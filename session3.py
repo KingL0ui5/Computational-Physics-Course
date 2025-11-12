@@ -7,30 +7,39 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
 from tqdm import tqdm
 
-def HOT2(f_prime, y_0, t_0, t_f, delta_t = None, nsteps = None):
-    y_i = y_0
-    t = t_0
+
+def AM4_linear_coupled(f1,f2, f1_0, f2_0, t_0, t_f, delta_t = None, nsteps = None):
+    # With AB3 predictor 
     if nsteps is None:
         times = np.arange(t_0, t_f, delta_t)
+        nsteps = len(times)
     elif delta_t is None: 
         times = np.linspace(t_0, t_f, nsteps)
         delta_t = times[1] - times[0]
     else: 
-        return ValueError("Please enter only one of timestep or nsteps")
+        raise ValueError("Please enter only one of timestep or nsteps")
     
-    y = []
-    f2_prime = 
-    for t in times:
-        y_i = y_i + (f_prime(t, y_i)*delta_t)
-        y.append(y_i)
-    return y
+    # for the linear system 
+    A = np.array([[0, 1], [-1, 0]])
+    u_n = np.array([f1_0, f2_0])
 
-def impliciteuler(f_prime, y_0, t_0, t_f, delta_t = None, nsteps = None):
-    """
-    for the system d^2y/dx^2 = -y
-    """
-    y_i = y_0
-    t = t_0
+    # euler steps 
+    u_n1 = u_n + A @ u_n * delta_t
+    u_n2 = u_n1 + A @ u_n1 * delta_t
+    u_n3 = u_n2 + A @ u_n2 * delta_t
+    
+    u_n = [u_n, u_n1, u_n2, u_n3]
+    for i in range(len(u_n) - 1,nsteps):
+        u_pred = ((u_n[i]) + (delta_t/12) * (23 * (A @ u_n[i-3]) 
+                    - 16 * (A @ u_n[i-2]) + 5 * (A @ u_n[i-1]))) #AB3 predictor
+
+        u_next = (u_n[i] + (delta_t / 24.0) * (9.0 * (A @ u_pred) 
+                    + 19.0 * (A @ u_n[i]) - 5.0 * (A @ u_n[i-1]) + 1.0 * (A @ u_n[i-2])))
+
+        u_n.append(u_next)
+    return u_n[-1][0], u_n[-1][1] # returns u and v
+
+def HOT4_linear_coupled(f1,f2, f1_0, f2_0, t_0, t_f, delta_t = None, nsteps = None):
     if nsteps is None:
         times = np.arange(t_0, t_f, delta_t)
     elif delta_t is None: 
@@ -39,13 +48,95 @@ def impliciteuler(f_prime, y_0, t_0, t_f, delta_t = None, nsteps = None):
     else: 
         raise ValueError("Please enter only one of timestep or nsteps")
     
-    y = []
+    # for the linear system 
+    A = np.array([[0, 1], [-1, 0]])
+    I = np.eye(2)
+    u_n = np.array([f1_0, f2_0])
+    
+    f1_values = []
+    f2_values = []
+    for _ in times:
+        u_n = (u_n + (A @ u_n * delta_t) + (0.5 * (A @ A) @ u_n * delta_t**2) 
+               + (1/6 * (A @ A @ A) @ u_n * delta_t**3) 
+               + (1/24 * (A @ A @ A @ A) @ u_n * delta_t**4)) #4th order
+        f1_values.append(u_n[0])
+        f2_values.append(u_n[1])
+    return f1_values, f2_values
+
+def HOT2_linear_coupled(f1,f2, f1_0, f2_0, t_0, t_f, delta_t = None, nsteps = None):
+    if nsteps is None:
+        times = np.arange(t_0, t_f, delta_t)
+    elif delta_t is None: 
+        times = np.linspace(t_0, t_f, nsteps)
+        delta_t = times[1] - times[0]
+    else: 
+        raise ValueError("Please enter only one of timestep or nsteps")
+    
+    # for the linear system 
+    A = np.array([[0, 1], [-1, 0]])
+    I = np.eye(2)
+    u_n = np.array([f1_0, f2_0])
+    
+    f1_values = []
+    f2_values = []
+    for _ in times:
+        u_n = u_n + (A @ u_n * delta_t) + (0.5 * (A @ A) @ u_n * delta_t**2) #2nd order
+        f1_values.append(u_n[0])
+        f2_values.append(u_n[1])
+    return f1_values, f2_values
+
+def RK2_linear_coupled(f1,f2, f1_0, f2_0, t_0, t_f, delta_t = None, nsteps = None, alpha=0.5):
+    f1_i = f1_0
+    f2_i = f2_0
+    t = t_0
+    if nsteps is None:  
+        times = np.arange(t_0, t_f, delta_t)
+    elif delta_t is None:
+        times = np.linspace(t_0, t_f, nsteps)
+        delta_t = times[1] - times[0]
+    else:
+        raise ValueError("Please enter only one of timestep or nsteps")
+    
+    f1_values = []
+    f2_values = []
     for t in times:
-        y_i1 = y_i/(1+delta_t)
-        f_b = f_prime((t + delta_t), y_i1)
-        y_i = y_i + (f_b*delta_t)
-        y.append(y_i)
-    return y
+        f1_a = f1(t, f1_i, f2_i)
+        f1_b = f1(t + (alpha * delta_t), f1_i + (f1_a * alpha * delta_t), f2_i)
+        f2_a = f2(t, f1_i, f2_i)
+        f2_b = f2(t + (alpha * delta_t), f1_i, f2_i + (f2_a * alpha * delta_t))
+
+        f1_i = f1_i + 1/(2*alpha) * (f1_a + ( (2*alpha) -1) * f1_b) * delta_t
+        f2_i = f2_i + 1/(2*alpha) * (f2_a + ( (2*alpha) -1) * f2_b) * delta_t
+        f2_values.append(f2_i)
+        f1_values.append(f1_i)
+
+    return f1_values, f2_values
+
+def linear_implicit_coupled_euler(f1,f2, f1_0, f2_0, t_0, t_f, delta_t = None, nsteps = None):
+    """
+    for the system d^2y/dx^2 = -y
+    with a perfect step
+    """
+    if nsteps is None:  
+        times = np.arange(t_0, t_f, delta_t)
+    elif delta_t is None:
+        times = np.linspace(t_0, t_f, nsteps)
+        delta_t = times[1] - times[0]
+    else:
+        raise ValueError("Please enter only one of timestep or nsteps")
+    
+    A = np.array([[0, 1], [-1, 0]])
+    I = np.eye(2)
+    G = np.linalg.inv(I - A * delta_t)
+    u = np.array([f1_0, f2_0])
+
+    f1_values = []
+    f2_values = []
+    for _ in times:
+        u = G @ u
+        f1_values.append(u[0])
+        f2_values.append(u[1])
+    return f1_values, f2_values
 
 def impliciteuler_pc(f_prime, y_0, t_0, t_f, delta_t = None, nsteps = None):
     y_i = y_0
@@ -98,34 +189,11 @@ def euler_solver(f_prime, y_0, t_0, t_f, delta_t = None, nsteps = None):
         times = np.linspace(t_0, t_f, nsteps)
         delta_t = times[1] - times[0]
     else: 
-        return ValueError("Please enter only one of timestep or nsteps")
+        raise ValueError("Please enter only one of timestep or nsteps")
     
     y = []
     for t in times:
         y_i = y_i + (f_prime(t, y_i)*delta_t)
-        y.append(y_i)
-    return y
-
-
-def RK4(f_prime, y_0, t_0, t_f, delta_t = None, nsteps = None):
-    y_i = y_0
-    t = t_0
-    if nsteps is None:
-        times = np.arange(t_0, t_f, delta_t)
-    elif delta_t is None: 
-        times = np.linspace(t_0, t_f, nsteps)
-        delta_t = times[1] - times[0]
-    else: 
-        return ValueError("Please enter only one of timestep or nsteps")
-    
-    y = []
-    for t in times:
-        k1 = f_prime(t, y_i)
-        k2 = f_prime(t + delta_t/2, y_i + (k1 * delta_t/2))
-        k3 = f_prime(t + delta_t/2, y_i + (k2 * delta_t/2))
-        k4 = f_prime(t + delta_t, y_i + (k3 * delta_t))
-
-        y_i = y_i + delta_t * (k1 + 2*k2 + 2*k3 + k4) / 6
         y.append(y_i)
     return y
 
@@ -139,16 +207,45 @@ def coupled_euler_solver(f1, f2, f1_0, f2_0, t_0, t_f, delta_t = None, nsteps = 
         times = np.linspace(t_0, t_f, nsteps)
         delta_t = times[1] - times[0]
     else:
-        return ValueError("Please enter only one of timestep or nsteps")
+        raise ValueError("Please enter only one of timestep or nsteps")
     
     f1_values = []
     f2_values = []
     for t in times:
-        f1_i = f1_i + (f1(t, f1_i, f2_i)*delta_t)
-        f2_i = f2_i + (f2(t, f1_i, f2_i)*delta_t)
-        f1_values.append(f1_i)
-        f2_values.append(f2_i)
+        # f1_i_prime = f1_i + (f1(t, f1_i, f2_i)*delta_t)
+        # f2_i_prime = f2_i + (f2(t, f1_i, f2_i)*delta_t)
+        f1_i_prime = f1_i * np.cos(delta_t) + f2_i * np.sin(delta_t) # perfect step for euler method
+        f2_i_prime = -f1_i * np.sin(delta_t) + f2_i * np.cos(delta_t)
+
+        f1_values.append(f1_i_prime)
+        f2_values.append(f2_i_prime)
+        f1_i = f1_i_prime
+        f2_i = f2_i_prime
+
     return f1_values, f2_values
+
+def RK4(f_prime, y_0, t_0, t_f, delta_t = None, nsteps = None):
+    y_i = y_0
+    t = t_0
+    if nsteps is None:
+        times = np.arange(t_0, t_f, delta_t)
+    elif delta_t is None: 
+        times = np.linspace(t_0, t_f, nsteps)
+        delta_t = times[1] - times[0]
+    else: 
+        raise ValueError("Please enter only one of timestep or nsteps")
+    
+    y = []
+    for t in times:
+        k1 = f_prime(t, y_i)
+        k2 = f_prime(t + delta_t/2, y_i + (k1 * delta_t/2))
+        k3 = f_prime(t + delta_t/2, y_i + (k2 * delta_t/2))
+        k4 = f_prime(t + delta_t, y_i + (k3 * delta_t))
+
+        y_i = y_i + delta_t * (k1 + 2*k2 + 2*k3 + k4) / 6
+        y.append(y_i)
+    return y    
+    
 
 def coupled_RK4_solver(f1, f2, f1_0, f2_0, t_0, t_f, delta_t = None, nsteps = None):
     f1_i = f1_0
@@ -160,7 +257,7 @@ def coupled_RK4_solver(f1, f2, f1_0, f2_0, t_0, t_f, delta_t = None, nsteps = No
         times = np.linspace(t_0, t_f, nsteps)
         delta_t = times[1] - times[0]
     else:
-        return ValueError("Please enter only one of timestep or nsteps")
+        raise ValueError("Please enter only one of timestep or nsteps")
     
     f1_values = []
     f2_values = []
@@ -182,22 +279,19 @@ def coupled_RK4_solver(f1, f2, f1_0, f2_0, t_0, t_f, delta_t = None, nsteps = No
 
     return f1_values, f2_values
 
-def problem2():
-    def f_2prime(t, u):
-        return -u 
-    
+def problem2c():    
     def du(t, u, v):
         return v
 
     def dv(t, u, v):
         return -u
     
-    stepsizes = np.linspace(0.0000001,0.3,3)
+    stepsizes = np.linspace(0.0000001,0.1,5)
     fig, axes = plt.subplots(1, 2, figsize=(12, 5), sharey=True)
 
     for stepsize in stepsizes:
         t = np.arange(0, 1, stepsize)
-        u, v = coupled_euler_solver(du, dv, f1_0 = 1, f2_0=0, t_0=0, t_f=1, stepsize=stepsize)
+        u, v = coupled_euler_solver(du, dv, f1_0=0, f2_0=1, t_0=0, t_f=1, delta_t=stepsize)
         axes[0].plot(t, u, label=f"Δt={stepsize}")
     axes[0].plot(t, np.sin(t), 'k--', label='Analytic (sin t)')
     axes[0].set_title("Explicit Euler")
@@ -208,7 +302,7 @@ def problem2():
 
     for stepsize in stepsizes:
         t = np.arange(0, 1, stepsize)
-        u, v = implicit_coupled_euler(du, dv, f1_0 = 1, f2_0=0, t_0=0, t_f=1, stepsize=stepsize)
+        u, v = linear_implicit_coupled_euler(du, dv, f1_0 = 0, f2_0=1, t_0=0, t_f=1, delta_t=stepsize)
         axes[1].plot(t, u, label=f"Δt={stepsize}")
     axes[1].plot(t, np.sin(t), 'k--', label='Analytic (sin t)')
     axes[1].set_title("Implicit Euler (Iterative)")
@@ -218,6 +312,38 @@ def problem2():
 
 plt.tight_layout()
 plt.show()
+
+def problem2d():
+    def du(t, u, v):
+        return v
+
+    def dv(t, u, v):
+        return -u
+    
+    sizes = np.logspace(-7, -5, 10)
+    errors = []
+    for stepsize in sizes:
+        u, v = AM4_linear_coupled(du, dv, f1_0 = 0, f2_0=1, t_0=0, t_f=1, delta_t=stepsize)
+        t = np.arange(0, 1, stepsize)
+        # plt.plot(t, u, label='HOT2')
+        # plt.plot(t, np.sin(t), 'k--', label='Analytic (sin t)')
+        # plt.xlabel("t")
+        # plt.ylabel("y(t)")
+        # plt.title("Higher Order Taylor Method")
+        # plt.legend()
+        # plt.grid()
+        # plt.show()
+
+        error = np.abs(np.array(u) - np.sin(t))
+        errors.append(np.max(error))
+
+    plt.scatter(sizes, errors)
+    plt.yscale('log')
+    plt.xlabel("t")
+    plt.ylabel("Absolute Error")
+    plt.title("Absolute Error in HOT4 Method")
+    plt.grid()
+    plt.show()
 
 def problem3():    
     def bisection(f, xlow, xhigh, max_err=1e-5, max_iter=100):
@@ -418,11 +544,6 @@ def problem3():
     # plt.grid()
     # plt.show()
 
-    
-
-    
-    
-
 
 if __name__ == '__main__':
-    problem3()
+    problem2d()
