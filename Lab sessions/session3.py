@@ -8,6 +8,77 @@ from scipy.interpolate import interp1d
 from tqdm import tqdm
 
 
+"""
+Problem Sheet 7
+"""
+
+def ParabolicPDE(D, u_0, u_N, x_i, x_f, N_time, N_space, delta_t):
+    """
+    Solves the diffusion equation using explicit euler for time stepping and central 
+    difference scheme for spatial derivatives.
+    """
+    h = (x_f - x_i) / (N_space - 1)
+    d = D * delta_t / (h**2) 
+
+    u = np.zeros((N_time, N_space))
+    # fix boundaries for all time
+    u[:, 0] = u_0 
+    u[:, -1] = u_N
+
+    for n in range(N_time - 1):
+        for i in range(1, N_space - 1):
+            u[n+1, i] = (1-2*d) * u[n, i] + d *(u[n, i-1] + u[n, i+1])
+    return u
+
+def ps7problem4():
+
+    def sol(x, t, N_terms=500):
+        s = 0
+        for n in range(1, N_terms + 1):
+            s += ((-1)**n / n) * np.sin(n*np.pi*x) * np.exp(-n**2 * np.pi**2 * t**2)
+        return x + (2/np.pi) * s
+
+    delta_t = 0.00001
+    N_space = 100
+    N_time = 100000
+
+    u = ParabolicPDE(D=1., u_0=0, u_N=1, 
+                    x_i=0, x_f=1, 
+                    N_time=N_time, N_space=N_space, 
+                    delta_t=delta_t)
+
+    x = np.linspace(0, 1, N_space)
+
+    plot_times = [0.01, 0.09, 0.25, 1]
+    indices = [int(t / delta_t) for t in plot_times]
+
+    fig, ax = plt.subplots(len(plot_times), 1, figsize=(6, 8), sharex=True)
+
+    for i, (t, n) in enumerate(zip(plot_times, indices)):
+        ax[i].plot(x, u[n, :], label=f't={t:.3f}s')
+        ax[i].set_xlim(0, 1)
+        ax[i].legend()
+        ax[i].grid()
+
+    plt.xlabel('x')
+    plt.tight_layout()
+    plt.show()
+
+
+    sol_001 = sol(x, 0.01)
+    sol_009 = sol(x, 0.09)
+    sol_025 = sol(x, 0.25)
+
+    plt.plot(x, sol_001, label="t=0.01")
+    plt.plot(x, sol_009, label="t=0.09")
+    plt.plot(x, sol_025, label="t=0.25")
+    plt.legend()
+    plt.grid()
+    plt.show()
+    """
+Problem Sheet 6
+"""
+
 def AM4_linear_coupled(f1,f2, f1_0, f2_0, t_0, t_f, delta_t = None, nsteps = None):
     # With AB3 predictor 
     if nsteps is None:
@@ -546,4 +617,4 @@ def problem3():
 
 
 if __name__ == '__main__':
-    problem2d()
+    ps7problem4()
