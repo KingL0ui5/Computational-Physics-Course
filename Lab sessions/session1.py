@@ -2,32 +2,37 @@
 Problem sheet 2 Wednesday 8th and Wednesday 15th Oct
 """
 
-import numpy as np 
-import matplotlib.pyplot as plt 
-from  scipy.integrate import trapezoid
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.integrate import trapezoid
 import pandas as pd
 
-def dft(x, N, T): # N should be a power of two or at least even where possible
+
+def dft(x, N, T):  # N should be a power of two or at least even where possible
     res = np.zeros(N, dtype=complex)
-    for p in range(-N//2, N//2): # iterating over p space to find contributions to each p
-        for n in range(0,N): # iterating over n's for the summation
+    for p in range(-N//2, N//2):  # iterating over p space to find contributions to each p
+        for n in range(0, N):  #  iterating over n's for the summation
             res[p + N//2] += x[n] * np.exp((2j * np.pi * n * p)/N)
 
     w_arr = (np.array(range(-N//2, N//2)) * 2 * np.pi) / T
     return np.real(res), w_arr
-    
+
+
 def invdft(w, N, T):
     x_rec = np.zeros(N, dtype=complex)
     for p in range(-N//2, N//2):
         for n in range(N):
-            x_rec[n] += w[p + N//2] * np.exp((-2j * np.pi * n * p) / N) # sign flip and index change due to spectrum centered on zero
-            
-    x_rec /= (N) # amplitude normalisation
+            # sign flip and index change due to spectrum centered on zero
+            x_rec[n] += w[p + N//2] * np.exp((-2j * np.pi * n * p) / N)
+
+    x_rec /= (N)  # amplitude normalisation
     t_arr = np.linspace(0, T, N, endpoint=False)
     return np.real(x_rec), t_arr
 
-def gaussian(t,sigma):
-    return (1/(sigma * np.sqrt(2*np.pi))) * np.exp(-((t)**2)/(2 * sigma**2)) 
+
+def gaussian(t, sigma):
+    return (1/(sigma * np.sqrt(2*np.pi))) * np.exp(-((t)**2)/(2 * sigma**2))
+
 
 def task1():
     pi = np.pi
@@ -39,7 +44,7 @@ def task1():
     freqs, w = dft(sine, N, T)
     plt.plot(x, sine, 'x')
     plt.show()
-    
+
     plt.grid(True)
     plt.plot(w, freqs)
     plt.show()
@@ -57,7 +62,8 @@ def task2():
     generally, E_j = B_0 j(j+1)
         therefore, B_0 = E_0 = hbar * omega
     """
-    laser_data = pd.read_csv('data.txt', delimiter=' ', header=None, names=['t', 'f(t)'])
+    laser_data = pd.read_csv('data.txt', delimiter=' ',
+                             header=None, names=['t', 'f(t)'])
     laser_data.plot(x='t', y='f(t)')
     plt.show()
 
@@ -69,12 +75,13 @@ def task2():
     plt.show()
     return laser_data['t'], spectrum, w
 
+
 def task3():
     t, init_spectrum, init_w = task2()
     N = len(init_spectrum)
     T = max(t)
 
-    curve = gaussian(t, 0.5) 
+    curve = gaussian(t, 0.5)
     plt.plot(t, curve, "x")
     plt.title("gaussian")
     print(trapezoid(curve, t))
@@ -84,7 +91,7 @@ def task3():
     delta_w = sum(np.diff(w))/len(np.diff(w))
     plt.plot(w, gaussian_spect)
     plt.title('Spectrum')
-    print(trapezoid(gaussian_spect,w))
+    print(trapezoid(gaussian_spect, w))
     plt.show()
 
     convolved_spect = gaussian_spect * init_spectrum
@@ -93,24 +100,28 @@ def task3():
     plt.show()
 
     f_t, t = invdft(convolved_spect, N, T)
-    f_t *= (2*np.pi)/(delta_w*N) # accounting for factors lost by computing fft twice
+    #  accounting for factors lost by computing fft twice
+    f_t *= (2*np.pi)/(delta_w*N)
 
-    laser_data = pd.read_csv('data.txt', delimiter=' ', header=None, names=['t', 'f(t)'])
+    laser_data = pd.read_csv('data.txt', delimiter=' ',
+                             header=None, names=['t', 'f(t)'])
     laser_data.plot(x='t', y='f(t)', label='original')
     plt.plot(t, f_t, label='convolved')
     plt.title('time domain')
     plt.legend(loc='upper right')
     plt.show()
 
+
 def task4():
     def decay(t, gamma):
         return np.exp(-t/gamma)
-    laser_data = pd.read_csv('data.txt', delimiter=' ', header=None, names=['t', 'f(t)'])
+    laser_data = pd.read_csv('data.txt', delimiter=' ',
+                             header=None, names=['t', 'f(t)'])
     laser_data['alt_f(t)'] = laser_data['f(t)'] * decay(laser_data['t'], 30)
     T = max(laser_data['t'])
     N = len(laser_data['f(t)'])
 
-    laser_data.plot(x='t', y=['f(t)','alt_f(t)'])
+    laser_data.plot(x='t', y=['f(t)', 'alt_f(t)'])
     plt.show()
 
     spectrum, w = dft(x=laser_data['f(t)'], N=N, T=T)
@@ -118,6 +129,7 @@ def task4():
     plt.plot(w, spectrum, label='normal')
     plt.plot(w_d, spectrum_d, label='decay')
     plt.show()
+
 
 def lagrange(x_data, y_data, x_eval):
     n = len(x_data)
@@ -128,13 +140,15 @@ def lagrange(x_data, y_data, x_eval):
             if j != k:
                 L_j *= (x_eval - x_data[k]) / (x_data[j] - x_data[k])
         P += y_data[j] * L_j
-    return P  
+    return P
 
 # part 1 of problem sheet
+
+
 def problem1(n):
     def function1(x):
         return np.sin(x)
-    
+
     x_data = np.linspace(-np.pi, np.pi, n)
     y_data = function1(x_data)
 
@@ -152,14 +166,13 @@ def problem2():
     def trapeziod(f, start, end, step_size, omit=[]):
         area = 0.
         for step in np.arange(start, end, step_size):
-            if step in omit: 
+            if step in omit:
                 continue
             x_i = f(step)
             x_f = f(step + step_size)
 
             area += (x_i + x_f) / 2 * step_size
         return area
-    
 
     def simpsons(f, start, end, step_size, omit=[]):
         area = 0.0
@@ -182,16 +195,16 @@ def problem2():
             area += (step_size / 6.0) * (f0 + 4*f1 + f2)
 
         return area
-    
+
     def function(x):
         return np.sin(x**2)/x
-    
+
     step_size = 0.001
     I = trapeziod(function, 0, 10, step_size, [0])
     I1 = simpsons(function, 0, 10, step_size, [0])
     print(I)
     print(I1)
-            
+
 
 if __name__ == '__main__':
     problem2()
