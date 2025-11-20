@@ -1,5 +1,5 @@
 """
-A module to sample functions from a given function space. 
+A module to sample functions from a given function space.
 Louis Liu 19/11
 """
 import numpy as np
@@ -21,7 +21,7 @@ class ProposalFunction:
         return np.random.normal(loc=x, scale=sigma)
 
 
-def metropolis_hastings(f: Callable, f_prop: str, x_0: np.ndarray, xmin: np.ndarray, xmax: np.ndarray, N: int = 10000, kwrgs: dict = None) -> np.ndarray:
+def metropolis_hastings(f: Callable, f_prop: str, x_0: np.ndarray, xmin: np.ndarray, xmax: np.ndarray, N: int = 10000, kwrgs: dict = None, detail: bool = False) -> np.ndarray:
     """
     Metropolis algorithm to sample from a target distribution defined by nd function f.
 
@@ -67,9 +67,83 @@ def metropolis_hastings(f: Callable, f_prop: str, x_0: np.ndarray, xmin: np.ndar
             accepted_count += 1
         samples.append(current)
 
-    # print(f"Acceptance Rate: {accepted_count / N:.2f}")
+    if detail:
+        import matplotlib.pyplot as plt
+        n = 6  # number of subplots
+        fig, axes = plt.subplots(n, 1, figsize=(10, 12), sharey=True)
+        chunk_size = N // n
+
+        for i in range(n):
+            start = i * chunk_size
+            end = (i + 1) * chunk_size if i < (n-1) else N
+            axes[i].plot(range(start, end), samples[start:end],
+                         color='black', linewidth=0.5, alpha=0.6)
+
+            axes[i].set_ylabel('x Value')
+            axes[i].text(0.02, 0.9, f'Segment {i+1}: Iterations {start}-{end}',
+                         transform=axes[i].transAxes, fontsize=10, fontweight='bold')
+
+        axes[-1].set_xlabel('Sample Index')
+        plt.suptitle(
+            'Trace of Metropolis-Hastings Sampling (Split View)', y=1.02, fontsize=14)
+        plt.tight_layout()
+        plt.show()
+
+        print(f"Acceptance Rate: {accepted_count / N:.2f}")
+
     return np.vstack(samples)
 
 
-def MALA():
-    pass
+def MALA(f: Callable, f_prime, x_0: np.ndarray | list, xmin: np.ndarray | list, xmax: np.ndarray | list, timestep: float, N: int = 10000) -> np.ndarray:
+    """
+    Metropolis-Adjusted Langevin Algorithm (MALA) to sample from a target distribution defined by nd wavefunction probability density function f.
+    Parameters:
+        f : callable, the wavefunction probability density to sample from.
+        f_prime : callable, The derivative of the wavefunction.
+        xmin : list or np.ndarray, The minimum bounds for each dimension.
+        xmax : list or np.ndarray, The maximum bounds for each dimension.
+        x_0 : list or np.ndarray, The initial position to start sampling from.
+        timestep : float, The timestep for the Langevin dynamics.
+        N : int, The number of samples to generate.
+
+    Returns: np.ndarray, An array of sampled positions.
+    """
+
+    current = np.array(x_0, dtype=float)
+    xmin = np.array(xmin, dtype=float)
+    xmax = np.array(xmax, dtype=float)
+    samples = []
+    samples.append(current.copy())
+
+    accepted_count = 0
+    F_current = 2 * np.real(f_prime(current) / f(current))
+
+    for _ in range(N - 1):
+        xi = np.random.normal(size=current.shape)
+        forward_mean = current + timestep * F_current
+
+        proposal = forward_mean + \
+            np.sqrt(2 * timestep) * xi
+
+        if np.any(proposal < xmin) or np.any(proposal > xmax):
+            samples.append(current.copy())
+            continue
+
+        F_prop = 2 * np.real(f_prime(proposal) / f(proposal))
+        backward_mean = proposal + timestep * F_prop
+
+        Rev_distance = np.sum((current - backward_mean)**2)
+        Frd_distance = np.sum((proposal - forward_mean)**2)
+
+        log_A = (np.log(f(proposal) / f(current))) + \
+            (Frd_distance - Rev_distance) / (4 * timestep)
+
+        if np.log(np.random.uniform(0, 1)) < log_A:
+            current = proposal
+            F_current = F_prop
+            accepted_count += 1
+
+        samples.append(current.copy())
+
+    # print(f"Acceptance Rate: {accepted_count / N:.2f}")
+    return np.vstack(samples)

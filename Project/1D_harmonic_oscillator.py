@@ -45,7 +45,7 @@ def test():
     N = 100000
     f, _ = eigenfunctions(4)
     samples = metropolis_hastings(lambda x: f(x)**2, 'gaussian', [0.], xmin=[0.], xmax=[10.], N=N, kwrgs={
-                                  'sigma': 1}).flatten()
+                                  'sigma': 2.}, detail=True).flatten()
 
     #  discard first 10% of samples as burn-in
     samples = samples[int(0.1 * N):]
