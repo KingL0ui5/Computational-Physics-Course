@@ -1,0 +1,88 @@
+"""
+Defining the 1D harmonic oscillator eigenfunctions for the dimensionless hamiltonian (6)
+Louis Liu 19/11
+"""
+
+import numpy as np
+from function_sampling import metropolis_hastings
+from differentiators import double_central_difference
+from typing import Callable
+
+
+@staticmethod
+def eigenfunctions(n: int) -> tuple:
+    """
+    Compute the nth eigenfunction of the 1D harmonic oscillator at position x.
+    Parameters:
+        n : int, The quantum number of the eigenfunction.
+    Returns:
+        tuple: The callable eigenfunction, and the dimensionless energy eigenvalue.
+    """
+
+    def f(x):
+        x = np.asarray(x)
+        H = 0
+        if n == 0:
+            H = 1.0
+
+        elif n == 1:
+            H = 2 * x
+
+        else:
+            h_prev = 1.0  # H_0
+            h_curr = 2 * x  # H_1
+
+            for i in range(1, n):
+                h_next = (2 * x * h_curr) - (2 * i * h_prev)
+                h_prev = h_curr
+                h_curr = h_next
+
+            H = h_curr
+        return np.exp(-x**2 / 2) * H
+
+    return f, n + 0.5
+
+
+class wavefunction:
+    def __init__(self, n: int):
+        self.n = n
+        self.f, self.E = eigenfunctions(n)
+
+    def psi(self, x):
+        return self.f(x)
+
+    def energy(self):
+        return self.E
+
+    def probability_density(self, x):
+        return np.abs(self.f(x))**2
+
+
+def localenergy(wf: wavefunction, x: np.ndarray) -> np.ndarray:
+    """
+    Compute the local energy of the harmonic oscillator at position x for a given wavefunction.
+    Parameters:
+        wf : wavefunction, The wavefunction object containing the eigenfunction and energy.
+        x : np.ndarray, The position(s) at which to compute the local energy.
+    Returns:
+        np.ndarray: The local energy at the given position(s).
+    """
+
+    d2psi = double_central_difference(wf.psi, x, h=1e-5, order=8)
+
+    return -0.5 * (d2psi / wf.psi(x)) + 0.5 * x**2
+
+
+if __name__ == "__main__":
+    N_s = 1000000
+    psi = wavefunction(n=5)
+    x = metropolis_hastings(f=psi.probability_density, f_prop='gaussian', x_0=[1.], xmin=[-10.], xmax=[10.], N=N_s, kwrgs={
+        'sigma': 2.})
+
+    #  discard burn in
+    x = x[N_s//10:]
+
+    localenergy_arr = localenergy(psi, x)
+    exp_energy = np.mean(localenergy_arr)
+    print(
+        f"Expected Energy: {exp_energy}, Theoretical Energy: {psi.energy()}, error = {np.abs(exp_energy - psi.energy())}")

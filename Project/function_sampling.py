@@ -4,6 +4,7 @@ Louis Liu 19/11
 """
 import numpy as np
 from typing import Callable
+import time
 
 
 class ProposalFunction:
@@ -49,6 +50,7 @@ def metropolis_hastings(f: Callable, f_prop: str, x_0: np.ndarray, xmin: np.ndar
 
     accepted_count = 0
 
+    start1 = time.perf_counter()
     for _ in range(N - 1):
         proposal = [f_prop(i, kwrgs) for i in current]
 
@@ -56,16 +58,18 @@ def metropolis_hastings(f: Callable, f_prop: str, x_0: np.ndarray, xmin: np.ndar
         prob_proposal = f(proposal)
 
         # greater than 1 means a higher probability
-        acceptance_ratio = prob_proposal / prob_current
+        log_acceptance_ratio = np.log(
+            prob_proposal + 1e-30) - np.log(prob_current)
 
         if np.any(proposal < xmin) or np.any(proposal > xmax):
             samples.append(current.copy())
             continue
 
-        if np.random.uniform(0, 1) < min(1, acceptance_ratio):
+        if np.log(np.random.uniform(0, 1)) < min(1, log_acceptance_ratio):
             current = proposal
             accepted_count += 1
         samples.append(current)
+    end1 = time.perf_counter()
 
     if detail:
         import matplotlib.pyplot as plt
@@ -89,12 +93,13 @@ def metropolis_hastings(f: Callable, f_prop: str, x_0: np.ndarray, xmin: np.ndar
         plt.tight_layout()
         plt.show()
 
-        print(f"Acceptance Rate: {accepted_count / N:.2f}")
+        print(f"Metropolis hastings acceptance Rate: {accepted_count / N:.2f}")
+        print(f"Time elapsed: {end1 - start1}")
 
-    return np.vstack(samples)
+    return np.asarray(samples)
 
 
-def MALA(f: Callable, f_prime, x_0: np.ndarray | list, xmin: np.ndarray | list, xmax: np.ndarray | list, timestep: float, N: int = 10000) -> np.ndarray:
+def MALA(f: Callable, f_prime, x_0: np.ndarray | list, xmin: np.ndarray | list, xmax: np.ndarray | list, timestep: float, N: int = 10000, detail: bool = False) -> np.ndarray:
     """
     Metropolis-Adjusted Langevin Algorithm (MALA) to sample from a target distribution defined by nd wavefunction probability density function f.
     Parameters:
@@ -118,6 +123,7 @@ def MALA(f: Callable, f_prime, x_0: np.ndarray | list, xmin: np.ndarray | list, 
     accepted_count = 0
     F_current = 2 * np.real(f_prime(current) / f(current))
 
+    start2 = time.perf_counter()
     for _ in range(N - 1):
         xi = np.random.normal(size=current.shape)
         forward_mean = current + timestep * F_current
@@ -135,7 +141,7 @@ def MALA(f: Callable, f_prime, x_0: np.ndarray | list, xmin: np.ndarray | list, 
         Rev_distance = np.sum((current - backward_mean)**2)
         Frd_distance = np.sum((proposal - forward_mean)**2)
 
-        log_A = (np.log(f(proposal) / f(current))) + \
+        log_A = (np.log(f(proposal)+1e-30) - np.log(f(current))) + \
             (Frd_distance - Rev_distance) / (4 * timestep)
 
         if np.log(np.random.uniform(0, 1)) < log_A:
@@ -144,6 +150,136 @@ def MALA(f: Callable, f_prime, x_0: np.ndarray | list, xmin: np.ndarray | list, 
             accepted_count += 1
 
         samples.append(current.copy())
+    end2 = time.perf_counter()
+
+    if detail:
+        import matplotlib.pyplot as plt
+        n = 6  # number of subplots
+        fig, axes = plt.subplots(n, 1, figsize=(10, 12), sharey=True)
+        chunk_size = N // n
+
+        for i in range(n):
+            start = i * chunk_size
+            end = (i + 1) * chunk_size if i < (n-1) else N
+            axes[i].plot(range(start, end), samples[start:end],
+                         color='black', linewidth=0.5, alpha=0.6)
+
+            axes[i].set_ylabel('x Value')
+            axes[i].text(0.02, 0.9, f'Segment {i+1}: Iterations {start}-{end}',
+                         transform=axes[i].transAxes, fontsize=10, fontweight='bold')
+
+        axes[-1].set_xlabel('Sample Index')
+        plt.suptitle(
+            'Trace of Metropolis-Hastings Sampling (Split View)', y=1.02, fontsize=14)
+        plt.tight_layout()
+        plt.show()
+
+        print(f"MALA acceptance Rate: {accepted_count / N:.2f}")
+        print(f"time elapsed: {end2 - start2}")
 
     # print(f"Acceptance Rate: {accepted_count / N:.2f}")
-    return np.vstack(samples)
+    return np.asarray(samples)
+
+
+def stochasticMALA(f: Callable, f_prime, x_0: np.ndarray | list, xmin: np.ndarray | list, xmax: np.ndarray | list, timestep: float, N: int = 10000, p_kick: float = 0.1, kick_sigma: float = 1., detail: bool = False) -> np.ndarray:
+    """
+    Metropolis-Adjusted Langevin Algorithm (MALA) to sample from a target distribution defined by nd wavefunction probability density function f.
+    Also including stochastic random walk steps to improve exploration.
+
+    Parameters:
+        f : callable, the wavefunction probability density to sample from.
+        f_prime : callable, The derivative of the wavefunction.
+        xmin : list or np.ndarray, The minimum bounds for each dimension.
+        xmax : list or np.ndarray, The maximum bounds for each dimension.
+        x_0 : list or np.ndarray, The initial position to start sampling from.
+        timestep : float, The timestep for the Langevin dynamics.
+        N : int, The number of samples to generate.
+
+    Returns: np.ndarray, An array of sampled positions.
+    """
+
+    current = np.array(x_0, dtype=float)
+    xmin = np.array(xmin, dtype=float)
+    xmax = np.array(xmax, dtype=float)
+    samples = []
+    samples.append(current.copy())
+
+    accepted_count = 0
+    F_current = 2 * np.real(f_prime(current) / f(current))
+
+    start3 = time.perf_counter()
+    for _ in range(N - 1):
+        #  random kick
+        if np.random.rand() < p_kick:
+            step = np.random.normal(0, kick_sigma, size=current.shape)
+            proposal = current + step
+
+            if np.any(proposal < xmin) or np.any(proposal > xmax):
+                samples.append(current.copy())
+                continue
+
+            # retain the log to minimmise numerical errors
+            log_A = 2 * np.log(np.abs(f(proposal)) / np.abs(f(current)))
+
+            if np.log(np.random.uniform(0, 1)) < log_A:
+                current = proposal
+                F_current = 2 * np.real(f_prime(current) / f(current))
+                accepted_count += 1
+
+        #  usual MALA
+        else:
+            xi = np.random.normal(size=current.shape)
+            forward_mean = current + timestep * F_current
+
+            proposal = forward_mean + \
+                np.sqrt(2 * timestep) * xi
+
+            if np.any(proposal < xmin) or np.any(proposal > xmax):
+                samples.append(current.copy())
+                continue
+
+            F_prop = 2 * np.real(f_prime(proposal) / f(proposal))
+            backward_mean = proposal + timestep * F_prop
+
+            Rev_distance = np.sum((current - backward_mean)**2)
+            Frd_distance = np.sum((proposal - forward_mean)**2)
+
+            log_A = (np.log(f(proposal+1e-30)) - np.log(f(current))) + \
+                (Frd_distance - Rev_distance) / (4 * timestep)
+
+            if np.log(np.random.uniform(0, 1)) < log_A:
+                current = proposal
+                F_current = F_prop
+                accepted_count += 1
+
+        samples.append(current.copy())
+
+    end3 = time.perf_counter()
+
+    if detail:
+        import matplotlib.pyplot as plt
+        n = 6  # number of subplots
+        fig, axes = plt.subplots(n, 1, figsize=(10, 12), sharey=True)
+        chunk_size = N // n
+
+        for i in range(n):
+            start = i * chunk_size
+            end = (i + 1) * chunk_size if i < (n-1) else N
+            axes[i].plot(range(start, end), samples[start:end],
+                         color='black', linewidth=0.5, alpha=0.6)
+
+            axes[i].set_ylabel('x Value')
+            axes[i].text(0.02, 0.9, f'Segment {i+1}: Iterations {start}-{end}',
+                         transform=axes[i].transAxes, fontsize=10, fontweight='bold')
+
+        axes[-1].set_xlabel('Sample Index')
+        plt.suptitle(
+            'Trace of Metropolis-Hastings Sampling (Split View)', y=1.02, fontsize=14)
+        plt.tight_layout()
+        plt.show()
+
+        print(f"Stochastic MALA acceptance Rate: {accepted_count / N:.2f}")
+        print(f"time elapsed: {end3 - start3}")
+
+    # print(f"Acceptance Rate: {accepted_count / N:.2f}")
+    return np.asarray(samples)

@@ -1,53 +1,27 @@
-"""
-Defining the 1D harmonic oscillator eigenfunctions for the dimensionless hamiltonian (6)
-Louis Liu 19/11
-"""
+from harmonic_oscillator import eigenfunctions
+from function_sampling import metropolis_hastings, MALA, stochasticMALA
+import differentiators
 
 import numpy as np
-from function_sampling import metropolis_hastings
-import differentiators
-from typing import Callable
 import seaborn as sns
 from helpers import rms
 sns.set_style('darkgrid')
 sns.set_context('paper')
 sns.set_palette("colorblind")
 
-
-def eigenfunctions(n: int) -> tuple:
-    """
-    Compute the nth eigenfunction of the 1D harmonic oscillator at position x.
-    Parameters:
-        n : int, The quantum number of the eigenfunction.
-    Returns:
-        tuple: The callable eigenfunction, and the dimensionless energy eigenvalue.
-    """
-
-    def f(x):
-        x = np.asarray(x)
-        H = 0
-        if n == 0:
-            H = 1.0
-
-        elif n == 1:
-            H = 2 * x
-
-        else:
-            h_prev = 1.0  # H_0
-            h_curr = 2 * x  # H_1
-
-            for i in range(1, n):
-                h_next = (2 * x * h_curr) - (2 * i * h_prev)
-                h_prev = h_curr
-                h_curr = h_next
-
-            H = h_curr
-        return np.exp(-x**2 / 2) * H
-
-    return f, n + 0.5
+# %% analytical functions for testing
 
 
-def analytical_derivative(n: int) -> Callable:
+def get_acf(series, max_lag=200):
+    series = series.flatten()
+    series = series - np.mean(series)
+    corr = np.correlate(series, series, mode='full')
+    corr = corr[len(corr)//2:]
+    corr = corr / corr[0]
+    return corr[:max_lag]
+
+
+def analytical_derivative(n: int):
     """
     Compute the analytical second derivative of the nth eigenfunction of the 1D harmonic oscillator at position x
     Parameters:
@@ -63,24 +37,91 @@ def analytical_derivative(n: int) -> Callable:
     return f
 
 
+def analytical_first_derivative(n: int):
+    """
+    Compute the analytical first derivative of the nth eigenfunction of the 1D harmonic oscillator at position x
+    Parameters:
+        n: int, The quantum number of the eigenfunction
+    Returns:
+        Callable: The first derivative function
+    """
+    psi_n, _ = eigenfunctions(n)
+
+    if n == 0:
+        def f_ground(x):
+            x = np.asarray(x)
+            return -x * psi_n(x)
+        return f_ground
+
+    psi_n_minus_1, _ = eigenfunctions(n - 1)
+    sqrt_2n = np.sqrt(2 * n)
+
+    def f(x):
+        x = np.asarray(x)
+        return sqrt_2n * psi_n_minus_1(x) - x * psi_n(x)
+    return f
+
+# %%
+
+
 def test_samples():
     x = np.linspace(0, 10, 100)
     N = 100000
-    f, _ = eigenfunctions(4)
-    samples = metropolis_hastings(lambda x: f(x)**2, 'gaussian', [0.], xmin=[0.], xmax=[10.], N=N, kwrgs={
-                                  'sigma': 2.}, detail=True).flatten()
+
+    n = 3
+    f, _ = eigenfunctions(n)
+    f2x = analytical_first_derivative(n)
+    samples_MH = metropolis_hastings(lambda x: f(x)**2, 'gaussian', [0.], xmin=[0.], xmax=[10.], N=N, kwrgs={
+        'sigma': 1.}, detail=True)
+
+    # samples = MALA(f=f, f_prime=f2x, x_0=[1.], timestep=0.0001, xmin=[
+    #                0.], xmax=[10.], N=N, detail=True)
+
+    samples_MALA = stochasticMALA(f=f, f_prime=f2x, x_0=[1.], timestep=0.001, xmin=[
+        0.], xmax=[10.], N=N, p_kick=0.5, kick_sigma=0.5, detail=True)
 
     #  discard first 10% of samples as burn-in
-    samples = samples[int(0.1 * N):]
+    burn_in = N//10
+    samples_MALA = samples_MALA[burn_in:]
+    samples_MH = samples_MH[burn_in:]
+
+    acf_mala = get_acf(samples_MALA)
+    acf_mh = get_acf(samples_MH)
 
     import matplotlib.pyplot as plt
-    plt.hist(samples, bins=500, density=True,
-             alpha=0.6, label='Sampled Distribution')
+    fig, ax = plt.subplots(2, 1, figsize=(10, 6), sharex=True)
+    ax[0].hist(samples_MH, bins=100, density=True,
+               alpha=1, label='Sampled Distribution')
+    ax[1].hist(samples_MALA, bins=100, density=True,
+               alpha=1, label='Sampled Distribution')
 
     pdf = f(x)**2
-    pdf /= np.trapz(pdf, x)
-    plt.plot(x, pdf, label='Target Distribution', color='red')
+    pdf /= np.trapezoid(pdf, x)
+    ax[0].plot(x, pdf, label='Target Distribution', color='red')
+    ax[1].plot(x, pdf, label='Target Distribution', color='red')
+    ax[0].set_title(f"Metropolis Hastings, nsamples: {N}")
+    ax[1].set_title(f"Stochastic Metropolis-adjusted Langevin, nsamples: {N}")
+    ax[0].legend()
+    ax[1].legend()
+    plt.ylabel("$\psi (x)$")
+    plt.xlabel("x")
+    plt.show()
+
+    #  autocorrelation
+    plt.figure(figsize=(10, 5))
+    plt.plot(acf_mh, label='Metropolis-Hastings', color='C0')
+    plt.plot(acf_mala, label='Stochastic MALA', color='C1')
+
+    plt.axhline(0, color='black', lw=0.5, ls='--')
+    plt.axhline(1/np.e, color='gray', lw=0.5, ls=':',
+                label='Correlation Time ($1/e$)')
+
+    plt.xlabel('Lag (k steps)')
+    plt.ylabel('Autocorrelation $C(k)$')
+    plt.title('Sampler Efficiency Comparison (Steep Drop = Better)')
     plt.legend()
+    plt.grid(True)
+
     plt.show()
 
 
@@ -226,4 +267,5 @@ def test_diffrentiators():
 
 
 if __name__ == "__main__":
-    test_diffrentiators()
+    test_samples()
+    # test_diffrentiators()
