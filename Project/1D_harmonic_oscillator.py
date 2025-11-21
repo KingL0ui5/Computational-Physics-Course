@@ -85,15 +85,19 @@ def test_samples():
 
 
 def test_diffrentiators():
-    for n in range(10):
+    import matplotlib.pyplot as plt
+    min_errors = []
+
+    N = 5  # quantum numbers to test
+    for n in range(1, N):
         f, _ = eigenfunctions(n)
 
-        x = np.linspace(-5, 5, 100)
+        x = np.linspace(-10, 10, 200)
         d2f = analytical_derivative(n)
         h = np.linspace(1e-5, 1, 500)
 
-        mean_error_d2bc = []
-        mean_error_d2fw = []
+        # mean_error_d2bc = []
+        # mean_error_d2fw = []
         mean_error_d2c_h2 = []
         mean_error_d2c_h4 = []
         mean_error_d2c_h6 = []
@@ -102,27 +106,27 @@ def test_diffrentiators():
 
         for step in h:
             d2c_h2 = differentiators.double_central_difference(
-                f, x, h=step, order='h2')
+                f, x, h=step, order=2)
             error_d2c_h2 = (np.abs(d2c_h2 - d2f(x)))
             mean_error_d2c_h2.append(rms(error_d2c_h2))
 
             d2c_h4 = differentiators.double_central_difference(
-                f, x, h=step, order='h4')
+                f, x, h=step, order=4)
             error_d2c_h4 = (np.abs(d2c_h4 - d2f(x)))
             mean_error_d2c_h4.append(rms(error_d2c_h4))
 
             d2c_h6 = differentiators.double_central_difference(
-                f, x, h=step, order='h6')
+                f, x, h=step, order=6)
             error_d2c_h6 = (np.abs(d2c_h6 - d2f(x)))
             mean_error_d2c_h6.append(rms(error_d2c_h6))
 
             d2c_h8 = differentiators.double_central_difference(
-                f, x, h=step, order='h8')
+                f, x, h=step, order=8)
             error_d2c_h8 = (np.abs(d2c_h8 - d2f(x)))
             mean_error_d2c_h8.append(rms(error_d2c_h8))
 
             d2c_h10 = differentiators.double_central_difference(
-                f, x, h=step, order='h10')
+                f, x, h=step, order=10)
             error_d2c_h10 = (np.abs(d2c_h10 - d2f(x)))
             mean_error_d2c_h10.append(rms(error_d2c_h10))
 
@@ -133,8 +137,6 @@ def test_diffrentiators():
             # d2bc = differentiators.double_backward_difference(f, x, h=step)
             # error_d2bc = (np.abs(d2bc - d2f(x)))
             # mean_error_d2bc.append(np.mean(error_d2bc))
-
-            import matplotlib.pyplot as plt
 
             # methods = [
             #     ("Double Central Difference O(h^2)", d2c_h2, error_d2c_h2),
@@ -165,15 +167,15 @@ def test_diffrentiators():
         print(f"\nQuantum Number n={n} Differentiator Error Analysis:")
 
         plt.plot(h, mean_error_d2c_h2,
-                 label="Central Difference O(h^2)")
+                 label="Central Difference O($h^2$)")
         plt.plot(h, mean_error_d2c_h4,
-                 label="Central Difference O(h^4)")
+                 label="Central Difference O($h^4$)")
         plt.plot(h, mean_error_d2c_h6,
-                 label="Central Difference O(h^6)")
+                 label="Central Difference O($h^6$)")
         plt.plot(h, mean_error_d2c_h8,
-                 label="Central Difference O(h^8)")
+                 label="Central Difference O($h^8$)")
         plt.plot(h, mean_error_d2c_h10,
-                 label="Central Difference O(h^10)")
+                 label="Central Difference O($h^(10)$)")
 
         # plt.plot(h, mean_error_d2fw,
         #          label="Mean Error Double Forward Difference O(h^2)")
@@ -200,6 +202,9 @@ def test_diffrentiators():
         min_h_h6 = h[min_h_index_h6]
         min_h_h8 = h[min_h_index_h8]
         min_h_h10 = h[min_h_index_h10]
+        min_errors.append([mean_error_d2c_h2[min_h_index_h2], mean_error_d2c_h4[min_h_index_h4],
+                           mean_error_d2c_h6[min_h_index_h6], mean_error_d2c_h8[min_h_index_h8],
+                           mean_error_d2c_h10[min_h_index_h10]])
 
         print("optimal mean errors: \n"
               f" Double Central Difference O(h^2): {mean_error_d2c_h2[min_h_index_h2]:.3e} at h={min_h_h2:.3e}\n"
@@ -208,6 +213,16 @@ def test_diffrentiators():
               f" Double Central Difference O(h^8): {mean_error_d2c_h8[min_h_index_h8]:.3e} at h={min_h_h8:.3e}\n"
               f" Double Central Difference O(h^10): {mean_error_d2c_h10[min_h_index_h10]:.3e} at h={min_h_h10:.3e}\n"
               )
+
+    for i in range(5):
+        plt.plot(range(1, N), [min_errors[n-1][i] for n in range(1, N)],
+                 label=f"Order O(h^{2*(i+1)})")
+    plt.yscale("log")
+    plt.xlabel("Quantum Number n")
+    plt.ylabel("Optimal Step Size h")
+    plt.title("Optimal Step Size vs Quantum Number for Different Orders")
+    plt.legend()
+    plt.show()
 
 
 if __name__ == "__main__":
