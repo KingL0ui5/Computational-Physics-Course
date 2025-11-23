@@ -43,58 +43,56 @@ def metropolis_hastings(f: Callable, f_prop: str, x_0: np.ndarray, xmin: np.ndar
         raise ValueError(f"Unknown proposal function '{f_prop}'")
 
     current = np.array(x_0, dtype=float)
+    n_dims = current.shape[0]
     xmin = np.array(xmin, dtype=float)
     xmax = np.array(xmax, dtype=float)
-    samples = []
-    samples.append(current)
+    samples = np.zeros((N, n_dims))
+    samples[0] = current
 
     accepted_count = 0
 
     start1 = time.perf_counter()
-    for _ in range(N - 1):
-        proposal = [f_prop(i, kwrgs) for i in current]
+    for i in range(N - 1):
+        proposal = np.array([f_prop(xi, kwrgs) for xi in current])
 
         prob_current = f(current)
         prob_proposal = f(proposal)
-
-        # greater than 1 means a higher probability
-        log_acceptance_ratio = np.log(
-            prob_proposal + 1e-30) - np.log(prob_current)
 
         if np.any(proposal < xmin) or np.any(proposal > xmax):
             samples.append(current.copy())
             continue
 
+        # greater than 1 means a higher probability
+        log_acceptance_ratio = np.log(
+            prob_proposal + 1e-30) - np.log(prob_current)
+
         if np.log(np.random.uniform(0, 1)) < min(1, log_acceptance_ratio):
             current = proposal
             accepted_count += 1
-        samples.append(current)
+
+        samples[i] = (current)
     end1 = time.perf_counter()
 
     if detail:
         import matplotlib.pyplot as plt
-        n = 6  # number of subplots
-        fig, axes = plt.subplots(n, 1, figsize=(10, 12), sharey=True)
-        chunk_size = N // n
+        n_dims = samples.shape[1]
+        plot_dims = min(n_dims, 5)
 
-        for i in range(n):
-            start = i * chunk_size
-            end = (i + 1) * chunk_size if i < (n-1) else N
-            axes[i].plot(range(start, end), samples[start:end],
-                         color='black', linewidth=0.5, alpha=0.6)
+        fig, axes = plt.subplots(plot_dims, 1, figsize=(
+            10, 2 * plot_dims), sharex=True)
+        if plot_dims == 1:
+            axes = [axes]
 
-            axes[i].set_ylabel('x Value')
-            axes[i].text(0.02, 0.9, f'Segment {i+1}: Iterations {start}-{end}',
-                         transform=axes[i].transAxes, fontsize=10, fontweight='bold')
+        for d in range(plot_dims):
+            axes[d].plot(samples[:, d], color='black',
+                         linewidth=0.5, alpha=0.6)
+            axes[d].set_ylabel(f'Dim {d}')
 
-        axes[-1].set_xlabel('Sample Index')
+        axes[-1].set_xlabel('Iteration')
         plt.suptitle(
-            'Trace of Metropolis-Hastings Sampling (Split View)', y=1.02, fontsize=14)
+            f'Trace \nacceptance: {accepted_count/N:.2f}, time: {end1-start1:.4f}s')
         plt.tight_layout()
         plt.show()
-
-        print(f"Metropolis hastings acceptance Rate: {accepted_count / N:.2f}")
-        print(f"Time elapsed: {end1 - start1}")
 
     return np.asarray(samples)
 
@@ -267,10 +265,7 @@ def stochasticMALA(f: Callable, f_prime, x_0: np.ndarray | list, xmin: np.ndarra
             end = (i + 1) * chunk_size if i < (n-1) else N
             axes[i].plot(range(start, end), samples[start:end],
                          color='black', linewidth=0.5, alpha=0.6)
-
             axes[i].set_ylabel('x Value')
-            axes[i].text(0.02, 0.9, f'Segment {i+1}: Iterations {start}-{end}',
-                         transform=axes[i].transAxes, fontsize=10, fontweight='bold')
 
         axes[-1].set_xlabel('Sample Index')
         plt.suptitle(
