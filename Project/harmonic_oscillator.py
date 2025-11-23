@@ -6,7 +6,6 @@ Louis Liu 19/11
 import numpy as np
 from function_sampling import metropolis_hastings
 from differentiators import double_central_difference
-from typing import Callable
 
 
 @staticmethod
@@ -69,8 +68,9 @@ def localenergy(wf: wavefunction, x: np.ndarray) -> np.ndarray:
     """
 
     d2psi = double_central_difference(wf.psi, x, h=[1e-5], order=8)
-
-    return -0.5 * (d2psi / wf.psi(x)) + 0.5 * x**2
+    E = -0.5 * (d2psi / wf.psi(x)) + 0.5 * x**2
+    mask = np.isfinite(E)
+    return E[mask]
 
 
 if __name__ == "__main__":
