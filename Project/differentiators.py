@@ -7,36 +7,53 @@ import numpy as np
 from typing import Callable
 
 
-def double_central_difference(f: Callable, x: float | np.ndarray, h: float = 1e-5, order=2) -> float | np.ndarray:
+def double_central_difference(f: Callable, x: np.ndarray, h: float = 1e-5, order: int = 2) -> float | np.ndarray:
     """
     Compute the second derivative of a function using the double central difference method.
     Order O(h^2), O(h^4), O(h^6), O(h^8), or O(h^10)
     Parameters:
         f: callable, The function to differentiate
-        x: float | np.ndarray, The position(s) at which to evaluate the second derivative
+        x: 2d np.ndarray, The position(s) at which to evaluate the second derivative
         h: float, The step size for the finite difference
-        order: int, The order of the finite difference approximation ('h2', 'h4', 'h6', 'h8', 'h10')
+        order: int, The order of the finite difference approximation (2, 4, 6, 8, or 10)
     Returns:
         float | np.ndarray: The second derivative of f at position x
     """
-    x = np.asarray(x)
-    if order == 2:
-        return (f(x + h) - 2 * f(x) + f(x - h)) / (h ** 2)
+    x = np.asarray(x, dtype=float)
+    n_dims = x.shape[0]
+    d2f = np.zeros(n_dims)
 
-    elif order == 4:
-        return (-f(x + 2*h) + 16*f(x + h) - 30*f(x) + 16*f(x - h) - f(x - 2*h)) / (12 * h ** 2)
+    coeffs = {
+        2:  ([1, -2, 1], 1),
+        4:  ([-1, 16, -30, 16, -1], 12),
+        6:  ([2, -27, 270, -490, 270, -27, 2], 180),
+        8:  ([-9, 128, -1008, 8064, -14350, 8064, -1008, 128, -9], 5040),
+        10: ([5, -72, 495, -2200, 6600, -12650, 6600, -2200, 495, -72, 5], 27720)
+    }
 
-    elif order == 6:
-        return (2*f(x + 3*h) - 27*f(x + 2*h) + 270*f(x + h) - 490*f(x) + 270*f(x - h) - 27*f(x - 2*h) + 2*f(x - 3*h)) / (180 * h ** 2)
+    if order not in coeffs:
+        raise ValueError(
+            f"Order {order} not supported. Choose 2, 4, 6, 8, or 10.")
 
-    elif order == 8:
-        return (-9*f(x + 4*h) + 128*f(x + 3*h) - 1008*f(x + 2*h) + 8064*f(x + h) - 14350*f(x) + 8064*f(x - h) - 1008*f(x - 2*h) + 128*f(x - 3*h) - 9*f(x - 4*h)) / (5040 * h ** 2)
+    weights, divisor = coeffs[order]
+    weights = np.array(weights)
 
-    elif order == 10:
-        return (5*f(x + 5*h) - 72*f(x + 4*h) + 495*f(x + 3*h) - 2200*f(x + 2*h) + 6600*f(x + h) - 12650*f(x) + 6600*f(x - h) - 2200*f(x - 2*h) + 495*f(x - 3*h) - 72*f(x - 4*h) + 5*f(x - 5*h)) / (27720 * h ** 2)
+    radius = len(weights) // 2
+    k_steps = np.arange(-radius, radius + 1)
 
-    else:
-        raise ValueError(f"Unknown order '{order}'")
+    for i in range(n_dims):
+        val_sum = 0.0
+        current_h = h[i]
+
+        for k, w in zip(k_steps, weights):
+            x_perturbed = x.copy()
+            x_perturbed[i] += k * current_h
+
+            val_sum += w * f(x_perturbed)
+
+        d2f[i] = val_sum / (divisor * current_h**2)
+
+    return d2f
 
 
 def double_forward_difference(f: Callable, x: float | np.ndarray, h: float = 1e-5) -> float | np.ndarray:

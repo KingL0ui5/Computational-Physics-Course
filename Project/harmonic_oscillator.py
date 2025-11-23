@@ -68,7 +68,7 @@ def localenergy(wf: wavefunction, x: np.ndarray) -> np.ndarray:
         np.ndarray: The local energy at the given position(s).
     """
 
-    d2psi = double_central_difference(wf.psi, x, h=1e-5, order=8)
+    d2psi = double_central_difference(wf.psi, [x], h=[1e-5], order=8)
 
     return -0.5 * (d2psi / wf.psi(x)) + 0.5 * x**2
 
