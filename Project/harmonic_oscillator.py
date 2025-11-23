@@ -68,14 +68,14 @@ def localenergy(wf: wavefunction, x: np.ndarray) -> np.ndarray:
         np.ndarray: The local energy at the given position(s).
     """
 
-    d2psi = double_central_difference(wf.psi, [x], h=[1e-5], order=8)
+    d2psi = double_central_difference(wf.psi, x, h=[1e-5], order=8)
 
     return -0.5 * (d2psi / wf.psi(x)) + 0.5 * x**2
 
 
 if __name__ == "__main__":
-    N_s = 1000000
-    psi = wavefunction(n=5)
+    N_s = 100000
+    psi = wavefunction(n=1)
     x = metropolis_hastings(f=psi.probability_density, f_prop='gaussian', x_0=[1.], xmin=[-10.], xmax=[10.], N=N_s, kwrgs={
         'sigma': 2.})
 

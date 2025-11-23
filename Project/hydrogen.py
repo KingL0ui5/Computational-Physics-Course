@@ -36,7 +36,7 @@ class hydrogen_wavefunction:
         Returns:
             np.ndarray | float: The value of the trial wavefunction at the given position(s)
         """
-        return self.f(x)
+        return self.f(x, y, z)
 
     def probability_density(self, x: np.ndarray | float, y: np.ndarray | float, z: np.ndarray | float) -> np.ndarray | float:
         """
@@ -48,7 +48,7 @@ class hydrogen_wavefunction:
         Returns:
             np.ndarray | float: The probability density at the given position(s)
         """
-        return np.abs(self.f(x))**2
+        return np.abs(self.f(x, y, z))**2
 
 
 def hydrogen_local_energy(wf: hydrogen_wavefunction, x: np.ndarray, y: np.ndarray, z: np.ndarray) -> np.ndarray:
@@ -71,7 +71,7 @@ def hydrogen_local_energy(wf: hydrogen_wavefunction, x: np.ndarray, y: np.ndarra
 if __name__ == "__main__":
     N_s = 1000000
     psi = hydrogen_wavefunction(theta=5)
-    samples = metropolis_hastings(f=psi.probability_density, f_prop='gaussian', x_0=[1.], xmin=[-10.], xmax=[10.], N=N_s, kwrgs={
+    samples = metropolis_hastings(f=psi.probability_density, f_prop='gaussian', x_0=[1., 1., 1.], xmin=[-10., -10., -10.], xmax=[10., 10., 10.], N=N_s, kwrgs={
         'sigma': 2.})
 
     #  discard burn in
