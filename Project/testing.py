@@ -137,8 +137,6 @@ def test_diffrentiators():
         d2f = analytical_derivative(n)
         h = np.linspace(1e-5, 1, 500)
 
-        # mean_error_d2bc = []
-        # mean_error_d2fw = []
         mean_error_d2c_h2 = []
         mean_error_d2c_h4 = []
         mean_error_d2c_h6 = []
@@ -148,63 +146,56 @@ def test_diffrentiators():
         for step in h:
             step = np.array([step], dtype=float)
             d2c_h2 = differentiators.double_central_difference(
-                f, x, h=step, order=2)
+                f, x, h=step, order=2).flatten()
             error_d2c_h2 = (np.abs(d2c_h2 - d2f(x)))
             mean_error_d2c_h2.append(rms(error_d2c_h2))
 
             d2c_h4 = differentiators.double_central_difference(
-                f, x, h=step, order=4)
+                f, x, h=step, order=4).flatten()
             error_d2c_h4 = (np.abs(d2c_h4 - d2f(x)))
             mean_error_d2c_h4.append(rms(error_d2c_h4))
 
             d2c_h6 = differentiators.double_central_difference(
-                f, x, h=step, order=6)
+                f, x, h=step, order=6).flatten()
             error_d2c_h6 = (np.abs(d2c_h6 - d2f(x)))
             mean_error_d2c_h6.append(rms(error_d2c_h6))
 
             d2c_h8 = differentiators.double_central_difference(
-                f, x, h=step, order=8)
+                f, x, h=step, order=8).flatten()
             error_d2c_h8 = (np.abs(d2c_h8 - d2f(x)))
             mean_error_d2c_h8.append(rms(error_d2c_h8))
 
             d2c_h10 = differentiators.double_central_difference(
-                f, x, h=step, order=10)
+                f, x, h=step, order=10).flatten()
             error_d2c_h10 = (np.abs(d2c_h10 - d2f(x)))
             mean_error_d2c_h10.append(rms(error_d2c_h10))
-
-            # d2fw = differentiators.double_forward_difference(f, x, h=step)
-            # error_d2fw = (np.abs(d2fw - d2f(x)))
-            # mean_error_d2fw.append(np.mean(error_d2fw))
-
-            # d2bc = differentiators.double_backward_difference(f, x, h=step)
-            # error_d2bc = (np.abs(d2bc - d2f(x)))
-            # mean_error_d2bc.append(np.mean(error_d2bc))
 
             # methods = [
             #     ("Double Central Difference O(h^2)", d2c_h2, error_d2c_h2),
             #     ("Double Central Difference O(h^4)", d2c_h4, error_d2c_h4),
-            #     ("Double Forward Difference O(h^2)", d2fw, error_d2fw),
-            #     ("Double Backward Difference O(h^2)", d2bc, error_d2bc),
+            #     ("Double Central Difference O(h^6)", d2c_h6, error_d2c_h6),
+            #     ("Double Central Difference O(h^8)", d2c_h8, error_d2c_h8),
+            #     ("Double Central Difference O(h^10)", d2c_h10, error_d2c_h10),
             # ]
 
             # for title, approx, err in methods:
             #     _, ax = plt.subplots(2, 1, figsize=(10, 6), sharex=True)
 
-            #     ax[0].plot(x, approx, label=f"{title}, h={step:.1e}")
+            #     ax[0].plot(x, approx, label=f"{title}, h={step[0]:.1e}")
             #     ax[0].plot(x, d2f(x), linestyle="dashed",
             #                label="Analytical Second Derivative")
             #     ax[0].set_title(title)
             #     ax[0].legend()
 
-            #     ax[1].plot(x, err, label=f"{title} Error, h={step:.1e}")
+            #     ax[1].plot(x, err, label=f"{title} Error, h={step[0]:.1e}")
             #     ax[1].set_yscale("log")
             #     ax[1].set_title(f"{title} Error (log scale)")
             #     ax[1].legend()
 
-            #     print(
-            #         f"Mean error for {title} with h={step:.1e}: {np.mean(err):.3e}")
+            # print(
+            #     f"Mean error for {title} with h={step:.1e}: {np.mean(err):.3e}")
 
-            # plt.show()
+            plt.show()
 
         print(f"\nQuantum Number n={n} Differentiator Error Analysis:")
 

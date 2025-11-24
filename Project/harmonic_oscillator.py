@@ -19,7 +19,7 @@ def eigenfunctions(n: int) -> tuple:
     """
 
     def f(x):
-        x = np.asarray(x[0])
+        x = np.asarray(x)
         H = 0
         if n == 0:
             H = 1.0
@@ -37,7 +37,7 @@ def eigenfunctions(n: int) -> tuple:
                 h_curr = h_next
 
             H = h_curr
-        return np.array([np.exp(-x**2 / 2) * H])
+        return np.array(np.exp(-x**2 / 2) * H)
 
     return f, n + 0.5
 
