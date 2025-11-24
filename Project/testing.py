@@ -146,6 +146,7 @@ def test_diffrentiators():
         mean_error_d2c_h10 = []
 
         for step in h:
+            step = np.array([step], dtype=float)
             step = [step]
             d2c_h2 = differentiators.double_central_difference(
                 f, x, h=step, order=2)
