@@ -48,13 +48,12 @@ def double_central_difference(f: Callable, x: np.ndarray, h: float = 1e-5, order
 
         for k, w in zip(k_steps, weights):
             x_perturbed = x.copy()
-            x_perturbed[i, :] += k * current_h
+            x_perturbed[:, i] += k * current_h
 
             res = f(x_perturbed)
 
-            val_sum += w * np.asarray(res).reshape(n_samples)
-
-        d2f[i, :] = val_sum / (divisor * current_h**2)
+            val_sum += w * np.asarray(res).flatten()
+        d2f[:, i] = val_sum / (divisor * current_h**2)
 
     return d2f
 
