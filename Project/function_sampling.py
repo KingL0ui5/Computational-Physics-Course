@@ -94,7 +94,7 @@ def metropolis_hastings(f: Callable, f_prop: str, x_0: np.ndarray, xmin: np.ndar
         plt.tight_layout()
         plt.show()
 
-    return np.asarray(samples).T
+    return np.asarray(samples)
 
 
 def MALA(f: Callable, f_prime, x_0: np.ndarray | list, xmin: np.ndarray | list, xmax: np.ndarray | list, timestep: float, N: int = 10000, detail: bool = False) -> np.ndarray:

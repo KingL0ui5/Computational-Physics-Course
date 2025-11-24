@@ -80,7 +80,7 @@ if __name__ == "__main__":
         'sigma': 2.})
 
     #  discard burn in
-    x = x[:, N_s//10:]
+    x = x[N_s//10:, :]
 
     localenergy_arr = localenergy(psi, x)
     exp_energy = np.mean(localenergy_arr)

@@ -297,6 +297,34 @@ def test_diffrentiators_3d():
     plt.show()
 
 
+def test_sampling_3d():
+    def psi_3d(coords):
+        r2 = np.sum(coords**2)
+        return np.exp(-0.5 * r2)
+
+    def grad_psi_3d(coords):
+        return -coords * psi_3d(coords)
+
+    def prob_density_3d(coords):
+        return psi_3d(coords)**2
+
+    N_samples = 40000
+    start_pos = np.array([1.0, 1.0, 1.0])
+
+    xmin = np.array([-6.0, -6.0, -6.0])
+    xmax = np.array([6.0, 6.0, 6.0])
+
+    samples_MH = metropolis_hastings(
+        f=prob_density_3d,
+        f_prop='gaussian',
+        x_0=start_pos,
+        xmin=xmin,
+        xmax=xmax,
+        N=N_samples,
+        kwrgs={'sigma': 0.5}
+    )
+
+
 if __name__ == "__main__":
     # test_samples()
     # test_diffrentiators()
