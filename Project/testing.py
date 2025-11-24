@@ -258,6 +258,46 @@ def test_diffrentiators():
     plt.show()
 
 
+def test_diffrentiators_3d():
+    def f(coords):
+        x, y, z = coords[:, 0], coords[:, 1], coords[:, 2]
+        return x**2 + y**2 + z**2
+
+    def analytic(coords):
+        return 2 * coords
+
+    t = np.linspace(-10, 10, 100)
+    x = np.column_stack([t, t, t])
+
+    d2x = differentiators.double_central_difference(
+        f, x, h=[0.001, 0.001, 0.001], order=8)
+    analytic_val = 2.0
+    rmse = np.sqrt(np.mean((d2x - analytic_val)**2))
+    print(f"RMS Error compared to analytic (2.0): {rmse:.5e}")
+
+    import matplotlib.pyplot as plt
+    fig = plt.figure(figsize=(10, 8))
+    ax = fig.add_subplot(111, projection='3d')
+    ax.plot(x[:, 0], x[:, 1], x[:, 2], color='blue',
+            alpha=0.5, label='Trajectory')
+
+    ax.scatter(x[:, 0], x[:, 1], x[:, 2], color='blue', s=20)
+
+    ax.quiver(x[:, 0], x[:, 1], x[:, 2],
+              d2x[:, 0], d2x[:, 1], d2x[:, 2],
+              length=2.0, normalize=True, color='red', label='Calculated $\\nabla^2$ Vector', alpha=0.8)
+
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+    ax.set_title(
+        '3D Visualisation of Numerical Second Derivative\nFunction: $f(x,y,z) = x^2 + y^2 + z^2$')
+    ax.legend()
+
+    plt.show()
+
+
 if __name__ == "__main__":
     # test_samples()
-    test_diffrentiators()
+    # test_diffrentiators()
+    test_diffrentiators_3d()
