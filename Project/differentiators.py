@@ -20,7 +20,7 @@ def double_central_difference(f: Callable, x: np.ndarray, h: float = 1e-5, order
         float | np.ndarray: The second derivative of f at position x
     """
     x = np.asarray(x, dtype=float)
-    n_samples, n_dims = x.shape
+    n_dims, n_samples = x.shape
     d2f = np.zeros_like(x)
 
     coeffs = {
@@ -41,17 +41,17 @@ def double_central_difference(f: Callable, x: np.ndarray, h: float = 1e-5, order
 
     for i in range(n_dims):
         val_sum = np.zeros(n_samples)
-        current_h = h[i] if isinstance(h, (list, np.ndarray)) else h
+        current_h = h[i]
 
         for k, w in zip(k_steps, weights):
             x_perturbed = x.copy()
-            x_perturbed[:, i] += k * current_h
+            x_perturbed[i, :] += k * current_h
 
             res = f(x_perturbed)
 
             val_sum += w * np.asarray(res).flatten()
 
-        d2f[:, i] = val_sum / (divisor * current_h**2)
+        d2f[i, :] = val_sum / (divisor * current_h**2)
 
     return d2f
 

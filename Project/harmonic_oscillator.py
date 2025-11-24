@@ -19,7 +19,7 @@ def eigenfunctions(n: int) -> tuple:
     """
 
     def f(x):
-        x = np.asarray(x)
+        x = np.asarray(x[0])
         H = 0
         if n == 0:
             H = 1.0
@@ -37,7 +37,7 @@ def eigenfunctions(n: int) -> tuple:
                 h_curr = h_next
 
             H = h_curr
-        return np.exp(-x**2 / 2) * H
+        return np.array([np.exp(-x**2 / 2) * H])
 
     return f, n + 0.5
 
@@ -66,7 +66,7 @@ def localenergy(wf: wavefunction, x: np.ndarray) -> np.ndarray:
     Returns:
         np.ndarray: The local energy at the given position(s).
     """
-
+    x = np.asarray(x)
     d2psi = double_central_difference(wf.psi, x, h=[1e-5], order=8)
     E = -0.5 * (d2psi / wf.psi(x)) + 0.5 * x**2
     mask = np.isfinite(E)
@@ -80,7 +80,7 @@ if __name__ == "__main__":
         'sigma': 2.})
 
     #  discard burn in
-    x = x[N_s//10:]
+    x = x[:, N_s//10:]
 
     localenergy_arr = localenergy(psi, x)
     exp_energy = np.mean(localenergy_arr)

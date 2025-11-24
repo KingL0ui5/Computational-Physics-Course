@@ -35,7 +35,7 @@ def metropolis_hastings(f: Callable, f_prop: str, x_0: np.ndarray, xmin: np.ndar
         N : int, The number of samples to generate.
         kwrgs : dict, Additional keyword arguments to pass to the proposal function.
 
-    Returns: np.ndarray, An array of sampled positions.
+    Returns: np.ndarray, An array of sampled positions in coordinate format.
     """
     if f_prop == 'gaussian':
         f_prop = ProposalFunction.gaussian
@@ -94,7 +94,7 @@ def metropolis_hastings(f: Callable, f_prop: str, x_0: np.ndarray, xmin: np.ndar
         plt.tight_layout()
         plt.show()
 
-    return np.asarray(samples)
+    return np.asarray(samples).T
 
 
 def MALA(f: Callable, f_prime, x_0: np.ndarray | list, xmin: np.ndarray | list, xmax: np.ndarray | list, timestep: float, N: int = 10000, detail: bool = False) -> np.ndarray:

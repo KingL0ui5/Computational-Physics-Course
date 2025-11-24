@@ -32,8 +32,8 @@ def analytical_derivative(n: int):
     eigenfunction, _ = eigenfunctions(n)
 
     def f(x):
-        x = np.asarray(x)
-        return (x**2 - (2*n + 1)) * eigenfunction(x)
+        x = np.asarray(x[0])
+        return [(x**2 - (2*n + 1)) * eigenfunction(x)]
     return f
 
 
@@ -49,23 +49,23 @@ def analytical_first_derivative(n: int):
 
     if n == 0:
         def f_ground(x):
-            x = np.asarray(x)
-            return -x * psi_n(x)
+            x = np.asarray(x[0])
+            return [-x * psi_n(x)]
         return f_ground
 
     psi_n_minus_1, _ = eigenfunctions(n - 1)
     sqrt_2n = np.sqrt(2 * n)
 
     def f(x):
-        x = np.asarray(x)
-        return sqrt_2n * psi_n_minus_1(x) - x * psi_n(x)
+        x = np.asarray(x[0])
+        return [sqrt_2n * psi_n_minus_1(x) - x * psi_n(x)]
     return f
 
 # %%
 
 
 def test_samples():
-    x = np.linspace(0, 10, 100)
+    x = [np.linspace(0, 10, 100)]
     N = 100000
 
     n = 3
@@ -133,9 +133,9 @@ def test_diffrentiators():
     for n in range(1, N):
         f, _ = eigenfunctions(n)
 
-        x = np.linspace(-10, 10, 200)
+        x = [np.linspace(-10, 10, 200)]
         d2f = analytical_derivative(n)
-        h = np.linspace(1e-5, 1, 500)
+        h = np.linspace(1e-5, 10, 500)
 
         # mean_error_d2bc = []
         # mean_error_d2fw = []
@@ -146,6 +146,7 @@ def test_diffrentiators():
         mean_error_d2c_h10 = []
 
         for step in h:
+            step = [step]
             d2c_h2 = differentiators.double_central_difference(
                 f, x, h=step, order=2)
             error_d2c_h2 = (np.abs(d2c_h2 - d2f(x)))
@@ -267,5 +268,5 @@ def test_diffrentiators():
 
 
 if __name__ == "__main__":
-    test_samples()
-    # test_diffrentiators()
+    # test_samples()
+    test_diffrentiators()
