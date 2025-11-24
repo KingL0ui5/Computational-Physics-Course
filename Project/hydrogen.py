@@ -26,49 +26,43 @@ class hydrogen_wavefunction:
     def __init__(self, theta: float):
         self.f = hydrogen_anstatz(theta)
 
-    def psi(self, x: np.ndarray | float, y: np.ndarray | float, z: np.ndarray | float) -> np.ndarray | float:
+    def psi(self, coords: np.array) -> np.ndarray | float:
         """
         The trial wavefunction
         Parameters:
-            x: np.ndarray | float, The x position(s)
-            y: np.ndarray | float, The y position(s)
-            z: np.ndarray | float, The z position(s)
+            coords: np.ndarray, The position(s) as an array of shape (N, 3)
         Returns:
             np.ndarray | float: The value of the trial wavefunction at the given position(s)
         """
+        x, y, z = coords[:, 0], coords[:, 1], coords[:, 2]
         return self.f(x, y, z)
 
-    def probability_density(self, x: np.ndarray | float, y: np.ndarray | float, z: np.ndarray | float) -> np.ndarray | float:
+    def probability_density(self, coords: np.ndarray) -> np.ndarray | float:
         """
         The probability density of the trial wavefunction
         Parameters:
-            x: np.ndarray | float, The x position(s)
-            y: np.ndarray | float, The y position(s)
-            z: np.ndarray | float, The z position(s)
+            coords: np.ndarray, The position(s) as an array of shape (N, 3)
         Returns:
             np.ndarray | float: The probability density at the given position(s)
         """
+        x, y, z = coords[0], coords[1], coords[2]
         return np.abs(self.f(x, y, z))**2
 
 
-def hydrogen_local_energy(wf: hydrogen_wavefunction, x: np.ndarray, y: np.ndarray, z: np.ndarray) -> np.ndarray:
+def hydrogen_local_energy(wf: hydrogen_wavefunction, coords: np.ndarray) -> np.ndarray:
     """
     The local energy of the hydrogen atom trial wavefunction
     Parameters:
         wf: hydrogen_wavefunction, The trial wavefunction
-        x: np.ndarray, The x position(s)
-        y: np.ndarray, The y position(s)
-        z: np.ndarray, The z position(s)
+        coords: np.ndarray, The position(s) as an array of shape (N, 3)
     Returns:
         np.ndarray: The local energy at the given position(s)
     """
-    r_vec = np.column_stack((x, y, z))
-
     d2psi = double_central_difference(
-        wf.psi, r_vec, h=[1e-5, 1e-5, 1e-5], order=8)
+        wf.psi, coords, h=[1e-5, 1e-5, 1e-5], order=8)
 
-    E = -0.5 * (np.sum(d2psi) / wf.psi(r_vec) -
-                1 / np.sqrt(x**2 + y**2 + z**2))
+    E = -0.5 * (np.sum(d2psi) / wf.psi(coords) -
+                1 / np.sqrt(np.sum(coords**2, axis=1)))
     mask = np.isfinite(E)
     return E[mask]
 
@@ -81,9 +75,9 @@ if __name__ == "__main__":
     print(samples.shape)
 
     #  discard burn in
-    x, y, z = samples[N_s//10:].T
+    samples = samples[N_s//10:]
 
-    localenergy_arr = hydrogen_local_energy(psi, x, y, z)
+    localenergy_arr = hydrogen_local_energy(psi, samples)
     exp_energy = np.mean(localenergy_arr)
     print(
-        f"Expected Energy: {exp_energy}, Theoretical Energy: {psi.energy()}, error = {np.abs(exp_energy - psi.energy())}")
+        f"Expected Energy: {exp_energy}")

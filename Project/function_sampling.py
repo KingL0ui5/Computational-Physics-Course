@@ -55,8 +55,8 @@ def metropolis_hastings(f: Callable, f_prop: str, x_0: np.ndarray, xmin: np.ndar
     for i in range(N - 1):
         proposal = np.array([f_prop(xi, kwrgs) for xi in current])
 
-        prob_current = f(*current)
-        prob_proposal = f(*proposal)
+        prob_current = f(current)
+        prob_proposal = f(proposal)
 
         if np.any(proposal < xmin) or np.any(proposal > xmax):
             samples[i] = (current.copy())
