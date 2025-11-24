@@ -17,7 +17,8 @@ def hydrogen_anstatz(theta: float) -> Callable:
     Returns:
         callable: The trial wavefunction
     """
-    def f(x: np.ndarray | float, y: np.ndarray | float, z: np.ndarray | float) -> np.ndarray | float:
+    def f(coords: np.ndarray) -> np.ndarray | float:
+        x, y, z = x[:, 0], x[:, 1], x[:, 2]
         return np.exp(-theta * np.sqrt(x**2 + y**2 + z**2))
     return f
 
@@ -34,7 +35,7 @@ class hydrogen_wavefunction:
         Returns:
             np.ndarray | float: The value of the trial wavefunction at the given position(s)
         """
-        x, y, z = coords[:, 0], coords[:, 1], coords[:, 2]
+        x, y, z = x[:, 0], x[:, 1], x[:, 2]
         return self.f(x, y, z)
 
     def probability_density(self, coords: np.ndarray) -> np.ndarray | float:
@@ -45,7 +46,7 @@ class hydrogen_wavefunction:
         Returns:
             np.ndarray | float: The probability density at the given position(s)
         """
-        x, y, z = coords[0], coords[1], coords[2]
+        x, y, z = x[:, 0], x[:, 1], x[:, 2]
         return np.abs(self.f(x, y, z))**2
 
 
