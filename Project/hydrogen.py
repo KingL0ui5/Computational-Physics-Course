@@ -18,6 +18,7 @@ def hydrogen_anstatz(theta: float) -> Callable:
         callable: The trial wavefunction
     """
     def f(coords: np.ndarray) -> np.ndarray | float:
+        coords = np.asarray(coords)
         x, y, z = coords[:, 0], coords[:, 1], coords[:, 2]
         return np.exp(-theta * np.sqrt(x**2 + y**2 + z**2))
     return f
@@ -76,7 +77,6 @@ if __name__ == "__main__":
     psi = hydrogen_wavefunction(theta=5)
     samples = metropolis_hastings(f=psi.probability_density, f_prop='gaussian', x_0=[1., 1., 1.], xmin=[-10., -10., -10.], xmax=[10., 10., 10.], N=N_s, kwrgs={
         'sigma': 2.}, detail=True)
-    print(samples.shape)
 
     #  discard burn in
     samples = samples[N_s//10:]
