@@ -301,13 +301,16 @@ def test_sampling_3d():
     import matplotlib.pyplot as plt
 
     def psi_3d(coords):
+        coords = np.asarray(coords)
         r2 = np.sum(coords**2)
         return np.exp(-0.5 * r2)
 
     def grad_psi_3d(coords):
+        coords = np.asarray(coords)
         return -coords * psi_3d(coords)
 
     def prob_density_3d(coords):
+        coords = np.asarray(coords)
         return psi_3d(coords)**2
 
     N_samples = 40000
@@ -418,7 +421,7 @@ def test_sampling_3d():
 
 
 if __name__ == "__main__":
-    # test_samples()
+    test_samples()
     # test_diffrentiators()
     # test_diffrentiators_3d()
-    test_sampling_3d()
+    # test_sampling_3d()
