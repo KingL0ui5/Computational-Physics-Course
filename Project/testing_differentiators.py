@@ -3,7 +3,7 @@ import Project.modules.differentiators as differentiators
 
 import numpy as np
 import seaborn as sns
-from Project.modules.helpers import rms, harmonic_oscillator
+from modules.helpers import rms, harmonic_oscillator
 sns.set_style('darkgrid')
 sns.set_context('paper')
 sns.set_palette("colorblind")

@@ -4,9 +4,9 @@ Louis Liu 19/11
 """
 
 import numpy as np
-from Project.modules.function_sampling import metropolis_hastings
-from Project.modules.differentiators import double_central_difference
-from Project.modules.helpers import harmonic_oscillator
+from modules.function_sampling import metropolis_hastings
+from modules.differentiators import double_central_difference
+from modules.helpers import harmonic_oscillator
 
 
 class wavefunction:

@@ -4,9 +4,10 @@ Louis Liu 22/11
 """
 
 import numpy as np
-from Project.modules.function_sampling import metropolis_hastings
-from Project.modules.differentiators import double_central_difference
-from Project.modules.helpers import hydrogen
+from modules.function_sampling import metropolis_hastings
+from modules.differentiators import double_central_difference
+from modules.helpers import hydrogen
+from modules.minimisers import gradient_desecent
 
 
 class hydrogen_wavefunction:
@@ -92,8 +93,7 @@ if __name__ == "__main__":
 
     #  find the expected energy of the state, given the local energies
     exp_energy = np.mean(localenergy_arr)
-    print(
-        f"Expected Energy: {exp_energy}")
+    print(f"Expected Energy: {exp_energy}")
 
-    d_theta = test_derivative(psi, exp_energy, N_s)
-    print(f"derivative: {d_theta}")
+    # d_theta = test_derivative(psi, exp_energy, N_s)
+    # print(f"test derivative: {d_theta}")

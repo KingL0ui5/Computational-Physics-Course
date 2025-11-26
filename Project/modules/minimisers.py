@@ -5,9 +5,10 @@ Louis Liu 22/11
 
 from typing import Callable
 import numpy as np
+import time
 
 
-def gradient_desecent(f: Callable, df: Callable, x_0: np.ndarray, stepsize: float, max_iter: int = 10000) -> tuple:
+def gradient_desecent(f: Callable, df: Callable, x_0: np.ndarray, stepsize: float, max_iter: int = 10000, stop_tol: float = 1e-6, detail: bool = False) -> tuple:
     """
     A method to find the minima of a function using the gradient descent method. 
     Parameters:
@@ -16,17 +17,31 @@ def gradient_desecent(f: Callable, df: Callable, x_0: np.ndarray, stepsize: floa
         x_0: np.ndarray, the starting point of the minimiser
         stepsize: float, the stepsize of the minimizer 
         max_iter: int, the number of iterations to run
+        stop_tol: float, default = 1e-6, the value of the gradient at which convergence is determined
+        detail: bool, default = False, show the time elapsed for the method to run
 
     Returns:
         tuple: the coordinates of minima, the minimum value of the function at this point
     """
     x = x_0
-    for _ in range(max_iter):
-        x = x - stepsize * df(x)
+    start = time.perf_counter()
+    for i in range(max_iter):
+        d = df(x)
+
+        if np.linalg.norm(d) < stop_tol:
+            break
+
+        x = x - stepsize * d
+    end = time.perf_counter()
+    time_elapsed = end - start
+
+    if detail:
+        print(f"iteration number GD: {i}")
+        print(f"time elapsed GD: {time_elapsed}")
     return x, f(x)
 
 
-def stochastic_GD(f: Callable, df: Callable, x_0: np.ndarray, stepsize: float, noise: float, max_iter: int = 10000) -> tuple:
+def stochastic_GD(f: Callable, df: Callable, x_0: np.ndarray, stepsize: float, noise: float, max_iter: int = 10000, stop_tol: float = None, detail: bool = False) -> tuple:
     """
     A method to find the minima of a function using the gradient descent method with added noise. 
     Parameters:
@@ -36,20 +51,32 @@ def stochastic_GD(f: Callable, df: Callable, x_0: np.ndarray, stepsize: float, n
         stepsize: float, the stepsize of the minimizer 
         noise: float, the level of noise to introduce to the derivative
         max_iter: int, the number of iterations to run
+        stop_tol: float, default = None, the value of the gradient at which convergence is determined. Defaulted to none to give it a chance to get off local minima
+        detail: bool, default = False, show the time elapsed for the method to run
 
     Returns:
         tuple: the coordinates of minima, the minimum value of the function at this point
     """
-    x = x_0
-    for _ in range(max_iter):
+    x = np.asarray(x_0, dtype=float)
+    start = time.perf_counter()
+    for i in range(max_iter):
         d = df(x)
+        if stop_tol:
+            if np.linalg.norm(d) < stop_tol:
+                break
         sigma = noise * stepsize
         d += np.random.normal(loc=0, scale=sigma, size=x.shape)
         x = x - stepsize * d
+    end = time.perf_counter()
+    time_elapsed = end - start
+
+    if detail:
+        print(f"iteration number SGD: {i}")
+        print(f"time elapsed SGD: {time_elapsed}")
     return x, f(x)
 
 
-def RMSProp_GD(f: Callable, df: Callable, x_0: np.ndarray, stepsize: float, forgetting: float, max_iter: int = 10000) -> tuple:
+def RMSProp_GD(f: Callable, df: Callable, x_0: np.ndarray, stepsize: float, forgetting: float, max_iter: int = 10000, stop_tol: float = 1e-6, detail: bool = False) -> tuple:
     """
     A method to find the minima of a function using the RMSProp adjusted gradient descent method. 
     Parameters:
@@ -59,20 +86,33 @@ def RMSProp_GD(f: Callable, df: Callable, x_0: np.ndarray, stepsize: float, forg
         stepsize: float, the stepsize of the minimiser 
         forgetting: float, the forgetting factor of the minimiser
         max_iter: int, the number of iterations to run
+        stop_tol: float, default = 1e-6, the value of the gradient at which convergence is determined
+        detail: bool, default = False, show the time elapsed for the method to run
 
     Returns:
         tuple: the coordinates of minima, the minimum value of the function at this point
     """
     x = x_0
     v = np.zeros_like(x)
-    for _ in range(max_iter):
+    start = time.perf_counter()
+    for i in range(max_iter):
         d = df(x)
+
+        if np.linalg.norm(d) < stop_tol:
+            break
+
         v = forgetting * v + (1 - forgetting)*(d**2)
         x = x - (stepsize / np.sqrt(v)) * d
+    end = time.perf_counter()
+    time_elapsed = end - start
+
+    if detail:
+        print(f"iteration number RMS GD: {i}")
+        print(f"time elapsed RMS GD: {time_elapsed}")
     return x, f(x)
 
 
-def quasi_newton(f: Callable, df: Callable, x_0: np.ndarray, stepsize: float, method: str = "DFP", max_iter: int = 10000) -> tuple:
+def quasi_newton(f: Callable, df: Callable, x_0: np.ndarray, stepsize: float, method: str = "DFP", max_iter: int = 10000, stop_tol: float = None, detail: bool = False) -> tuple:
     """
     A method to find the minima of a function using the quasi-newton method using a chosen method to approximate the hessian
     Parameters:
@@ -81,7 +121,9 @@ def quasi_newton(f: Callable, df: Callable, x_0: np.ndarray, stepsize: float, me
         x_0: np.ndarray, the starting point of the minimiser
         stepsize: float, the stepsize of the minimiser
         method: str, default = "DFP" the method to use for the hessian approximation - allowed values "DFP", "BFGS"
+        stop_tol: float, default = None, the value of the gradient at which convergence is determined. defaults to none to give a chance to get off local minima
         max_iter: int, default = 10000 the number of iterations to run
+        detail: bool, default = False, show the time elapsed for the method to run
 
     Returns:
         tuple: the coordinates of minima, the minimum value of the function at this point
@@ -116,12 +158,23 @@ def quasi_newton(f: Callable, df: Callable, x_0: np.ndarray, stepsize: float, me
     elif method == "BFGS":
         grad_update = BFGS
 
-    for _ in range(max_iter):
+    start = time.perf_counter()
+    for i in range(max_iter):
         grad = df(x)
+        if stop_tol:
+            if np.linalg.norm(grad) < stop_tol:
+                print("halting QN")
+                break
+
         x_new = x - stepsize * G @ grad
         grad_new = df(x_new)
 
         G = grad_update(x_new, grad_new, x, grad, G)
         x = x_new
+    end = time.perf_counter()
+    time_elapsed = end - start
 
+    if detail:
+        print(f"iteration number QN: {i}")
+        print(f"time elapsed QN: {time_elapsed}")
     return x, f(x)
