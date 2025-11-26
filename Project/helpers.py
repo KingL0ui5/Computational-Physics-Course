@@ -37,7 +37,10 @@ class hydrogen:
             callable: The trial wavefunction
         """
         def f(coords: np.ndarray) -> np.ndarray | float:
-            coords = np.asarray(coords)
+            coords = np.array(coords)
+            if len(coords.shape) == 1:
+                coords = np.array([coords])
+
             x, y, z = coords[:, 0], coords[:, 1], coords[:, 2]
             return np.exp(-theta * np.sqrt(x**2 + y**2 + z**2))
         return f
@@ -47,14 +50,16 @@ class hydrogen:
         Returns the analytic derivative of the expectation value of the hamiltonian in the Hydrogen atom system for minimiser functions
         Parameters:
             wf: hydrogen wavefunction object, the wavefunction to differentiate
-            local_E: float, the function to find the local energy of the wavefunction
+            local_E: Callable, the function to find the local energy of the wavefunction
             H_exp: float, the expected value of the hamiltonian at the parameter theta
             coords: np.ndarray, array of coordinates to evaluate the derivative
             N_s: int, the number of samples used to find the expectation value of the hamiltonian
         """
+        coords = np.asarray(coords)
+
         psi = wf.psi(coords)
         dtheta = -wf.theta() * psi
-        sum = (local_E(coords) - H_exp) * (dtheta / psi)
+        sum = (local_E(wf, coords) - H_exp) * (dtheta / psi)
         return 2/N_s * np.sum(sum)
 
 

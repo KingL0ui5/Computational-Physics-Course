@@ -12,7 +12,7 @@ from helpers import hydrogen
 class hydrogen_wavefunction:
     def __init__(self, theta: float):
         self.f = hydrogen.anstatz(theta)
-        self.theta = theta
+        self._theta = theta
 
     def psi(self, coords: np.array) -> np.ndarray | float:
         """
@@ -34,13 +34,13 @@ class hydrogen_wavefunction:
         """
         return np.abs(self.f(coords))**2
 
-    def theta(self):
+    def theta(self) -> float:
         """
         Returns the theta parameter of the wavefunction
         Returns:    
             float: the value of theta for the current wavefunction 
         """
-        return self.theta
+        return self._theta
 
 
 def hydrogen_local_energy(wf: hydrogen_wavefunction, coords: np.ndarray) -> np.ndarray:
@@ -52,7 +52,10 @@ def hydrogen_local_energy(wf: hydrogen_wavefunction, coords: np.ndarray) -> np.n
     Returns:
         np.ndarray: The local energy at the given position(s)
     """
-    coords = np.array(coords)
+    coords = np.asarray(coords)
+    if len(coords.shape) == 1:
+        coords = np.array([coords])
+
     x, y, z = coords[:, 0], coords[:, 1], coords[:, 2]
     d2psi = double_central_difference(
         wf.psi, coords, h=[1e-5, 1e-5, 1e-5], order=8)
@@ -69,11 +72,8 @@ def test_derivative(wf, H_exp, N_s):
     """
     #   evaluate at one particular coordinate
     coords = np.array([10, 10, 10])
-
-    #   find the local energy at this point
-
-    E_l = hydrogen_local_energy(wf, coords)
-    derivative = hydrogen.H_partial_theta(wf, E_l, H_exp, coords, N_s)
+    derivative = hydrogen.H_partial_theta(
+        wf, hydrogen_local_energy, H_exp, coords, N_s)
 
     return derivative
 
@@ -96,4 +96,4 @@ if __name__ == "__main__":
         f"Expected Energy: {exp_energy}")
 
     d_theta = test_derivative(psi, exp_energy, N_s)
-    print(d_theta)
+    print(f"derivative: {d_theta}")
