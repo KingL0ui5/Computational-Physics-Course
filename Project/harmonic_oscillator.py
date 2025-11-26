@@ -6,13 +6,13 @@ Louis Liu 19/11
 import numpy as np
 from function_sampling import metropolis_hastings
 from differentiators import double_central_difference
-from helpers import harmonic_eigenfunctions
+from helpers import harmonic_oscillator
 
 
 class wavefunction:
     def __init__(self, n: int):
         self.n = n
-        self.f, self.E = harmonic_eigenfunctions(n)
+        self.f, self.E = harmonic_oscillator.eigenfunctions(n)
 
     def psi(self, x):
         return self.f(x)

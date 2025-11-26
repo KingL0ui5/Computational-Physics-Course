@@ -3,7 +3,7 @@ import differentiators
 
 import numpy as np
 import seaborn as sns
-from helpers import rms, harmonic_second_derivative
+from helpers import rms, harmonic_oscillator
 sns.set_style('darkgrid')
 sns.set_context('paper')
 sns.set_palette("colorblind")
@@ -18,7 +18,7 @@ def test_diffrentiators():
         f, _ = eigenfunctions(n)
 
         x = np.linspace(-10, 10, 200)
-        d2f = harmonic_second_derivative(n)
+        d2f = harmonic_oscillator.second_derivative(n)
         h = np.linspace(1e-5, 1, 500)
 
         mean_error_d2c_h2 = []

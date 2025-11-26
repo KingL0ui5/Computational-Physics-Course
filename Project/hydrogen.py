@@ -6,13 +6,12 @@ Louis Liu 22/11
 import numpy as np
 from function_sampling import metropolis_hastings
 from differentiators import double_central_difference
-from typing import Callable
-from helpers import hydrogen_anstatz
+from helpers import hydrogen
 
 
 class hydrogen_wavefunction:
     def __init__(self, theta: float):
-        self.f = hydrogen_anstatz(theta)
+        self.f = hydrogen.anstatz(theta)
         self.theta = theta
 
     def psi(self, coords: np.array) -> np.ndarray | float:
@@ -53,6 +52,7 @@ def hydrogen_local_energy(wf: hydrogen_wavefunction, coords: np.ndarray) -> np.n
     Returns:
         np.ndarray: The local energy at the given position(s)
     """
+    coords = np.array(coords)
     x, y, z = coords[:, 0], coords[:, 1], coords[:, 2]
     d2psi = double_central_difference(
         wf.psi, coords, h=[1e-5, 1e-5, 1e-5], order=8)
@@ -61,6 +61,21 @@ def hydrogen_local_energy(wf: hydrogen_wavefunction, coords: np.ndarray) -> np.n
                 1 / np.sqrt(x**2 + y**2 + z**2))
     mask = np.isfinite(E)
     return E[mask]
+
+
+def test_derivative(wf, H_exp, N_s):
+    """
+    Test the partial theta derivative for the hamiltonian expecation; Made sense to include in the scope of this module     
+    """
+    #   evaluate at one particular coordinate
+    coords = np.array([10, 10, 10])
+
+    #   find the local energy at this point
+
+    E_l = hydrogen_local_energy(wf, coords)
+    derivative = hydrogen.H_partial_theta(wf, E_l, H_exp, coords, N_s)
+
+    return derivative
 
 
 if __name__ == "__main__":
@@ -72,7 +87,13 @@ if __name__ == "__main__":
     #  discard burn in
     samples = samples[N_s//10:]
 
+    #  compute the local energy across all the samples
     localenergy_arr = hydrogen_local_energy(psi, samples)
+
+    #  find the expected energy of the state, given the local energies
     exp_energy = np.mean(localenergy_arr)
     print(
         f"Expected Energy: {exp_energy}")
+
+    d_theta = test_derivative(psi, exp_energy, N_s)
+    print(d_theta)

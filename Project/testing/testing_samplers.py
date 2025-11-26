@@ -1,10 +1,7 @@
-from harmonic_oscillator import eigenfunctions
-from function_sampling import metropolis_hastings, MALA, stochasticMALA
-
-
 import numpy as np
 import seaborn as sns
-from helpers import harmonic_first_derivative, get_acf
+from function_sampling import metropolis_hastings, MALA, stochasticMALA
+from helpers import harmonic_oscillator, get_acf
 sns.set_style('darkgrid')
 sns.set_context('paper')
 sns.set_palette("colorblind")
@@ -15,8 +12,8 @@ def test_samples():
     N = 100000
 
     n = 3
-    f, _ = eigenfunctions(n)
-    df = harmonic_first_derivative(n)
+    f, _ = harmonic_oscillator.eigenfunctions(n)
+    df = harmonic_oscillator.harmonic_first_derivative(n)
     samples_MH = metropolis_hastings(lambda x: f(x)**2, 'gaussian', [0.], xmin=[0.], xmax=[10.], N=N, kwrgs={
         'sigma': 1.}, detail=True)
 
