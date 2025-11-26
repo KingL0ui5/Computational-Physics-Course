@@ -1,7 +1,8 @@
 """
-A helper module containing utiltiy functions 
+A helper module containing utiltiy functions
 """
 
+from hydrogen import hydrogen_wavefunction
 from typing import Callable
 import numpy as np
 
@@ -115,3 +116,19 @@ def get_acf(series, max_lag=200):
     corr = corr[len(corr)//2:]
     corr = corr / corr[0]
     return corr[:max_lag]
+
+
+def H_partial_theta(wf: hydrogen_wavefunction, local_E: Callable, H_exp: float, coords: np.ndarray, N_s: int):
+    """
+    Returns the analytic derivative of the expectation value of the hamiltonian in the Hydrogen atom system for minimiser functions
+    Parameters:
+        wf: hydrogen wavefunction object, the wavefunction to differentiate
+        local_E: float, the function to find the local energy of the wavefunction
+        H_exp: float, the expected value of the hamiltonian at the parameter theta
+        coords: np.ndarray, array of coordinates to evaluate the derivative
+        N_s: int, the number of samples used to find the expectation value of the hamiltonian
+    """
+    psi = wf.psi(coords)
+    dtheta = -wf.theta() * psi
+    sum = (local_E(coords) - H_exp) * (dtheta / psi)
+    return 2/N_s * np.sum(sum)

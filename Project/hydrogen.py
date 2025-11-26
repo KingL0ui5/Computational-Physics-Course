@@ -13,6 +13,7 @@ from helpers import hydrogen_anstatz
 class hydrogen_wavefunction:
     def __init__(self, theta: float):
         self.f = hydrogen_anstatz(theta)
+        self.theta = theta
 
     def psi(self, coords: np.array) -> np.ndarray | float:
         """
@@ -33,6 +34,14 @@ class hydrogen_wavefunction:
             np.ndarray | float: The probability density at the given position(s)
         """
         return np.abs(self.f(coords))**2
+
+    def theta(self):
+        """
+        Returns the theta parameter of the wavefunction
+        Returns:    
+            float: the value of theta for the current wavefunction 
+        """
+        return self.theta
 
 
 def hydrogen_local_energy(wf: hydrogen_wavefunction, coords: np.ndarray) -> np.ndarray:
