@@ -1,9 +1,9 @@
 from harmonic_oscillator import eigenfunctions
-import differentiators
+import Project.modules.differentiators as differentiators
 
 import numpy as np
 import seaborn as sns
-from helpers import rms, harmonic_oscillator
+from Project.modules.helpers import rms, harmonic_oscillator
 sns.set_style('darkgrid')
 sns.set_context('paper')
 sns.set_palette("colorblind")

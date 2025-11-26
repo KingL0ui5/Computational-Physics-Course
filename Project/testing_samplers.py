@@ -1,7 +1,7 @@
 import numpy as np
 import seaborn as sns
-from function_sampling import metropolis_hastings, MALA, stochasticMALA
-from helpers import harmonic_oscillator, get_acf
+from Project.modules.function_sampling import metropolis_hastings, MALA, stochasticMALA
+from Project.modules.helpers import harmonic_oscillator, get_acf
 sns.set_style('darkgrid')
 sns.set_context('paper')
 sns.set_palette("colorblind")

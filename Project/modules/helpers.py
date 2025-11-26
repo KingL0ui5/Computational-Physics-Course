@@ -56,10 +56,15 @@ class hydrogen:
             N_s: int, the number of samples used to find the expectation value of the hamiltonian
         """
         coords = np.asarray(coords)
+        if len(coords.shape) == 1:
+            coords = np.array([coords])
 
-        psi = wf.psi(coords)
-        dtheta = -wf.theta() * psi
-        sum = (local_E(wf, coords) - H_exp) * (dtheta / psi)
+        x, y, z = coords[:, 0], coords[:, 1], coords[:, 2]
+        r = np.sqrt(x**2 + y**2 + z**2)
+
+        psi_val = wf.psi(coords)
+        dtheta = - r * psi_val
+        sum = (local_E(wf, coords) - H_exp) * (dtheta / psi_val)
         return 2/N_s * np.sum(sum)
 
 

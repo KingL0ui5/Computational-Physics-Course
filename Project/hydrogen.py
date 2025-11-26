@@ -4,9 +4,9 @@ Louis Liu 22/11
 """
 
 import numpy as np
-from function_sampling import metropolis_hastings
-from differentiators import double_central_difference
-from helpers import hydrogen
+from Project.modules.function_sampling import metropolis_hastings
+from Project.modules.differentiators import double_central_difference
+from Project.modules.helpers import hydrogen
 
 
 class hydrogen_wavefunction:
