@@ -6,46 +6,13 @@ Louis Liu 19/11
 import numpy as np
 from function_sampling import metropolis_hastings
 from differentiators import double_central_difference
-
-
-@staticmethod
-def eigenfunctions(n: int) -> tuple:
-    """
-    Compute the nth eigenfunction of the 1D harmonic oscillator at position x.
-    Parameters:
-        n : int, The quantum number of the eigenfunction.
-    Returns:
-        tuple: The callable eigenfunction, and the dimensionless energy eigenvalue.
-    """
-
-    def f(x):
-        x = np.asarray(x)
-        H = 0
-        if n == 0:
-            H = 1.0
-
-        elif n == 1:
-            H = 2 * x
-
-        else:
-            h_prev = 1.0  # H_0
-            h_curr = 2 * x  # H_1
-
-            for i in range(1, n):
-                h_next = (2 * x * h_curr) - (2 * i * h_prev)
-                h_prev = h_curr
-                h_curr = h_next
-
-            H = h_curr
-        return np.array(np.exp(-x**2 / 2) * H)
-
-    return f, n + 0.5
+from helpers import harmonic_eigenfunctions
 
 
 class wavefunction:
     def __init__(self, n: int):
         self.n = n
-        self.f, self.E = eigenfunctions(n)
+        self.f, self.E = harmonic_eigenfunctions(n)
 
     def psi(self, x):
         return self.f(x)

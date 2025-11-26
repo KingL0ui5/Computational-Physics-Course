@@ -3,64 +3,10 @@ import differentiators
 
 import numpy as np
 import seaborn as sns
-from helpers import rms
+from helpers import rms, harmonic_second_derivative
 sns.set_style('darkgrid')
 sns.set_context('paper')
 sns.set_palette("colorblind")
-
-# %% analytical functions for testing
-
-
-def get_acf(series, max_lag=200):
-    series = series.flatten()
-    series = series - np.mean(series)
-    corr = np.correlate(series, series, mode='full')
-    corr = corr[len(corr)//2:]
-    corr = corr / corr[0]
-    return corr[:max_lag]
-
-
-def analytical_derivative(n: int):
-    """
-    Compute the analytical second derivative of the nth eigenfunction of the 1D harmonic oscillator at position x
-    Parameters:
-        n: int, The quantum number of the eigenfunction
-    Returns:
-        Callable: The second derivative function
-    """
-    eigenfunction, _ = eigenfunctions(n)
-
-    def f(x):
-        x = np.asarray(x)
-        return (x**2 - (2*n + 1)) * eigenfunction(x)
-    return f
-
-
-def analytical_first_derivative(n: int):
-    """
-    Compute the analytical first derivative of the nth eigenfunction of the 1D harmonic oscillator at position x
-    Parameters:
-        n: int, The quantum number of the eigenfunction
-    Returns:
-        Callable: The first derivative function
-    """
-    psi_n, _ = eigenfunctions(n)
-
-    if n == 0:
-        def f_ground(x):
-            x = np.asarray(x)
-            return -x * psi_n(x)
-        return f_ground
-
-    psi_n_minus_1, _ = eigenfunctions(n - 1)
-    sqrt_2n = np.sqrt(2 * n)
-
-    def f(x):
-        x = np.asarray(x)
-        return sqrt_2n * psi_n_minus_1(x) - x * psi_n(x)
-    return f
-
-# %%
 
 
 def test_diffrentiators():
@@ -72,7 +18,7 @@ def test_diffrentiators():
         f, _ = eigenfunctions(n)
 
         x = np.linspace(-10, 10, 200)
-        d2f = analytical_derivative(n)
+        d2f = harmonic_second_derivative(n)
         h = np.linspace(1e-5, 1, 500)
 
         mean_error_d2c_h2 = []

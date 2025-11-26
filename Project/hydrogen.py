@@ -7,25 +7,7 @@ import numpy as np
 from function_sampling import metropolis_hastings
 from differentiators import double_central_difference
 from typing import Callable
-
-
-def hydrogen_anstatz(theta: float) -> Callable:
-    """
-    The hydrogen atom trial wavefunction
-    Parameters:
-        theta: float, The variational parameter
-    Returns:
-        callable: The trial wavefunction
-    """
-    def f(coords: np.ndarray) -> np.ndarray | float:
-        coords = np.asarray(coords)
-        x, y, z = coords[:, 0], coords[:, 1], coords[:, 2]
-        return np.exp(-theta * np.sqrt(x**2 + y**2 + z**2))
-    return f
-
-
-def gradient():
-    pass
+from helpers import hydrogen_anstatz
 
 
 class hydrogen_wavefunction:
