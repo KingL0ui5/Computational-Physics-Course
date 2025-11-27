@@ -8,7 +8,49 @@ import numpy as np
 import time
 
 
-def gradient_desecent(f: Callable, df: Callable, x_0: np.ndarray, stepsize: float, max_iter: int = 10000, stop_tol: float = 1e-6, detail: bool = False) -> tuple:
+def hydrogen_adapted_gradient_desecent(wf: Callable, dH: Callable, x_0: np.ndarray, stepsize: float, max_iter: int = 10000, stop_tol: float = 1e-6, N_s: int = 1000, detail: bool = False) -> tuple:
+    """
+    A method to find the minima of a function using the gradient descent method.
+    Parameters:
+        E: callable, the function to minimise
+        dH: callable, the first derivative of the function, left for flexibility of method
+        x_0: np.ndarray, the starting point of the minimiser
+        stepsize: float, the stepsize of the minimizer
+        max_iter: int, the number of iterations to run
+        stop_tol: float, default = 1e-6, the value of the gradient at which convergence is determined
+        N_s: number of samples to take per wavefunction iteration
+        detail: bool, default = False, show the time elapsed for the method to run
+
+    Returns:
+        tuple: the coordinates of minima, the minimum value of the function at this point
+    """
+    from function_sampling import metropolis_hastings
+    x = x_0
+    start = time.perf_counter()
+
+    for i in range(max_iter):
+        psi = wf(x)  # hydrogen wavefunction given theta
+        samples = metropolis_hastings(f=psi.probability_density, f_prop='gaussian', x_0=[
+                                      1., 1., 1.], xmin=[-10., -10., -10.], xmax=[10., 10., 10.], N=N_s, kwrgs={'sigma': 2.})
+        samples = samples[N_s//10:]
+
+        d = dH(x, samples)
+
+        if np.linalg.norm(d) < stop_tol:
+            break
+
+        x = x - stepsize * d
+
+    end = time.perf_counter()
+    time_elapsed = end - start
+
+    if detail:
+        print(f"iteration number GD: {i}")
+        print(f"time elapsed GD: {time_elapsed}")
+    return x
+
+
+def gradient_desecent(f: Callable, df: Callable, x_0: np.ndarray, stepsize: float, max_iter: int = 10000, stop_tol: float = 1e-6, detail: bool = False, **kwargs) -> tuple:
     """
     A method to find the minima of a function using the gradient descent method. 
     Parameters:
@@ -26,7 +68,7 @@ def gradient_desecent(f: Callable, df: Callable, x_0: np.ndarray, stepsize: floa
     x = x_0
     start = time.perf_counter()
     for i in range(max_iter):
-        d = df(x)
+        d = df(x, **kwargs)
 
         if np.linalg.norm(d) < stop_tol:
             break
@@ -38,10 +80,10 @@ def gradient_desecent(f: Callable, df: Callable, x_0: np.ndarray, stepsize: floa
     if detail:
         print(f"iteration number GD: {i}")
         print(f"time elapsed GD: {time_elapsed}")
-    return x, f(x)
+    return x, f(x, **kwargs)
 
 
-def stochastic_GD(f: Callable, df: Callable, x_0: np.ndarray, stepsize: float, noise: float, max_iter: int = 10000, stop_tol: float = None, detail: bool = False) -> tuple:
+def stochastic_GD(f: Callable, df: Callable, x_0: np.ndarray, stepsize: float, noise: float, max_iter: int = 10000, stop_tol: float = None, detail: bool = False, **kwargs) -> tuple:
     """
     A method to find the minima of a function using the gradient descent method with added noise. 
     Parameters:
@@ -60,7 +102,7 @@ def stochastic_GD(f: Callable, df: Callable, x_0: np.ndarray, stepsize: float, n
     x = np.asarray(x_0, dtype=float)
     start = time.perf_counter()
     for i in range(max_iter):
-        d = df(x)
+        d = df(x, **kwargs)
         if stop_tol:
             if np.linalg.norm(d) < stop_tol:
                 break
@@ -73,10 +115,10 @@ def stochastic_GD(f: Callable, df: Callable, x_0: np.ndarray, stepsize: float, n
     if detail:
         print(f"iteration number SGD: {i}")
         print(f"time elapsed SGD: {time_elapsed}")
-    return x, f(x)
+    return x, f(x, **kwargs)
 
 
-def RMSProp_GD(f: Callable, df: Callable, x_0: np.ndarray, stepsize: float, forgetting: float, max_iter: int = 10000, stop_tol: float = 1e-6, detail: bool = False) -> tuple:
+def RMSProp_GD(f: Callable, df: Callable, x_0: np.ndarray, stepsize: float, forgetting: float, max_iter: int = 10000, stop_tol: float = 1e-6, detail: bool = False, **kwargs) -> tuple:
     """
     A method to find the minima of a function using the RMSProp adjusted gradient descent method. 
     Parameters:
@@ -96,7 +138,7 @@ def RMSProp_GD(f: Callable, df: Callable, x_0: np.ndarray, stepsize: float, forg
     v = np.zeros_like(x)
     start = time.perf_counter()
     for i in range(max_iter):
-        d = df(x)
+        d = df(x, **kwargs)
 
         if np.linalg.norm(d) < stop_tol:
             break
@@ -109,10 +151,10 @@ def RMSProp_GD(f: Callable, df: Callable, x_0: np.ndarray, stepsize: float, forg
     if detail:
         print(f"iteration number RMS GD: {i}")
         print(f"time elapsed RMS GD: {time_elapsed}")
-    return x, f(x)
+    return x, f(x, **kwargs)
 
 
-def quasi_newton(f: Callable, df: Callable, x_0: np.ndarray, stepsize: float, method: str = "DFP", max_iter: int = 10000, stop_tol: float = None, detail: bool = False) -> tuple:
+def quasi_newton(f: Callable, df: Callable, x_0: np.ndarray, stepsize: float, method: str = "DFP", max_iter: int = 10000, stop_tol: float = None, detail: bool = False, **kwargs) -> tuple:
     """
     A method to find the minima of a function using the quasi-newton method using a chosen method to approximate the hessian
     Parameters:
@@ -160,14 +202,14 @@ def quasi_newton(f: Callable, df: Callable, x_0: np.ndarray, stepsize: float, me
 
     start = time.perf_counter()
     for i in range(max_iter):
-        grad = df(x)
+        grad = df(x, **kwargs)
         if stop_tol:
             if np.linalg.norm(grad) < stop_tol:
                 print("halting QN")
                 break
 
         x_new = x - stepsize * G @ grad
-        grad_new = df(x_new)
+        grad_new = df(x_new, **kwargs)
 
         G = grad_update(x_new, grad_new, x, grad, G)
         x = x_new
@@ -177,4 +219,4 @@ def quasi_newton(f: Callable, df: Callable, x_0: np.ndarray, stepsize: float, me
     if detail:
         print(f"iteration number QN: {i}")
         print(f"time elapsed QN: {time_elapsed}")
-    return x, f(x)
+    return x, f(x, **kwargs)

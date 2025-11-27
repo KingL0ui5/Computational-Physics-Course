@@ -1,9 +1,7 @@
-from harmonic_oscillator import eigenfunctions
-import Project.modules.differentiators as differentiators
-
 import numpy as np
 import seaborn as sns
 from modules.helpers import rms, harmonic_oscillator
+import modules.differentiators as differentiators
 sns.set_style('darkgrid')
 sns.set_context('paper')
 sns.set_palette("colorblind")
@@ -15,10 +13,10 @@ def test_diffrentiators():
 
     N = 5  # quantum numbers to test
     for n in range(1, N):
-        f, _ = eigenfunctions(n)
+        f, _ = harmonic_oscillator.eigenfunctions(n)
 
         x = np.linspace(-10, 10, 200)
-        d2f = harmonic_oscillator.second_derivative(n)
+        d2f = harmonic_oscillator.second_derivative(n=n)
         h = np.linspace(1e-5, 1, 500)
 
         mean_error_d2c_h2 = []

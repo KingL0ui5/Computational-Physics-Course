@@ -45,12 +45,11 @@ class hydrogen:
             return np.exp(-theta * np.sqrt(x**2 + y**2 + z**2))
         return f
 
-    def H_partial_theta(wf, local_E: Callable, H_exp: float, coords: np.ndarray, N_s: int):
+    def H_partial_theta(wf, H_exp: float, coords: np.ndarray, N_s: int):
         """
         Returns the analytic derivative of the expectation value of the hamiltonian in the Hydrogen atom system for minimiser functions
         Parameters:
             wf: hydrogen wavefunction object, the wavefunction to differentiate
-            local_E: Callable, the function to find the local energy of the wavefunction
             H_exp: float, the expected value of the hamiltonian at the parameter theta
             coords: np.ndarray, array of coordinates to evaluate the derivative
             N_s: int, the number of samples used to find the expectation value of the hamiltonian
@@ -64,7 +63,7 @@ class hydrogen:
 
         psi_val = wf.psi(coords)
         dtheta = - r * psi_val
-        sum = (local_E(wf, coords) - H_exp) * (dtheta / psi_val)
+        sum = (wf.local_energy(wf, coords) - H_exp) * (dtheta / psi_val)
         return 2/N_s * np.sum(sum)
 
 
@@ -101,7 +100,8 @@ class harmonic_oscillator:
 
         return f, n + 0.5
 
-    def second_derivative(self, n: int):
+    @staticmethod
+    def second_derivative(n: int):
         """
         Compute the analytical second derivative of the nth eigenfunction of the 1D harmonic oscillator at position x
         Parameters:
@@ -109,14 +109,15 @@ class harmonic_oscillator:
         Returns:
             Callable: The second derivative function
         """
-        eigenfunction, _ = self.harmonic_eigenfunctions(n)
+        eigenfunction, _ = harmonic_oscillator.eigenfunctions(n)
 
         def f(x):
             x = np.asarray(x)
             return (x**2 - (2*n + 1)) * eigenfunction(x)
         return f
 
-    def first_derivative(self, n: int):
+    @staticmethod
+    def first_derivative(n: int):
         """
         Compute the analytical first derivative of the nth eigenfunction of the 1D harmonic oscillator at position x
         Parameters:
@@ -124,7 +125,7 @@ class harmonic_oscillator:
         Returns:
             Callable: The first derivative function
         """
-        psi_n, _ = self.harmonic_eigenfunctions(n)
+        psi_n, _ = harmonic_oscillator.eigenfunctions(n)
 
         if n == 0:
             def f_ground(x):
@@ -132,7 +133,7 @@ class harmonic_oscillator:
                 return -x * psi_n(x)
             return f_ground
 
-        psi_n_minus_1, _ = self.harmonic_eigenfunctions(n - 1)
+        psi_n_minus_1, _ = harmonic_oscillator.eigenfunctions(n - 1)
         sqrt_2n = np.sqrt(2 * n)
 
         def f(x):
