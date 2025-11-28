@@ -63,7 +63,7 @@ class hydrogen:
 
         psi_val = wf.psi(coords)
         dtheta = - r * psi_val
-        sum = (wf.local_energy(wf, coords) - H_exp) * (dtheta / psi_val)
+        sum = (wf.local_energy(coords) - H_exp) * (dtheta / psi_val)
         return 2/N_s * np.sum(sum)
 
 

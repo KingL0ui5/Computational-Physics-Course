@@ -61,10 +61,10 @@ class hydrogen_wavefunction:
         d2psi = double_central_difference(
             self.psi, coords, h=[1e-5, 1e-5, 1e-5], order=8)
 
-        E = -0.5 * (np.sum(d2psi) / self.psi(coords) -
-                    1 / np.sqrt(x**2 + y**2 + z**2))
-        mask = np.isfinite(E)
-        return E[mask]
+        eps = 1e-12
+        E = -0.5 * ((np.sum(d2psi) / self.psi(coords)) -
+                    1 / (np.sqrt(x**2 + y**2 + z**2) + eps))
+        return E
 
 
 def test_derivative(wf, H_exp, N_s):
@@ -83,30 +83,32 @@ def find_minima():
     #  gradient function in terms of theta
     def hydrogen_energy_grad(theta, samples):
         wf = hydrogen_wavefunction(float(theta))
-        return hydrogen.H_partial_theta(wf, wf.local_energy, samples)
+        H_exp = np.mean(wf.local_energy(samples))
+        return hydrogen.H_partial_theta(wf, H_exp, samples, len(samples))
 
-    theta0 = [1.0]
+    theta0 = 1.0
 
     theta_min, E_min = hydrogen_adapted_gradient_desecent(
-        hydrogen_wavefunction, hydrogen_energy_grad, x_0=theta0, stepsize=0.05)
+        hydrogen_wavefunction, hydrogen_energy_grad, x_0=theta0, stepsize=0.05, detail=True)
 
     print(f"minimum value of theta: {theta_min} \nminimum energy: {E_min}")
 
 
 if __name__ == "__main__":
-    N_s = 1000000
-    theta = 1
+    # N_s = 1000000
+    # theta = 1
 
-    psi = hydrogen_wavefunction(theta=theta)
-    samples = metropolis_hastings(f=psi.probability_density, f_prop='gaussian', x_0=[1., 1., 1.], xmin=[-10., -10., -10.], xmax=[10., 10., 10.], N=N_s, kwrgs={
-        'sigma': 2.}, detail=True)
+    # psi = hydrogen_wavefunction(theta=theta)
+    # samples = metropolis_hastings(f=psi.probability_density, f_prop='gaussian', x_0=[1., 1., 1.], xmin=[-10., -10., -10.], xmax=[10., 10., 10.], N=N_s, kwrgs={
+    #     'sigma': 2.}, detail=True)
 
-    #  discard burn in
-    samples = samples[N_s//10:]
+    # #  discard burn in
+    # samples = samples[N_s//10:]
 
-    #  compute the local energy across all the samples
-    localenergy_arr = psi.local_energy(samples)
+    # #  compute the local energy across all the samples
+    # localenergy_arr = psi.local_energy(samples)
 
-    #  find the expected energy of the state, given the local energies
-    exp_energy = np.mean(localenergy_arr)
-    print(f"Expected Energy: {exp_energy}")
+    # #  find the expected energy of the state, given the local energies
+    # exp_energy = np.mean(localenergy_arr)
+    # print(f"Expected Energy: {exp_energy}")
+    find_minima()

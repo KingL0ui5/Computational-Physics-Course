@@ -24,7 +24,7 @@ def hydrogen_adapted_gradient_desecent(wf: Callable, dH: Callable, x_0: np.ndarr
     Returns:
         tuple: the coordinates of minima, the minimum value of the function at this point
     """
-    from function_sampling import metropolis_hastings
+    from modules.function_sampling import metropolis_hastings
     x = x_0
     start = time.perf_counter()
 
@@ -47,7 +47,7 @@ def hydrogen_adapted_gradient_desecent(wf: Callable, dH: Callable, x_0: np.ndarr
     if detail:
         print(f"iteration number GD: {i}")
         print(f"time elapsed GD: {time_elapsed}")
-    return x
+    return x, np.mean(wf.local_energy(coords=samples))
 
 
 def gradient_desecent(f: Callable, df: Callable, x_0: np.ndarray, stepsize: float, max_iter: int = 10000, stop_tol: float = 1e-6, detail: bool = False, **kwargs) -> tuple:
