@@ -8,7 +8,6 @@ from modules.function_sampling import metropolis_hastings
 from modules.differentiators import double_central_difference
 from modules.helpers import hydrogen
 from modules.minimisers import hydrogen_adapted_gradient_desecent
-import time
 
 
 class hydrogen_wavefunction:
@@ -59,23 +58,24 @@ class hydrogen_wavefunction:
             coords = np.array([coords])
 
         x, y, z = coords[:, 0], coords[:, 1], coords[:, 2]
+        r = np.sqrt(x**2 + y**2 + z**2)
+
         d2psi = double_central_difference(
             self.psi, coords, h=[1e-5, 1e-5, 1e-5], order=8)
 
+        #  numerical instability ^^^
+
         eps = 1e-12
-        E = -0.5 * (np.sum(d2psi, axis=1) / self.psi(coords)) - \
-            1 / (np.sqrt(x**2 + y**2 + z**2) + eps)
+        E = -0.5 * (np.sum(d2psi) / self.psi(coords)) - \
+            1 / (r + eps)
         return E
 
 
-def test_derivative(wf, H_exp, N_s):
+def test_derivative(wf, samples):
     """
     Test the partial theta derivative for the hamiltonian expecation; Made sense to include in the scope of this module
     """
-    #   evaluate at one particular coordinate
-    coords = np.array([10, 10, 10])
-    derivative = hydrogen.H_partial_theta(
-        wf, H_exp, coords, N_s)
+    derivative = hydrogen.H_partial_theta(wf, samples, analytic=True)
 
     return derivative
 
@@ -84,35 +84,34 @@ def find_minima():
     #  gradient function in terms of theta
     def hydrogen_energy_grad(theta, samples):
         wf = hydrogen_wavefunction(float(theta))
-        H_exp = np.nanmean(wf.local_energy(samples))
-        return hydrogen.H_partial_theta(wf, H_exp, samples, len(samples))
+        return hydrogen.H_partial_theta(wf, samples)
 
     theta0 = 1
 
     theta_min, E_min = hydrogen_adapted_gradient_desecent(
-        hydrogen_wavefunction, hydrogen_energy_grad, x_0=theta0, stepsize=0.005, detail=True)
+        hydrogen_wavefunction, hydrogen_energy_grad, x_0=theta0, stepsize=0.005, detail=True, N_s=10000)
 
     print(f"minimum value of theta: {theta_min} \nminimum energy: {E_min}")
 
 
 if __name__ == "__main__":
-    # N_s = 1000000
-    # theta = 1
+    N_s = 100000
+    theta = 1
 
-    # psi = hydrogen_wavefunction(theta=theta)
-    # samples = metropolis_hastings(f=psi.probability_density, f_prop='gaussian', x_0=[1., 1., 1.], xmin=[-10., -10., -10.], xmax=[10., 10., 10.], N=N_s, kwrgs={
-    #     'sigma': 2.}, detail=True)
+    psi = hydrogen_wavefunction(theta=theta)
+    samples = metropolis_hastings(f=psi.probability_density, f_prop='gaussian', x_0=[1., 1., 1.], xmin=[-10., -10., -10.], xmax=[10., 10., 10.], N=N_s, kwrgs={
+        'sigma': 2.}, detail=True)
 
-    # #  discard burn in
-    # samples = samples[N_s//10:]
+    #  discard burn in
+    samples = samples[N_s//10:]
 
-    # #  compute the local energy across all the samples
-    # localenergy_arr = psi.local_energy(samples)
+    #  compute the local energy across all the samples
+    localenergy_arr = hydrogen.analytic_local_energy(psi, samples)
 
-    # #  find the expected energy of the state, given the local energies
-    # exp_energy = np.mean(localenergy_arr)
-    # print(f"Expected Energy: {exp_energy}")
+    #  find the expected energy of the state, given the local energies
+    exp_energy = np.mean(localenergy_arr)
+    print(f"Expected Energy: {exp_energy}")
 
-    # dH = test_derivative(psi, exp_energy, N_s)
-    # print(dH)
-    find_minima()
+    #  find the gradient at this point
+    dH = test_derivative(psi, samples)
+    print(f"Derivative dH/d_theta: {dH}")

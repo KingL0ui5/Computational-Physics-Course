@@ -62,8 +62,9 @@ def metropolis_hastings(f: Callable, f_prop: str, x_0: np.ndarray, xmin: np.ndar
             continue
 
         # greater than 1 means a higher probability
+        eps = 1e-30
         log_acceptance_ratio = np.log(
-            prob_proposal + 1e-30) - np.log(prob_current)
+            prob_proposal + eps) - np.log(prob_current + eps)
 
         if np.log(np.random.uniform(0, 1)) < min(1, log_acceptance_ratio):
             current = proposal

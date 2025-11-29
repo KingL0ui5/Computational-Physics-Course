@@ -42,29 +42,54 @@ class hydrogen:
                 coords = np.array([coords])
 
             x, y, z = coords[:, 0], coords[:, 1], coords[:, 2]
-            return np.exp(-theta * np.sqrt(x**2 + y**2 + z**2))
+            r = np.sqrt(x**2 + y**2 + z**2)
+            return np.exp(-theta * r)
         return f
 
-    def H_partial_theta(wf, H_exp: float, coords: np.ndarray, N_s: int):
+    def analytic_local_energy(wf, coords: np.ndarray) -> float:
         """
-        Returns the analytic derivative of the expectation value of the hamiltonian in the Hydrogen atom system for minimiser functions
+        Returns the analytically determined local energy
         Parameters:
-            wf: hydrogen wavefunction object, the wavefunction to differentiate
-            H_exp: float, the expected value of the hamiltonian at the parameter theta
-            coords: np.ndarray, array of coordinates to evaluate the derivative
-            N_s: int, the number of samples used to find the expectation value of the hamiltonian
+            wf: hydrogen_wavefunction object
+            coords: np.ndarray, coordinates for the local energy
+        Returns:
+            float: the local energy at the input coordinates
         """
         coords = np.asarray(coords)
+
         if len(coords.shape) == 1:
             coords = np.array([coords])
 
         x, y, z = coords[:, 0], coords[:, 1], coords[:, 2]
+        r = np.sqrt(x**2 + y**2 + z**2) + 1e-12
+
+        return -0.5 * (wf.theta()**2) + (wf.theta() - 1.0) / r
+
+    def H_partial_theta(wf, samples: np.ndarray, analytic: bool = False):
+        """
+        Returns the analytic derivative of the expectation value of the hamiltonian in the Hydrogen atom system for minimiser functions
+        Parameters:
+            wf: hydrogen wavefunction object, the wavefunction to differentiate
+            coords: np.ndarray, array of coordinates to evaluate the derivative
+            analytic: bool, whether to find the local energy analytically or not.
+        Returns: 
+            float, the derivative of the energy expecation value with respect to theta
+        """
+        samples = np.asarray(samples)
+
+        if analytic:
+            E_l = hydrogen.analytic_local_energy(wf, samples)
+        else:
+            E_l = wf.local_energy(samples)
+
+        if len(samples.shape) == 1:
+            samples = np.array([samples])
+
+        x, y, z = samples[:, 0], samples[:, 1], samples[:, 2]
         r = np.sqrt(x**2 + y**2 + z**2)
 
-        psi_val = wf.psi(coords)
-        dtheta = - r * psi_val
-        sum = (wf.local_energy(coords) - H_exp) * (dtheta / psi_val)
-        return 2/N_s * np.sum(sum)
+        sum = (E_l - np.mean(E_l)) * (-r)
+        return 2 * np.mean(sum)
 
 
 class harmonic_oscillator:

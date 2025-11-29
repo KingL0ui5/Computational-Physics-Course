@@ -29,13 +29,14 @@ def hydrogen_adapted_gradient_desecent(wf: Callable, dH: Callable, x_0: np.ndarr
     start = time.perf_counter()
 
     for i in range(max_iter):
-        psi = wf(x)  # hydrogen wavefunction given theta
+        psi = wf(theta=x)  # hydrogen wavefunction given theta
         samples = metropolis_hastings(f=psi.probability_density, f_prop='gaussian', x_0=[
                                       1., 1., 1.], xmin=[-10., -10., -10.], xmax=[10., 10., 10.], N=N_s, kwrgs={'sigma': 2.})
         samples = samples[N_s//10:]
 
         d = dH(x, samples)
 
+        #  test stopping condition
         if np.linalg.norm(d) < stop_tol:
             break
 
@@ -47,7 +48,8 @@ def hydrogen_adapted_gradient_desecent(wf: Callable, dH: Callable, x_0: np.ndarr
     if detail:
         print(f"iteration number GD: {i}")
         print(f"time elapsed GD: {time_elapsed}")
-    return x, np.mean(wf.local_energy(coords=samples))
+        print(f"final derivative: {d}")
+    return x, np.nanmean(psi.local_energy(coords=samples))
 
 
 def gradient_desecent(f: Callable, df: Callable, x_0: np.ndarray, stepsize: float, max_iter: int = 10000, stop_tol: float = 1e-6, detail: bool = False, **kwargs) -> tuple:
