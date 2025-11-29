@@ -15,6 +15,8 @@ class hydrogen_wavefunction:
     def __init__(self, theta: float):
         self.f = hydrogen.anstatz(theta)
         self._theta = theta
+        if theta <= 0:
+            print("!!! ERROR: Theta is negative or zero! This will crash. !!!")
 
     def psi(self, coords: np.array) -> np.ndarray | float:
         """
@@ -48,7 +50,6 @@ class hydrogen_wavefunction:
         """
         The local energy of the hydrogen atom trial wavefunction
         Parameters:
-            wf: hydrogen_wavefunction, The trial wavefunction
             coords: np.ndarray, The position(s) as an array of shape (N, 3)
         Returns:
             np.ndarray: The local energy at the given position(s)
@@ -62,8 +63,8 @@ class hydrogen_wavefunction:
             self.psi, coords, h=[1e-5, 1e-5, 1e-5], order=8)
 
         eps = 1e-12
-        E = -0.5 * ((np.sum(d2psi) / self.psi(coords)) -
-                    1 / (np.sqrt(x**2 + y**2 + z**2) + eps))
+        E = -0.5 * (np.sum(d2psi, axis=1) / self.psi(coords)) - \
+            1 / (np.sqrt(x**2 + y**2 + z**2) + eps)
         return E
 
 
@@ -83,13 +84,13 @@ def find_minima():
     #  gradient function in terms of theta
     def hydrogen_energy_grad(theta, samples):
         wf = hydrogen_wavefunction(float(theta))
-        H_exp = np.mean(wf.local_energy(samples))
+        H_exp = np.nanmean(wf.local_energy(samples))
         return hydrogen.H_partial_theta(wf, H_exp, samples, len(samples))
 
-    theta0 = 1.0
+    theta0 = 1
 
     theta_min, E_min = hydrogen_adapted_gradient_desecent(
-        hydrogen_wavefunction, hydrogen_energy_grad, x_0=theta0, stepsize=0.05, detail=True)
+        hydrogen_wavefunction, hydrogen_energy_grad, x_0=theta0, stepsize=0.005, detail=True)
 
     print(f"minimum value of theta: {theta_min} \nminimum energy: {E_min}")
 
@@ -111,4 +112,7 @@ if __name__ == "__main__":
     # #  find the expected energy of the state, given the local energies
     # exp_energy = np.mean(localenergy_arr)
     # print(f"Expected Energy: {exp_energy}")
+
+    # dH = test_derivative(psi, exp_energy, N_s)
+    # print(dH)
     find_minima()
