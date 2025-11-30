@@ -93,6 +93,8 @@ def metropolis_hastings(f: Callable, f_prop: str, x_0: np.ndarray, xmin: np.ndar
             f'Trace \nacceptance: {accepted_count/N:.2f}, time: {end1-start1:.4f}s')
         plt.tight_layout()
         plt.show()
+        elapsed = end1 - start1
+        print(f"Time elapsed: {elapsed} for number of samples: {N}")
 
     return np.asarray(samples)
 

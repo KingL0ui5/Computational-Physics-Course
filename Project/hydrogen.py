@@ -8,6 +8,7 @@ from modules.function_sampling import metropolis_hastings
 from modules.differentiators import double_central_difference
 from modules.helpers import hydrogen
 from modules.minimisers import hydrogen_adapted_gradient_desecent
+eps = 1e-15
 
 
 class hydrogen_wavefunction:
@@ -17,7 +18,7 @@ class hydrogen_wavefunction:
         if theta <= 0:
             print("!!! ERROR: Theta is negative or zero! This will crash. !!!")
 
-    def psi(self, coords: np.array) -> np.ndarray | float:
+    def psi(self, coords: np.ndarray) -> np.ndarray | float:
         """
         The trial wavefunction
         Parameters:
@@ -65,7 +66,6 @@ class hydrogen_wavefunction:
         #  the problem is here in the H_partial theta as well.
         #  numerical instability ^^^ consider ways to mask this instability or otherwise
 
-        eps = 1e-12
         E = -0.5 * (np.sum(d2psi) / self.psi(coords)) - \
             1 / (r + eps)
         return E

@@ -3,6 +3,12 @@ A helper module containing utiltiy functions
 """
 from typing import Callable
 import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+sns.set_style('darkgrid')
+sns.set_context('paper')
+sns.set_palette("colorblind")
 
 
 def rms(data):
@@ -25,6 +31,52 @@ def get_acf(series, max_lag=200):
     corr = corr[len(corr)//2:]
     corr = corr / corr[0]
     return corr[:max_lag]
+
+
+class hydrogen_molecule:
+    @staticmethod
+    def anstatz(theta, q1, q2):
+        """
+        Creates the trial wavefunction for the Hydrogen molecule (H2).
+
+        Parameters:
+            theta (np.ndarray): Variational parameters [theta1, theta2, theta3].
+            q1 (np.ndarray): Position of the first nucleus.
+            q2 (np.ndarray): Position of the second nucleus.
+
+        Returns:
+            callable: A function f(r1, r2) that evaluates the wavefunction, where
+                    r1 and r2 are arrays of electron coordinates.
+        """
+
+        def d(a, b): return np.sqrt(np.sum((a - b)**2, axis=1))
+        theta1, theta2, theta3 = theta
+
+        def f(r1, r2):
+            r1 = np.asarray(r1)
+            r2 = np.asarray(r2)
+            return (np.exp(-theta1 * (d(r1, q1) + d(r2, q2))) +
+                    np.exp(-theta1 * (d(r1, q2) + d(r2, q1)))) * \
+                np.exp(-theta2 / (1.0 + theta3 * d(r1, r2)))
+        return f
+
+    @staticmethod
+    def plot_samples(r1, r2):
+        x_coords = np.concatenate([r1[:, 0], r2[:, 0]])
+        y_coords = np.concatenate([r1[:, 1], r2[:, 1]])
+
+        plt.figure(figsize=(8, 6))
+        sns.kdeplot(x=x_coords, y=y_coords, fill=True,
+                    cmap="mako", thresh=0, levels=50, cbar=True)
+
+        plt.title('Electron Density Heatmap (x, y)')
+        plt.xlabel('x position')
+        plt.ylabel('y position')
+
+        plt.scatter([1, 0], [0, 1], color='red', marker='x', label='Nuclei')
+        plt.legend()
+
+        plt.show()
 
 
 class hydrogen:
