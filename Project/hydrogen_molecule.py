@@ -126,3 +126,7 @@ if __name__ == '__main__':
     print(f"local energy: {E_l}")
     exp_energy = np.mean(E_l)
     print(f"Expected Energy: {exp_energy}")
+
+    import matplotlib.pyplot as plt
+    hydrogen_molecule.plot_samples(r1, r2, xlim=[-3, 3], ylim=[-3, 3])
+    plt.show()

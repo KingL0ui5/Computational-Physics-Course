@@ -61,11 +61,24 @@ class hydrogen_molecule:
         return f
 
     @staticmethod
-    def plot_samples(r1, r2):
+    def plot_samples(r1: np.ndarray, r2: np.ndarray, xlim: np.ndarray | tuple, ylim: np.ndarray | tuple) -> None:
+        """
+        Visualizes the electron probability density as a 2D heatmap.
+
+        Parameters:
+            r1 : numpy.ndarray, Array of shape (N, D) containing samples for the first electron.
+            r2 : numpy.ndarray, Array of shape (N, D) containing samples for the second electron.
+            xlim : tuple or list, A sequence of length 2 defining the x-axis plotting limits (min, max).
+            ylim : tuple or list, A sequence of length 2 defining the y-axis plotting limits (min, max).
+
+        Returns:
+            None, Displays the figure using plt.show() and returns None.
+        """
+
         x_coords = np.concatenate([r1[:, 0], r2[:, 0]])
         y_coords = np.concatenate([r1[:, 1], r2[:, 1]])
 
-        plt.figure(figsize=(8, 6))
+        fig = plt.figure(figsize=(8, 6))
         sns.kdeplot(x=x_coords, y=y_coords, fill=True,
                     cmap="mako", thresh=0, levels=50, cbar=True)
 
@@ -73,10 +86,14 @@ class hydrogen_molecule:
         plt.xlabel('x position')
         plt.ylabel('y position')
 
-        plt.scatter([1, 0], [0, 1], color='red', marker='x', label='Nuclei')
+        plt.xlim(xlim[0], xlim[1])
+        plt.ylim(ylim[0], ylim[1])
+
+        plt.scatter([1, 0], [0, 1], color='red',
+                    marker='x', label='Nuclei')
         plt.legend()
 
-        plt.show()
+        return fig
 
 
 class hydrogen:
