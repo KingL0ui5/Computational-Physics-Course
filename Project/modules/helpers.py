@@ -28,6 +28,7 @@ def get_acf(series, max_lag=200):
 
 
 class hydrogen:
+    @staticmethod
     def anstatz(theta: float) -> Callable:
         """
         The hydrogen atom trial wavefunction
@@ -46,6 +47,7 @@ class hydrogen:
             return np.exp(-theta * r)
         return f
 
+    @staticmethod
     def analytic_local_energy(wf, coords: np.ndarray) -> float:
         """
         Returns the analytically determined local energy
@@ -65,7 +67,8 @@ class hydrogen:
 
         return -0.5 * (wf.theta()**2) + (wf.theta() - 1.0) / r
 
-    def H_partial_theta(wf, samples: np.ndarray, analytic: bool = False):
+    @staticmethod
+    def H_partial_theta(wf, samples: np.ndarray, analytic: bool = False) -> float:
         """
         Returns the analytic derivative of the expectation value of the hamiltonian in the Hydrogen atom system for minimiser functions
         Parameters:
@@ -93,6 +96,7 @@ class hydrogen:
 
 
 class harmonic_oscillator:
+    @staticmethod
     def eigenfunctions(n: int) -> tuple:
         """
         Compute the nth eigenfunction of the 1D harmonic oscillator at position x.
