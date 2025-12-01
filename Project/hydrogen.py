@@ -47,31 +47,31 @@ class hydrogen_wavefunction:
     def local_energy(self, coords: np.ndarray) -> np.ndarray:
         """
         The local energy of the hydrogen atom trial wavefunction
-        Parameters:
-            coords: np.ndarray, The position(s) as an array of shape (N, 3)
-        Returns:
-            np.ndarray: The local energy at the given position(s)
         """
-        stepsize = 1e-5
-        coords = np.asarray(coords, dtype=float)
-        if len(coords.shape) == 1:
-            coords = np.array([coords])
+        stepsize = 1.805e-02  # Kept larger stepsize for Order 8 stability
 
-        x, y, z = coords[:, 0], coords[:, 1], coords[:, 2]
-        r = np.sqrt(x**2 + y**2 + z**2)
+        coords = np.array(coords, dtype=float, copy=True)
+        if coords.ndim == 1:
+            coords = coords.reshape(1, -1)
 
-        #  mask rs that are too close to 0 - causing numerical problems
-        size_mask = np.abs(r) < stepsize
-        safe_signs = np.where(r != 0, np.sign(r), 1.0)
-        r[size_mask] = safe_signs[size_mask] * stepsize
+        r = np.linalg.norm(coords, axis=1)
+
+        safe_threshold = 4.5 * stepsize
+        size_mask = r < safe_threshold
+
+        if np.any(size_mask):
+            current_r_small = np.maximum(r[size_mask], 1e-20)
+            scale = safe_threshold / current_r_small
+            coords[size_mask] *= scale[:, np.newaxis]
+            r[size_mask] = safe_threshold
 
         d2psi = double_central_difference(
             self.psi, coords, h=[stepsize, stepsize, stepsize], order=8)
-        #  the problem is here in the H_partial theta as well.
-        #  numerical instability ^^^ consider ways to mask this instability or otherwise
 
-        E = -0.5 * (np.sum(d2psi) / self.psi(coords)) - \
-            1 / (r + eps)
+        laplacian = np.sum(d2psi, axis=1)
+
+        E = -0.5 * (laplacian / self.psi(coords)) - 1.0 / (r + eps)
+
         return E
 
 
@@ -88,12 +88,11 @@ def find_minima():
     #  gradient function in terms of theta
     def hydrogen_energy_grad(theta, samples):
         wf = hydrogen_wavefunction(theta)
-        return hydrogen.H_partial_theta(wf, samples, analytic=True)
+        return hydrogen.H_partial_theta(wf, samples, analytic=False)
 
-    theta0 = 1
-
-    theta_min, E_min = hydrogen_adapted_gradient_desecent(
-        hydrogen_wavefunction, hydrogen_energy_grad, x_0=theta0, stepsize=1e-5, detail=True, N_s=10000, max_iter=100)
+    theta0 = 0.8
+    theta_min, E_min = hydrogen_adapted_quasi_newton(
+        hydrogen_wavefunction, hydrogen_energy_grad, x_0=theta0, stepsize=1e-3, detail=True, N_s=10000, max_iter=300)
 
     print(f"minimum value of theta: {theta_min} \nminimum energy: {E_min}")
 
