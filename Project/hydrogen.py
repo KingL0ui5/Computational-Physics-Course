@@ -7,16 +7,14 @@ import numpy as np
 from modules.function_sampling import metropolis_hastings
 from modules.differentiators import double_central_difference
 from modules.helpers import hydrogen
-from modules.minimisers import hydrogen_adapted_gradient_desecent
+from modules.minimisers import hydrogen_adapted_gradient_desecent, hydrogen_adapted_stochastic_GD, hydrogen_adapted_quasi_newton
 eps = 1e-15
 
 
 class hydrogen_wavefunction:
     def __init__(self, theta: float):
-        self.f = hydrogen.anstatz(theta)
+        self._f = hydrogen.anstatz(theta)
         self._theta = theta
-        if theta <= 0:
-            print("!!! ERROR: Theta is negative or zero! This will crash. !!!")
 
     def psi(self, coords: np.ndarray) -> np.ndarray | float:
         """
@@ -26,7 +24,7 @@ class hydrogen_wavefunction:
         Returns:
             np.ndarray | float: The value of the trial wavefunction at the given position(s)
         """
-        return self.f(coords)
+        return self._f(coords)
 
     def probability_density(self, coords: np.ndarray) -> np.ndarray | float:
         """
@@ -36,7 +34,7 @@ class hydrogen_wavefunction:
         Returns:
             np.ndarray | float: The probability density at the given position(s)
         """
-        return np.abs(self.f(coords))**2
+        return np.abs(self._f(coords))**2
 
     def theta(self) -> float:
         """
@@ -54,15 +52,21 @@ class hydrogen_wavefunction:
         Returns:
             np.ndarray: The local energy at the given position(s)
         """
-        coords = np.asarray(coords)
+        stepsize = 1e-5
+        coords = np.asarray(coords, dtype=float)
         if len(coords.shape) == 1:
             coords = np.array([coords])
 
         x, y, z = coords[:, 0], coords[:, 1], coords[:, 2]
         r = np.sqrt(x**2 + y**2 + z**2)
 
+        #  mask rs that are too close to 0 - causing numerical problems
+        size_mask = np.abs(r) < stepsize
+        safe_signs = np.where(r != 0, np.sign(r), 1.0)
+        r[size_mask] = safe_signs[size_mask] * stepsize
+
         d2psi = double_central_difference(
-            self.psi, coords, h=[1e-5, 1e-5, 1e-5], order=8)
+            self.psi, coords, h=[stepsize, stepsize, stepsize], order=8)
         #  the problem is here in the H_partial theta as well.
         #  numerical instability ^^^ consider ways to mask this instability or otherwise
 
@@ -83,13 +87,13 @@ def test_derivative(wf, samples):
 def find_minima():
     #  gradient function in terms of theta
     def hydrogen_energy_grad(theta, samples):
-        wf = hydrogen_wavefunction(float(theta))
+        wf = hydrogen_wavefunction(theta)
         return hydrogen.H_partial_theta(wf, samples, analytic=True)
 
-    theta0 = 1.
+    theta0 = 1
 
     theta_min, E_min = hydrogen_adapted_gradient_desecent(
-        hydrogen_wavefunction, hydrogen_energy_grad, x_0=theta0, stepsize=1e-5, detail=True, N_s=10000)
+        hydrogen_wavefunction, hydrogen_energy_grad, x_0=theta0, stepsize=1e-5, detail=True, N_s=10000, max_iter=100)
 
     print(f"minimum value of theta: {theta_min} \nminimum energy: {E_min}")
 
