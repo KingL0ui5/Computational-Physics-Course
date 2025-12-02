@@ -89,6 +89,10 @@ def hydrogen_adapted_quasi_newton(wf: Callable, dH: Callable, x_0: np.ndarray, s
 
         G = grad_update(x_new, grad_new, x, grad, G)
         x = x_new
+
+        if detail:
+            print(f"iteration {i}, x={x}")
+
     end = time.perf_counter()
     time_elapsed = end - start
 
@@ -132,8 +136,11 @@ def hydrogen_adapted_gradient_desecent(wf: Callable, dH: Callable, x_0: np.ndarr
 
         x = x - stepsize * d
         #  restrict x to be positive
-        if x <= 0.001:
-            x = 0.001
+        if x <= 0.00001:
+            x = 0.00001
+
+        if detail:
+            print(f"iteration {i}, x={x}, d/dx={d}")
 
     end = time.perf_counter()
     time_elapsed = end - start
@@ -183,6 +190,9 @@ def hydrogen_adapted_stochastic_GD(wf: Callable, dH: Callable, x_0: np.ndarray, 
         sigma = noise * stepsize
         d += np.random.normal(loc=0, scale=sigma, size=x.shape)
         x = x - stepsize * d
+
+        if detail:
+            print(f"iteration {i}, x={x}")
 
     end = time.perf_counter()
     time_elapsed = end - start

@@ -1,5 +1,6 @@
 import numpy as np
 import seaborn as sns
+import matplotlib.pyplot as plt
 from modules.helpers import rms, harmonic_oscillator
 import modules.differentiators as differentiators
 sns.set_style('darkgrid')
@@ -142,42 +143,110 @@ def test_diffrentiators():
 
 def test_diffrentiators_3d():
     def f(coords):
+        if coords.ndim == 1:
+            x, y, z = coords[0], coords[1], coords[2]
+            return x**2 + 2*y**3 + z**2
         x, y, z = coords[:, 0], coords[:, 1], coords[:, 2]
-        return x**2 + y**2 + z**2
+        return x**2 + 2*y**3 + z**2
 
-    def analytic(coords):
-        return 2 * coords
+    def analytic_second_derivative(coords):
+        x, y, z = coords[:, 0], coords[:, 1], coords[:, 2]
+        N = len(x)
+        res = np.zeros((N, 3))
+        res[:, 0] = 2.0
+        res[:, 1] = 12.0 * y
+        res[:, 2] = 2.0
+        return res
 
-    t = np.linspace(-10, 10, 100)
+    t = np.linspace(-2, 2, 40)
     x = np.column_stack([t, t, t])
 
-    d2x = differentiators.double_central_difference(
+    d2x_num = differentiators.double_central_difference(
         f, x, h=[0.001, 0.001, 0.001], order=8)
-    analytic_val = 2.0
-    rmse = np.sqrt(np.mean((d2x - analytic_val)**2))
-    print(f"RMS Error compared to analytic (2.0): {rmse:.5e}")
 
-    import matplotlib.pyplot as plt
-    fig = plt.figure(figsize=(10, 8))
+    d2x_ana = analytic_second_derivative(x)
+
+    rmse = np.sqrt(np.mean((d2x_num - d2x_ana)**2))
+    print(f"RMS Error compared to Analytic: {rmse:.5e}")
+
+    fig = plt.figure(figsize=(12, 10))
     ax = fig.add_subplot(111, projection='3d')
-    ax.plot(x[:, 0], x[:, 1], x[:, 2], color='blue',
-            alpha=0.5, label='Trajectory')
 
-    ax.scatter(x[:, 0], x[:, 1], x[:, 2], color='blue', s=20)
+    ax.plot(x[:, 0], x[:, 1], x[:, 2], color='gray',
+            alpha=0.3, label='Trajectory')
+    ax.scatter(x[:, 0], x[:, 1], x[:, 2], color='blue', s=10)
 
     ax.quiver(x[:, 0], x[:, 1], x[:, 2],
-              d2x[:, 0], d2x[:, 1], d2x[:, 2],
-              length=2.0, normalize=True, color='red', label='Calculated $\\nabla^2$ Vector', alpha=0.8)
+              d2x_ana[:, 0], d2x_ana[:, 1], d2x_ana[:, 2],
+              length=0.4, normalize=True, color='green',
+              label='Analytic (Exact)', linewidth=2.5, arrow_length_ratio=0.3)
+
+    ax.quiver(x[:, 0], x[:, 1], x[:, 2],
+              d2x_num[:, 0], d2x_num[:, 1], d2x_num[:, 2],
+              length=0.4, normalize=True, color='red',
+              label='Numerical (Calculated)', linewidth=1.0, linestyle='dashed', arrow_length_ratio=0.3)
 
     ax.set_xlabel('X')
     ax.set_ylabel('Y')
     ax.set_zlabel('Z')
-    ax.set_title(
-        '3D Visualisation of Numerical Second Derivative\nFunction: $f(x,y,z) = x^2 + y^2 + z^2$')
+    ax.set_title('Calculated vs Analytic Second Derivatives')
     ax.legend()
     plt.show()
 
 
+def test_hydrogen_laplacian():
+    theta = 1.0
+
+    def psi_hydrogen(coords):
+        r = np.linalg.norm(coords, axis=1)
+        return np.exp(-theta * r)
+
+    r_vals = np.logspace(-4, 0.5, 200)
+    coords = np.zeros((len(r_vals), 3))
+    coords[:, 0] = r_vals
+
+    stepsize = 1.801e-2
+    eps = 1e-15
+
+    d2psi_num = differentiators.double_central_difference(
+        psi_hydrogen, coords, h=[stepsize, stepsize, stepsize], order=8)
+    laplacian_num = np.sum(d2psi_num, axis=1)
+
+    psi_vals = psi_hydrogen(coords)
+    kinetic_num = -0.5 * (laplacian_num / psi_vals)
+    potential = -1.0 / (r_vals + eps)
+
+    from hydrogen import hydrogen_wavefunction
+    filtered_psi = hydrogen_wavefunction(theta)
+    elocal_filtered = filtered_psi.local_energy(coords)
+
+    elocal_num = kinetic_num + potential
+
+    elocal_analytic = np.full_like(r_vals, -0.5)
+
+    plt.figure(figsize=(10, 6))
+
+    plt.plot(r_vals, elocal_num,
+             label=f"Numerical $E_L$ (Finite Diff, h={stepsize})", color='red')
+    plt.plot(r_vals, elocal_filtered,
+             label=f"Numerical $E_L$ filtered (Finite Diff, h={stepsize})", color='blue')
+    plt.plot(r_vals, elocal_analytic, label="Analytic $E_L$ (Exact = -0.5)",
+             color='green', linestyle='--', linewidth=2)
+
+    plt.xscale('log')
+    plt.xlabel('$r$')
+    plt.ylabel('Local Energy $E_L$')
+
+    plt.ylim(-2, 2)
+    plt.grid(True, which="both", ls="--", alpha=0.5)
+    plt.legend()
+
+    print(
+        f"Max numerical energy error near cusp: {np.max(np.abs(elocal_num - (-0.5))):.2f} Ha")
+    plt.show()
+
+
 if __name__ == "__main__":
-    test_diffrentiators()
+    # test_diffrentiators()
     # test_diffrentiators_3d()
+    test_hydrogen_laplacian()
