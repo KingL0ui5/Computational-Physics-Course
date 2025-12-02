@@ -10,7 +10,7 @@ eps = 1e-15
 
 
 class h2_wavefunction:
-    def __init__(self, theta: np.ndarray, q1: np.ndarray, q2: np.ndarray):
+    def __init__(self, thetas: np.ndarray, q1: np.ndarray, q2: np.ndarray):
         """
         Constructor
         Parameters:
@@ -22,8 +22,8 @@ class h2_wavefunction:
         if len(q1.shape) == 1:
             q1, q2 = np.asarray([q1]), np.asarray([q2])
 
-        self.f = hydrogen_molecule.anstatz(theta, q1, q2)
-        self._theta = theta
+        self.f = hydrogen_molecule.anstatz(thetas, q1, q2)
+        self._thetass = thetas
         self._q1 = q1
         self._q2 = q2
 
@@ -55,7 +55,7 @@ class h2_wavefunction:
         Returns:
             float: the value of theta for the current wavefunction
         """
-        return self._theta
+        return self._thetas
 
     def local_energy(self, r1: np.ndarray, r2: np.ndarray) -> np.ndarray:
         """
@@ -103,6 +103,43 @@ class h2_wavefunction:
             + (1/q1q2)
 
         return kinetic + potential
+
+    def E_exp(self, r1, r2):
+        """
+        The energy expecation value of the hydrogen molecule trial wavefunction at given coordinates
+        Parameters:
+            r1: np.ndarray, The position(s) of electron 1 as an array of shape (N, 3)
+            r2: np.ndarray, The position(s) of electron 2 as an array of shape (N, 3)
+        Returns:
+            np.ndarray: The local energy at the given position(s)
+        """
+        r1, r2 = np.asarray(r1), np.asarray(r2)
+        E_ls = self.local_energy(r1, r2)
+        return np.mean(E_ls)
+
+
+def dE(r):
+    thetas_0 = [1., 1., 1.]
+
+    def wrapper_1(theta_1, r):
+        thetas = [theta_1, thetas_0[1], thetas_0[2]]
+        wf = h2_wavefunction(thetas)
+        return wf.E_exp(**r)
+
+    def wrapper_2(theta_2, r):
+        thetas = [thetas_0[0], theta_2, thetas_0[2]]
+        wf = h2_wavefunction(thetas)
+        return wf.E_exp(**r)
+
+    def wrapper_3(theta_3, r):
+        thetas = [thetas_0[0], thetas_0[1], theta_3]
+        wf = h2_wavefunction(thetas)
+        return wf.E_exp(**r)
+
+    # replace with single central difference
+    dE_t1 = double_central_difference(wrapper_1)
+    dE_t2 = double_central_difference(wrapper_2)
+    dE_t3 = double_central_difference(wrapper_3)
 
 
 if __name__ == '__main__':

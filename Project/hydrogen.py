@@ -76,16 +76,7 @@ class hydrogen_wavefunction:
         return E
 
 
-def test_derivative(wf, samples):
-    """
-    Test the partial theta derivative for the hamiltonian expecation; Made sense to include in the scope of this module
-    """
-    derivative = hydrogen.H_partial_theta(wf, samples, analytic=True)
-
-    return derivative
-
-
-def find_minima():
+def ground_state():
     #  gradient function in terms of theta
     def hydrogen_energy_grad(theta, samples):
         wf = hydrogen_wavefunction(theta)
@@ -94,7 +85,6 @@ def find_minima():
     theta0 = 0.8
     theta_min, E_min = hydrogen_adapted_quasi_newton(
         hydrogen_wavefunction, hydrogen_energy_grad, x_0=theta0, stepsize=0.5, detail=True, N_s=100000, max_iter=1000, stop_tol=1e-5)
-    # works well with 1000000 samples, stepsize = 0.3
 
     print(f"minimum value of theta: {theta_min} \nminimum energy: {E_min}")
 
@@ -121,4 +111,4 @@ if __name__ == "__main__":
     # dH = test_derivative(psi, samples)
     # print(f"Derivative dH/d_theta: {dH}")
 
-    find_minima()
+    ground_state()
