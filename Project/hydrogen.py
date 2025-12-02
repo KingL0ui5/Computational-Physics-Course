@@ -92,8 +92,8 @@ def find_minima():
         return hydrogen.H_partial_theta(wf, samples, analytic=False)
 
     theta0 = 0.8
-    theta_min, E_min = hydrogen_adapted_gradient_desecent(
-        hydrogen_wavefunction, hydrogen_energy_grad, x_0=theta0, stepsize=0.9, detail=True, N_s=10000, max_iter=1000, stop_tol=1e-5)
+    theta_min, E_min = hydrogen_adapted_quasi_newton(
+        hydrogen_wavefunction, hydrogen_energy_grad, x_0=theta0, stepsize=0.5, detail=True, N_s=100000, max_iter=1000, stop_tol=1e-5)
     # works well with 1000000 samples, stepsize = 0.3
 
     print(f"minimum value of theta: {theta_min} \nminimum energy: {E_min}")
