@@ -63,8 +63,8 @@ def hydrogen_adapted_quasi_newton(wf: Callable, dH: Callable, x_0: np.ndarray, s
     start = time.perf_counter()
     for i in range(max_iter):
         psi = wf(theta=x[0])  # hydrogen wavefunction given theta
-        samples = metropolis_hastings(f=psi.probability_density, f_prop='gaussian', x_0=[
-                                      1., 1., 1.], xmin=[-10., -10., -10.], xmax=[10., 10., 10.], N=N_s, kwrgs={'sigma': 2.})
+        samples = samples = metropolis_hastings(f=psi.probability_density, f_prop='gaussian', x_0=[
+            1., 1., 1.], xmin=[-20., -20., -20.], xmax=[20., 20., 20.], N=N_s, kwrgs={'sigma': 0.8})
         samples = samples[N_s//10:]
 
         grad = np.asarray(dH(x, samples), dtype=float)
@@ -79,8 +79,8 @@ def hydrogen_adapted_quasi_newton(wf: Callable, dH: Callable, x_0: np.ndarray, s
 
         x_new = x - stepsize * G @ grad
         psi_new = wf(theta=x_new[0])  # hydrogen wavefunction given theta
-        samples_new = metropolis_hastings(f=psi_new.probability_density, f_prop='gaussian', x_0=[
-            1., 1., 1.], xmin=[-10., -10., -10.], xmax=[10., 10., 10.], N=N_s, kwrgs={'sigma': 2.})
+        samples_new = metropolis_hastings(f=psi.probability_density, f_prop='gaussian', x_0=[
+            1., 1., 1.], xmin=[-20., -20., -20.], xmax=[20., 20., 20.], N=N_s, kwrgs={'sigma': 0.8})
         samples_new = samples_new[N_s//10:]
 
         grad_new = np.asarray(dH(x_new, samples_new), dtype=float)
@@ -125,7 +125,7 @@ def hydrogen_adapted_gradient_desecent(wf: Callable, dH: Callable, x_0: np.ndarr
     for i in range(max_iter):
         psi = wf(theta=x)  # hydrogen wavefunction given theta
         samples = metropolis_hastings(f=psi.probability_density, f_prop='gaussian', x_0=[
-                                      1., 1., 1.], xmin=[-10., -10., -10.], xmax=[10., 10., 10.], N=N_s, kwrgs={'sigma': 2.})
+                                      1., 1., 1.], xmin=[-20., -20., -20.], xmax=[20., 20., 20.], N=N_s, kwrgs={'sigma': 0.8})
         samples = samples[N_s//10:]
 
         d = dH(x, samples)
@@ -177,7 +177,7 @@ def hydrogen_adapted_stochastic_GD(wf: Callable, dH: Callable, x_0: np.ndarray, 
     for i in range(max_iter):
         psi = wf(theta=x)  # hydrogen wavefunction given theta
         samples = metropolis_hastings(f=psi.probability_density, f_prop='gaussian', x_0=[
-                                      1., 1., 1.], xmin=[-10., -10., -10.], xmax=[10., 10., 10.], N=N_s, kwrgs={'sigma': 2.})
+                                      1., 1., 1.], xmin=[-20., -20., -20.], xmax=[20., 20., 20.], N=N_s, kwrgs={'sigma': 0.8})
         samples = samples[N_s//10:]
 
         d = dH(x, samples)

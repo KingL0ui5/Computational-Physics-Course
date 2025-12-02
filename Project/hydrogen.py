@@ -48,7 +48,7 @@ class hydrogen_wavefunction:
         """
         The local energy of the hydrogen atom trial wavefunction
         """
-        stepsize = 1.805e-02  # Kept larger stepsize for Order 8 stability
+        stepsize = 1.805e-02  # Optimal stepsize for order 8
 
         coords = np.array(coords, dtype=float, copy=True)
         if coords.ndim == 1:
@@ -56,6 +56,7 @@ class hydrogen_wavefunction:
 
         r = np.linalg.norm(coords, axis=1)
 
+        #  filtering
         safe_threshold = 10e-1
         size_mask = r < safe_threshold
 
@@ -92,7 +93,8 @@ def find_minima():
 
     theta0 = 0.8
     theta_min, E_min = hydrogen_adapted_gradient_desecent(
-        hydrogen_wavefunction, hydrogen_energy_grad, x_0=theta0, stepsize=0.5, detail=True, N_s=100000, max_iter=100)
+        hydrogen_wavefunction, hydrogen_energy_grad, x_0=theta0, stepsize=0.3, detail=True, N_s=100000, max_iter=100)
+    # works well with 1000000 samples, stepsize = 0.3
 
     print(f"minimum value of theta: {theta_min} \nminimum energy: {E_min}")
 

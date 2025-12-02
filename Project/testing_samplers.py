@@ -2,6 +2,7 @@ import numpy as np
 import seaborn as sns
 from modules.function_sampling import metropolis_hastings, MALA, stochasticMALA
 from modules.helpers import harmonic_oscillator, get_acf
+import matplotlib.pyplot as plt
 sns.set_style('darkgrid')
 sns.set_context('paper')
 sns.set_palette("colorblind")
@@ -31,7 +32,6 @@ def test_samples():
     acf_mala = get_acf(samples_MALA)
     acf_mh = get_acf(samples_MH)
 
-    import matplotlib.pyplot as plt
     fig, ax = plt.subplots(2, 1, figsize=(10, 6), sharex=True)
     ax[0].hist(samples_MH, bins=100, density=True,
                alpha=1, label='Sampled Distribution')
@@ -69,8 +69,6 @@ def test_samples():
 
 
 def test_sampling_3d():
-    import matplotlib.pyplot as plt
-
     def psi_3d(coords):
         coords = np.asarray(coords)
         r2 = np.sum(coords**2)
@@ -191,6 +189,75 @@ def test_sampling_3d():
     plt.show()
 
 
+def test_samples_hydrogen():
+    from hydrogen import hydrogen_wavefunction
+
+    theta = 1.0
+    wf = hydrogen_wavefunction(theta)
+
+    N_samples = 100000
+    start_pos = np.array([1.0, 1.0, 1.0])
+    xmin = np.array([-10., -10., -10.])
+    xmax = np.array([10., 10., 10.])
+
+    samples = metropolis_hastings(
+        f=wf.probability_density,
+        f_prop='gaussian',
+        x_0=start_pos,
+        xmin=xmin,
+        xmax=xmax,
+        N=N_samples,
+        kwrgs={'sigma': 0.8},
+        detail=True
+    )
+
+    samples = samples[N_samples//10:]
+
+    r_samples = np.linalg.norm(samples, axis=1)
+    plt.figure(figsize=(10, 6))
+
+    r_vals = np.linspace(0, 8, 200)
+
+    coords_line = np.zeros((len(r_vals), 3))
+    coords_line[:, 0] = r_vals
+    psi_vals = wf.psi(coords_line)
+    if hasattr(psi_vals, 'flatten'):
+        psi_vals = psi_vals.flatten()
+
+    p_vals_unnormalized = (r_vals**2) * (psi_vals**2)
+
+    integral = np.trapezoid(p_vals_unnormalized, r_vals)
+    p_vals_norm = p_vals_unnormalized / integral
+
+    plt.hist(r_samples, bins=100, density=True, alpha=0.5,
+             color='orange', label='Sampled Radial Hist')
+    plt.plot(r_vals, p_vals_norm, 'k--', linewidth=2,
+             label=r'Analytic $P(r) \propto r^2 |\psi_{ansatz}|^2$')
+
+    plt.title("Hydrogen Radial Distribution (1s Orbital)")
+    plt.xlabel("Radius $r$ (Bohr radii)")
+    plt.ylabel("Probability Density")
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+    plt.show()
+
+    slice_mask = np.abs(samples[:, 2]) < 0.2
+    slice_samples = samples[slice_mask]
+
+    plt.figure(figsize=(8, 8))
+    plt.scatter(slice_samples[:, 0], slice_samples[:,
+                1], s=2, alpha=0.3, color='blue')
+    plt.title(f"Cross-section at z=0 ({len(slice_samples)} points)")
+    plt.xlabel("x")
+    plt.ylabel("y")
+    plt.xlim(-5, 5)
+    plt.ylim(-5, 5)
+    plt.grid(True)
+    plt.gca().set_aspect('equal')
+    plt.show()
+
+
 if __name__ == "__main__":
-    test_samples()
+    # test_samples()
     # test_sampling_3d()
+    test_samples_hydrogen()

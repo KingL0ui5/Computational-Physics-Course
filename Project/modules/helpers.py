@@ -126,6 +126,7 @@ class hydrogen:
         Returns:
             float: the local energy at the input coordinates
         """
+        eps = 1e-15
         coords = np.asarray(coords)
 
         if len(coords.shape) == 1:
@@ -134,7 +135,7 @@ class hydrogen:
         x, y, z = coords[:, 0], coords[:, 1], coords[:, 2]
         r = np.sqrt(x**2 + y**2 + z**2) + 1e-12
 
-        return -0.5 * (wf.theta()**2) + (wf.theta() - 1.0) / r
+        return -0.5 * (wf.theta()**2) + (wf.theta() - 1.0) / (r + eps)
 
     @staticmethod
     def H_partial_theta(wf, samples: np.ndarray, analytic: bool = False) -> float:
