@@ -91,7 +91,7 @@ def hydrogen_adapted_quasi_newton(wf: Callable, dH: Callable, x_0: np.ndarray, s
         x = x_new
 
         if detail:
-            print(f"iteration {i}, x={x}")
+            print(f"iteration {i}, x={x}, G={G}, gradient={grad}")
 
     end = time.perf_counter()
     time_elapsed = end - start
@@ -102,7 +102,7 @@ def hydrogen_adapted_quasi_newton(wf: Callable, dH: Callable, x_0: np.ndarray, s
     return x, np.nanmean(psi.local_energy(coords=samples))
 
 
-def hydrogen_adapted_gradient_desecent(wf: Callable, dH: Callable, x_0: np.ndarray, stepsize: float, max_iter: int = 1000, stop_tol: float = 1e-6, N_s: int = 1000, detail: bool = False) -> tuple:
+def hydrogen_adapted_gradient_desecent(wf: Callable, dH: Callable, x_0: np.ndarray, stepsize: float, max_iter: int = 100, stop_tol: float = 1e-6, N_s: int = 10000, detail: bool = False) -> tuple:
     """
     A method to find the minima of a function using the gradient descent method.
     Parameters:
@@ -120,13 +120,17 @@ def hydrogen_adapted_gradient_desecent(wf: Callable, dH: Callable, x_0: np.ndarr
     """
     from modules.function_sampling import metropolis_hastings
     x = x_0
+    d = 1
     start = time.perf_counter()
 
     for i in range(max_iter):
         psi = wf(theta=x)  # hydrogen wavefunction given theta
+        Ns_i = N_s + 1000 * (i+1)
+        alpha_i = stepsize/(i+1)
+
         samples = metropolis_hastings(f=psi.probability_density, f_prop='gaussian', x_0=[
-                                      1., 1., 1.], xmin=[-20., -20., -20.], xmax=[20., 20., 20.], N=N_s, kwrgs={'sigma': 0.8})
-        samples = samples[N_s//10:]
+                                      1., 1., 1.], xmin=[-20., -20., -20.], xmax=[20., 20., 20.], N=Ns_i, kwrgs={'sigma': 0.8})
+        samples = samples[Ns_i//10:]
 
         d = dH(x, samples)
 
@@ -134,13 +138,14 @@ def hydrogen_adapted_gradient_desecent(wf: Callable, dH: Callable, x_0: np.ndarr
         if np.linalg.norm(d) < stop_tol:
             break
 
-        x = x - stepsize * d
+        x = x - alpha_i * d
         #  restrict x to be positive
         if x <= 0.00001:
             x = 0.00001
 
         if detail:
-            print(f"iteration {i}, x={x}, d/dx={d}")
+            print(
+                f"iteration {i}, x={x}, d/dx={d}, N_s={Ns_i}, alpha={alpha_i}")
 
     end = time.perf_counter()
     time_elapsed = end - start

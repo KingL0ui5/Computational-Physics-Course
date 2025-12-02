@@ -57,7 +57,7 @@ class hydrogen_wavefunction:
         r = np.linalg.norm(coords, axis=1)
 
         #  filtering
-        safe_threshold = 10e-1
+        safe_threshold = 1e-3
         size_mask = r < safe_threshold
 
         if np.any(size_mask):
@@ -93,7 +93,7 @@ def find_minima():
 
     theta0 = 0.8
     theta_min, E_min = hydrogen_adapted_gradient_desecent(
-        hydrogen_wavefunction, hydrogen_energy_grad, x_0=theta0, stepsize=0.3, detail=True, N_s=100000, max_iter=100)
+        hydrogen_wavefunction, hydrogen_energy_grad, x_0=theta0, stepsize=0.9, detail=True, N_s=10000, max_iter=1000, stop_tol=1e-5)
     # works well with 1000000 samples, stepsize = 0.3
 
     print(f"minimum value of theta: {theta_min} \nminimum energy: {E_min}")

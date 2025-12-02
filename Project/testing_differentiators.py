@@ -195,7 +195,7 @@ def test_diffrentiators_3d():
 
 
 def test_hydrogen_laplacian():
-    theta = 0.8
+    theta = 1.
 
     def psi_hydrogen(coords):
         r = np.linalg.norm(coords, axis=1)
@@ -205,7 +205,8 @@ def test_hydrogen_laplacian():
     coords = np.zeros((len(r_vals), 3))
     coords[:, 0] = r_vals
 
-    stepsize = 1.801e-2
+    stepsize = 1.805e-5
+    #  the theoretical error of the method scales with the stepsize! That allows you to set a smaller threshold
     eps = 1e-15
 
     d2psi_num = differentiators.double_central_difference(
@@ -247,6 +248,6 @@ def test_hydrogen_laplacian():
 
 
 if __name__ == "__main__":
-    # test_diffrentiators()
+    test_diffrentiators()
     # test_diffrentiators_3d()
     test_hydrogen_laplacian()
