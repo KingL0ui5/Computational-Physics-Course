@@ -195,7 +195,7 @@ def test_diffrentiators_3d():
 
 
 def test_hydrogen_laplacian():
-    theta = 1.0
+    theta = 0.8
 
     def psi_hydrogen(coords):
         r = np.linalg.norm(coords, axis=1)
@@ -242,7 +242,7 @@ def test_hydrogen_laplacian():
     plt.legend()
 
     print(
-        f"Max numerical energy error near cusp: {np.max(np.abs(elocal_num - (-0.5))):.2f} Ha")
+        f"Max numerical energy error near r=0: {np.max(np.abs(elocal_num - (-0.5))):.2f}")
     plt.show()
 
 
