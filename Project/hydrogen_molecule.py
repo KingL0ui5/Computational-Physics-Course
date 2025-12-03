@@ -4,9 +4,10 @@ Louis Liu 28/11
 """
 import numpy as np
 from modules.helpers import hydrogen_molecule
-from modules.differentiators import double_central_difference, central_difference
+from modules.differentiators import double_central_difference
 from modules.function_sampling import metropolis_hastings
 from modules.minimisers import H2_gradient_descent
+import matplotlib.pyplot as plt
 eps = 1e-15
 
 
@@ -67,6 +68,8 @@ class h2_wavefunction:
         Returns:
             np.ndarray: The local energy at the given position(s)
         """
+
+        # this method has the same issues as before. There is a probelm around r=0 due to numerical divergence when it should cancel
         r1, r2 = np.asarray(r1), np.asarray(r2)
         if len(r1.shape) == 1:
             r1, r2 = np.asarray([r1]), np.asarray([r2])
@@ -94,10 +97,10 @@ class h2_wavefunction:
 
         def d(a, b): return np.sqrt(np.sum((a - b)**2, axis=1))
 
-        r1q1, r1q2 = d(r1, q1) + eps, d(r1, q2) + eps
-        r2q1, r2q2 = d(r2, q1) + eps, d(r2, q2) + eps
-        r12 = d(r1, r2) + eps
-        q1q2 = d(q1, q2) + eps
+        r1q1, r1q2 = d(r1, q1), d(r1, q2)
+        r2q1, r2q2 = d(r2, q1), d(r2, q2)
+        r12 = d(r1, r2)
+        q1q2 = d(q1, q2)
 
         potential = - (1/r1q1 + 1/r1q2 + 1/r2q1 + 1/r2q2) \
             + (1/r12) \
@@ -116,41 +119,53 @@ class h2_wavefunction:
         """
         r1, r2 = np.asarray(r1), np.asarray(r2)
         E_ls = self.local_energy(r1, r2)
-        return np.mean(E_ls)
+        return np.mean(E_ls,)
 
 
-def dE(q1, q2):
-    thetas_0 = [1., 1., 1.]  #  for minimiser
-    theta_min, E_min = H2_gradient_descent(q1, q2, x_0=thetas_0,
-                                           stepsize=0.5, stop_tol=1e-3, N_s=10000, detail=True)
-    return theta_min, E_min
+def test_samples():
+    q1 = [0, 1, 0]
+    q2 = [0, -1, 0]
+    wf = h2_wavefunction(thetas=[1., 1., 1.], q1=q1, q2=q2)
+
+    def wrapper(coords):
+        coords = np.asarray(coords)
+        r1 = coords[:, 0:3]
+        r2 = coords[:, 3:6]
+
+        return wf.probability_density(r1, r2)
+
+    x_0 = np.zeros(6)
+    N_s = 1000000
+    samples = metropolis_hastings(
+        wrapper, f_prop='gaussian', x_0=x_0, xmax=10., xmin=-10., N=N_s, kwrgs={
+            'sigma': 0.7}, detail=True)
+
+    r1, r2 = samples[:, 0:3], samples[:, 3:6]
+    E_l = wf.local_energy(r1=r1, r2=r2)
+
+    plt.scatter(np.linalg.norm(r1, axis=1), E_l, marker='.', alpha=0.1)
+    plt.plot(0, q1[1], 'ro', label='Nucleus 1')
+    plt.plot(0, q2[1], 'bo', label='Nucleus 2')
+    plt.xlabel("Distance of electron 1 from origin")
+    plt.ylabel("Local Energy")
+    plt.title("Local energy vs distance of electron 1 from origin")
+    plt.show()
+
+    print(f"local energy: {E_l}")
+    exp_energy = np.mean(E_l)
+    print(f"Expected Energy: {exp_energy}")
+
+    hydrogen_molecule.plot_samples(
+        r1, r2, q1=q1, q2=q2, xlim=[-3, 3], ylim=[-3, 3], seaborn=True)
+    plt.show()
 
 
 if __name__ == '__main__':
-    wf = h2_wavefunction(thetas=[1., 1., 1.], q1=[1, 0, 0], q2=[0, 1, 0])
+    q1 = [0, 0, 1]
+    q2 = [0, 0, -1]
+    wf = h2_wavefunction(thetas=[1., 1., 1.], q1=q1, q2=q2)
 
-    # def wrapper(coords):
-    #     coords = np.asarray(coords)
-    #     r1 = coords[:, 0:3]
-    #     r2 = coords[:, 3:6]
-
-    #     return wf.probability_density(r1, r2)
-
-    # x_0 = np.zeros(6)
-    # N_s = 1000000
-    # samples = metropolis_hastings(
-    #     wrapper, f_prop='gaussian', x_0=x_0, xmax=10., xmin=-10., N=N_s, kwrgs={
-    #         'sigma': 2.}, detail=True)
-
-    # r1, r2 = samples[:, 0:3], samples[:, 3:6]
-    # E_l = wf.local_energy(r1=r1, r2=r2)
-    # print(f"local energy: {E_l}")
-    # exp_energy = np.mean(E_l)
-    # print(f"Expected Energy: {exp_energy}")
-
-    theta_min, E_min = dE(q1=[0, 0, 1], q2=[0, 0, -1])
+    thetas_0 = [1., 1., 1.]  #  for minimiser
+    theta_min, E_min = H2_gradient_descent(q1, q2, x_0=thetas_0,
+                                           stepsize=0.5, stop_tol=1e-3, N_s=10000, detail=True)
     print(f"minimum theta: {theta_min}, minimum energy: {E_min}")
-
-    # import matplotlib.pyplot as plt
-    # hydrogen_molecule.plot_samples(r1, r2, xlim=[-3, 3], ylim=[-3, 3])
-    # plt.show()

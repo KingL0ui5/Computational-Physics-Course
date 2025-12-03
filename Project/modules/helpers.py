@@ -61,13 +61,15 @@ class hydrogen_molecule:
         return f
 
     @staticmethod
-    def plot_samples(r1: np.ndarray, r2: np.ndarray, xlim: np.ndarray | tuple, ylim: np.ndarray | tuple, seaborn: bool = False) -> None:
+    def plot_samples(r1: np.ndarray, r2: np.ndarray, q1: np.ndarray, q2: np.ndarray, xlim: np.ndarray | tuple, ylim: np.ndarray | tuple, seaborn: bool = False) -> None:
         """
         Visualizes the electron probability density as a 2D heatmap.
 
         Parameters:
             r1 : numpy.ndarray, Array of shape (N, D) containing samples for the first electron.
             r2 : numpy.ndarray, Array of shape (N, D) containing samples for the second electron.
+            q1 : numpy.ndarray, Position of the first nucleus.
+            q2 : numpy.ndarray, Position of the second nucleus.
             xlim : tuple or list, A sequence of length 2 defining the x-axis plotting limits (min, max).
             ylim : tuple or list, A sequence of length 2 defining the y-axis plotting limits (min, max).
             seaborn: bool, whether to plot using seaborn or not
@@ -78,6 +80,9 @@ class hydrogen_molecule:
 
         x_coords = np.concatenate([r1[:, 0], r2[:, 0]])
         y_coords = np.concatenate([r1[:, 1], r2[:, 1]])
+
+        q1 = q1[:2]
+        q2 = q2[:2]
 
         fig = plt.figure(figsize=(8, 6))
         if seaborn:
@@ -91,8 +96,10 @@ class hydrogen_molecule:
             plt.xlim(xlim[0], xlim[1])
             plt.ylim(ylim[0], ylim[1])
 
-            plt.scatter([1, 0], [0, 1], color='red',
-                        marker='x', label='Nuclei')
+            plt.scatter(q1[0], q1[1], color='red',
+                        marker='x', label='Nucleus 1')
+            plt.scatter(q2[0], q2[1], color='blue',
+                        marker='x', label='Nucleus 2')
             plt.legend()
 
             return fig
@@ -106,7 +113,7 @@ class hydrogen_molecule:
             img = plt.imshow(heatmap_matrix.T,
                              origin='lower',
                              extent=[xlim[0], xlim[1], ylim[0], ylim[1]],
-                             cmap='viridis',
+                             cmap='plasma',
                              interpolation='bilinear',
                              aspect='auto')
 
@@ -118,8 +125,10 @@ class hydrogen_molecule:
             plt.xlim(xlim[0], xlim[1])
             plt.ylim(ylim[0], ylim[1])
 
-            plt.scatter([1, 0], [0, 1], color='red',
-                        marker='x', label='Nuclei')
+            plt.scatter(q1[0], q1[1], color='red',
+                        marker='x', label='Nucleus 1')
+            plt.scatter(q2[0], q2[1], color='blue',
+                        marker='x', label='Nucleus 2')
             plt.legend()
             return fig
 
