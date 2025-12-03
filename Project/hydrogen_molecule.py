@@ -4,9 +4,10 @@ Louis Liu 28/11
 """
 import numpy as np
 from modules.helpers import hydrogen_molecule
-from modules.differentiators import double_central_difference
+from modules.differentiators import double_central_difference, central_difference
 from modules.function_sampling import metropolis_hastings
-eps = 1e-15
+from modules.minimisers import quasi_newton
+e = 1e-15
 
 
 class h2_wavefunction:
@@ -93,10 +94,10 @@ class h2_wavefunction:
 
         def d(a, b): return np.sqrt(np.sum((a - b)**2, axis=1))
 
-        r1q1, r1q2 = d(r1, q1) + eps, d(r1, q2) + eps
-        r2q1, r2q2 = d(r2, q1) + eps, d(r2, q2) + eps
-        r12 = d(r1, r2) + eps
-        q1q2 = d(q1, q2) + eps
+        r1q1, r1q2 = d(r1, q1) + e, d(r1, q2) + e
+        r2q1, r2q2 = d(r2, q1) + e, d(r2, q2) + e
+        r12 = d(r1, r2) + e
+        q1q2 = d(q1, q2) + e
 
         potential = - (1/r1q1 + 1/r1q2 + 1/r2q1 + 1/r2q2) \
             + (1/r12) \
@@ -118,32 +119,66 @@ class h2_wavefunction:
         return np.mean(E_ls)
 
 
-def dE(r):
-    thetas_0 = [1., 1., 1.]
+def E(q1, q2):
 
-    def wrapper_1(theta_1, r):
-        thetas = [theta_1, thetas_0[1], thetas_0[2]]
-        wf = h2_wavefunction(thetas)
-        return wf.E_exp(**r)
+    def cost_function(current_thetas):
+        wf = h2_wavefunction(current_thetas, q1, q2)
 
-    def wrapper_2(theta_2, r):
-        thetas = [thetas_0[0], theta_2, thetas_0[2]]
-        wf = h2_wavefunction(thetas)
-        return wf.E_exp(**r)
+        def wrapper(coords):
+            coords = np.asarray(coords)
+            r1 = coords[:, 0:3]
+            r2 = coords[:, 3:6]
 
-    def wrapper_3(theta_3, r):
-        thetas = [thetas_0[0], thetas_0[1], theta_3]
-        wf = h2_wavefunction(thetas)
-        return wf.E_exp(**r)
+            return wf.probability_density(r1, r2)
 
-    # replace with single central difference
-    dE_t1 = double_central_difference(wrapper_1)
-    dE_t2 = double_central_difference(wrapper_2)
-    dE_t3 = double_central_difference(wrapper_3)
+        x_0 = np.zeros(6)
+        N_s = 100000
+
+        samples = metropolis_hastings(wrapper, f_prop='gaussian', x_0=x_0, xmax=10., xmin=-10., N=N_s, kwrgs={
+            'sigma': 2.}, detail=True)
+        r1, r2 = samples[:, 0:3], samples[:, 3:6]
+
+        return wf.E_exp(r1, r2)
+
+    def gradient_function(current_thetas):
+        stepsize = 1.08e-2
+        grads = []
+
+        for i in range(len(current_thetas)):
+
+            def partial_wrapper(val_i):
+                temp_thetas = current_thetas.copy()
+                temp_thetas[i] = val_i
+                return cost_function(temp_thetas)
+
+            deriv = central_difference(
+                partial_wrapper,
+                x=current_thetas[i],
+                h=stepsize,
+                order=8
+            )
+            grads.append(deriv)
+
+        return np.array(grads)
+
+    thetas_0 = np.array([1., 1., 1.])
+
+    theta_min, E_min = quasi_newton(
+        f=cost_function,
+        df=gradient_function,
+        x_0=thetas_0,
+        stepsize=0.5,
+        stop_tol=1e-3,
+        detail=True
+    )
+
+    return theta_min, E_min
 
 
 if __name__ == '__main__':
-    wf = h2_wavefunction(theta=[1., 1., 1.], q1=[1, 0, 0], q2=[0, 1, 0])
+    q1 = [1, 0, 0]
+    q2 = [0, 1, 0]
+    wf = h2_wavefunction(thetas=[1., 1., 1.], q1=q1, q2=q2)
 
     def wrapper(coords):
         coords = np.asarray(coords)
@@ -164,6 +199,10 @@ if __name__ == '__main__':
     exp_energy = np.mean(E_l)
     print(f"Expected Energy: {exp_energy}")
 
+    # theta_min, E_min = E(q1, q2)
+    # print(f"Minimum Thetas: {theta_min}, Minimum Energy {E_min}")
+
     import matplotlib.pyplot as plt
-    hydrogen_molecule.plot_samples(r1, r2, xlim=[-3, 3], ylim=[-3, 3])
+    hydrogen_molecule.plot_samples(
+        r1, r2, xlim=[-3, 3], ylim=[-3, 3], seaborn=True)
     plt.show()

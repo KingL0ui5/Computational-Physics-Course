@@ -197,8 +197,8 @@ def test_samples_hydrogen():
 
     N_samples = 100000
     start_pos = np.array([1.0, 1.0, 1.0])
-    xmin = np.array([-10., -10., -10.])
-    xmax = np.array([10., 10., 10.])
+    xmin = np.array([-20., -20., -20.])
+    xmax = np.array([20., 20., 20.])
 
     samples = metropolis_hastings(
         f=wf.probability_density,
@@ -216,7 +216,7 @@ def test_samples_hydrogen():
     r_samples = np.linalg.norm(samples, axis=1)
     plt.figure(figsize=(10, 6))
 
-    r_vals = np.linspace(0, 8, 200)
+    r_vals = np.linspace(0, 50, 200)
 
     coords_line = np.zeros((len(r_vals), 3))
     coords_line[:, 0] = r_vals

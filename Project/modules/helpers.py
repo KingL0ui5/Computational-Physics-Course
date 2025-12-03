@@ -61,7 +61,7 @@ class hydrogen_molecule:
         return f
 
     @staticmethod
-    def plot_samples(r1: np.ndarray, r2: np.ndarray, xlim: np.ndarray | tuple, ylim: np.ndarray | tuple) -> None:
+    def plot_samples(r1: np.ndarray, r2: np.ndarray, xlim: np.ndarray | tuple, ylim: np.ndarray | tuple, seaborn: bool = False) -> None:
         """
         Visualizes the electron probability density as a 2D heatmap.
 
@@ -70,6 +70,7 @@ class hydrogen_molecule:
             r2 : numpy.ndarray, Array of shape (N, D) containing samples for the second electron.
             xlim : tuple or list, A sequence of length 2 defining the x-axis plotting limits (min, max).
             ylim : tuple or list, A sequence of length 2 defining the y-axis plotting limits (min, max).
+            seaborn: bool, whether to plot using seaborn or not
 
         Returns:
             None, Displays the figure using plt.show() and returns None.
@@ -79,21 +80,22 @@ class hydrogen_molecule:
         y_coords = np.concatenate([r1[:, 1], r2[:, 1]])
 
         fig = plt.figure(figsize=(8, 6))
-        sns.kdeplot(x=x_coords, y=y_coords, fill=True,
-                    cmap="mako", thresh=0, levels=50, cbar=True)
+        if seaborn:
+            sns.kdeplot(x=x_coords, y=y_coords, fill=True,
+                        cmap="mako", thresh=0, levels=50, cbar=True)
 
-        plt.title('Electron Density Heatmap (x, y)')
-        plt.xlabel('x position')
-        plt.ylabel('y position')
+            plt.title('Electron Density Heatmap (x, y)')
+            plt.xlabel('x position')
+            plt.ylabel('y position')
 
-        plt.xlim(xlim[0], xlim[1])
-        plt.ylim(ylim[0], ylim[1])
+            plt.xlim(xlim[0], xlim[1])
+            plt.ylim(ylim[0], ylim[1])
 
-        plt.scatter([1, 0], [0, 1], color='red',
-                    marker='x', label='Nuclei')
-        plt.legend()
+            plt.scatter([1, 0], [0, 1], color='red',
+                        marker='x', label='Nuclei')
+            plt.legend()
 
-        return fig
+            return fig
 
 
 class hydrogen:
@@ -126,7 +128,7 @@ class hydrogen:
         Returns:
             float: the local energy at the input coordinates
         """
-        eps = 1e-15
+        e = 1e-15
         coords = np.asarray(coords)
 
         if len(coords.shape) == 1:
@@ -135,7 +137,7 @@ class hydrogen:
         x, y, z = coords[:, 0], coords[:, 1], coords[:, 2]
         r = np.sqrt(x**2 + y**2 + z**2) + 1e-12
 
-        return -0.5 * (wf.theta()**2) + (wf.theta() - 1.0) / (r + eps)
+        return -0.5 * (wf.theta()**2) + (wf.theta() - 1.0) / (r + e)
 
     @staticmethod
     def H_partial_theta(wf, samples: np.ndarray, analytic: bool = False) -> float:

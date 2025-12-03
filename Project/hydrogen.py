@@ -8,7 +8,7 @@ from modules.function_sampling import metropolis_hastings
 from modules.differentiators import double_central_difference
 from modules.helpers import hydrogen
 from modules.minimisers import hydrogen_adapted_gradient_desecent, hydrogen_adapted_stochastic_GD, hydrogen_adapted_quasi_newton
-eps = 1e-15
+e = 1e-15
 
 
 class hydrogen_wavefunction:
@@ -71,7 +71,7 @@ class hydrogen_wavefunction:
 
         laplacian = np.sum(d2psi, axis=1)
 
-        E = -0.5 * (laplacian / self.psi(coords)) - 1.0 / (r + eps)
+        E = -0.5 * (laplacian / self.psi(coords)) - 1.0 / (r + e)
 
         return E
 
@@ -83,8 +83,8 @@ def ground_state():
         return hydrogen.H_partial_theta(wf, samples, analytic=False)
 
     theta0 = 0.8
-    theta_min, E_min = hydrogen_adapted_quasi_newton(
-        hydrogen_wavefunction, hydrogen_energy_grad, x_0=theta0, stepsize=0.5, detail=True, N_s=100000, max_iter=1000, stop_tol=1e-5)
+    theta_min, E_min = hydrogen_adapted_gradient_desecent(
+        hydrogen_wavefunction, hydrogen_energy_grad, x_0=theta0, stepsize=0.5, detail=True, N_s=100000, max_iter=1000, stop_tol=None)
 
     print(f"minimum value of theta: {theta_min} \nminimum energy: {E_min}")
 

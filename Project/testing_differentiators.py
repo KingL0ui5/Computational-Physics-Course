@@ -382,5 +382,6 @@ def test_hydrogen_laplacian():
 
 if __name__ == "__main__":
     test_first_order_diffrentiators()
+    # test_second_order_diffrentiators()
     # test_diffrentiators_3d()
-    test_hydrogen_laplacian()
+    # test_hydrogen_laplacian()
