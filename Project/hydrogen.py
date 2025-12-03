@@ -57,18 +57,11 @@ class hydrogen_wavefunction:
         r = np.linalg.norm(coords, axis=1)
         psi_val = self.psi(coords)
 
-        # #  filtering
-        # epsilon = 1e-12
-        # mask = np.abs(psi_val) > epsilon
-        # psi_val[mask] = epsilon
-        # r[mask] = epsilon
-
         d2psi = double_central_difference(
             self.psi, coords, h=[stepsize, stepsize, stepsize], order=8)
 
         laplacian = np.sum(d2psi, axis=1)
 
-        # worth trying to link this more effectively with the H_partial_theta code to avoid the blow up around r=0
         E = -0.5 * (laplacian / psi_val) - 1.0 / (r + e)
 
         return E
@@ -82,7 +75,7 @@ def ground_state():
 
     theta0 = 0.8
     theta_min, E_min = hydrogen_adapted_gradient_desecent(
-        hydrogen_wavefunction, hydrogen_energy_grad, x_0=theta0, stepsize=0.5, detail=True, N_s=100000, max_iter=1000, stop_tol=None)
+        hydrogen_wavefunction, hydrogen_energy_grad, x_0=theta0, stepsize=0.5, detail=True, N_s=100000, max_iter=1000, stop_tol=1e-9)
 
     print(f"minimum value of theta: {theta_min} \nminimum energy: {E_min}")
 

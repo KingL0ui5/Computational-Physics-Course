@@ -166,6 +166,8 @@ def hydrogen_adapted_quasi_newton(wf: Callable, dH: Callable, x_0: np.ndarray, s
     start = time.perf_counter()
     for i in range(max_iter):
         psi = wf(theta=x[0])  # hydrogen wavefunction given theta
+
+        #  increase number of samples each iteration
         Ns_i = N_s * int(np.exp((i+1)*0.1))
 
         samples = samples = metropolis_hastings(f=psi.probability_density, f_prop='gaussian', x_0=[
@@ -231,6 +233,7 @@ def hydrogen_adapted_gradient_desecent(wf: Callable, dH: Callable, x_0: np.ndarr
     for i in range(max_iter):
         psi = wf(theta=x)  # hydrogen wavefunction given theta
         Ns_i = N_s * int(np.exp((i+1)*0.05))
+        alpha = stepsize / np.sqrt(i+1)
 
         samples = metropolis_hastings(f=psi.probability_density, f_prop='gaussian', x_0=[
                                       0., 0., 0.], xmin=[-4., -4., -4.], xmax=[4., 4., 4.], N=Ns_i, kwrgs={'sigma': 0.8})
@@ -243,14 +246,14 @@ def hydrogen_adapted_gradient_desecent(wf: Callable, dH: Callable, x_0: np.ndarr
             if np.linalg.norm(d) < stop_tol:
                 break
 
-        x = x - stepsize * d
-        #  restrict x to be positive
+        x = x - alpha * d
+        #  restrict x to be positive - theta should not be negative
         if x <= 1e-7:
             x = 1e-7
 
         if detail:
             print(
-                f"iteration {i}, x={x}, d/dx={d}, N_s={Ns_i}, alpha={stepsize}")
+                f"iteration {i}, x={x}, d/dx={d}, N_s={Ns_i}, alpha={alpha}")
 
     end = time.perf_counter()
     time_elapsed = end - start
