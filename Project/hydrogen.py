@@ -71,6 +71,7 @@ class hydrogen_wavefunction:
 
         laplacian = np.sum(d2psi, axis=1)
 
+        # worth trying to link this more effectively with the H_partial_theta code to avoid the blow up around r=0
         E = -0.5 * (laplacian / self.psi(coords)) - 1.0 / (r + e)
 
         return E

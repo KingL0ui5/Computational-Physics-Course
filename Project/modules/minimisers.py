@@ -320,7 +320,7 @@ def RMSProp_GD(f: Callable, df: Callable, x_0: np.ndarray, stepsize: float, forg
     return x, f(x, **kwargs)
 
 
-def quasi_newton(f: Callable, df: Callable, x_0: np.ndarray, stepsize: float, method: str = "DFP", max_iter: int = 1000, stop_tol: float = None, detail: bool = False, **kwargs) -> tuple:
+def quasi_newton(f: Callable, df: Callable, x_0: np.ndarray, stepsize: float, method: str = "DFP", max_iter: int = 1000, stop_tol: float = None, detail: bool = False) -> tuple:
     """
     A method to find the minima of a function using the quasi-newton method using a chosen method to approximate the hessian
     Parameters:
@@ -371,14 +371,14 @@ def quasi_newton(f: Callable, df: Callable, x_0: np.ndarray, stepsize: float, me
 
     start = time.perf_counter()
     for i in range(max_iter):
-        grad = df(x, **kwargs)
+        grad = df(x)
         if stop_tol:
             if np.linalg.norm(grad) < stop_tol:
                 print("halting QN")
                 break
 
         x_new = x - stepsize * G @ grad
-        grad_new = df(x_new, **kwargs)
+        grad_new = df(x_new)
 
         G = grad_update(x_new, grad_new, x, grad, G)
         x = x_new
@@ -392,4 +392,4 @@ def quasi_newton(f: Callable, df: Callable, x_0: np.ndarray, stepsize: float, me
     if detail:
         print(f"iteration number QN: {i}")
         print(f"time elapsed QN: {time_elapsed}")
-    return x, f(x, **kwargs)
+    return x, f(x)

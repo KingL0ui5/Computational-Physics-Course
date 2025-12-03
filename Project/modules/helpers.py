@@ -97,6 +97,32 @@ class hydrogen_molecule:
 
             return fig
 
+        else:
+            fig = plt.figure(figsize=(8, 6))
+            heatmap_matrix, _, _ = np.histogram2d(x_coords, y_coords,
+                                                  bins=100,
+                                                  range=[xlim, ylim],
+                                                  density=True)
+            img = plt.imshow(heatmap_matrix.T,
+                             origin='lower',
+                             extent=[xlim[0], xlim[1], ylim[0], ylim[1]],
+                             cmap='viridis',
+                             interpolation='bilinear',
+                             aspect='auto')
+
+            plt.colorbar(img, label='Density')
+
+            plt.title('Electron Density Heatmap')
+            plt.xlabel('x position')
+            plt.ylabel('y position')
+            plt.xlim(xlim[0], xlim[1])
+            plt.ylim(ylim[0], ylim[1])
+
+            plt.scatter([1, 0], [0, 1], color='red',
+                        marker='x', label='Nuclei')
+            plt.legend()
+            return fig
+
 
 class hydrogen:
     @staticmethod
