@@ -6,7 +6,7 @@ import numpy as np
 from modules.helpers import hydrogen_molecule
 from modules.differentiators import double_central_difference, central_difference
 from modules.function_sampling import metropolis_hastings
-from modules.minimisers import quasi_newton
+from modules.minimisers import H2_gradient_descent
 eps = 1e-15
 
 
@@ -24,7 +24,7 @@ class h2_wavefunction:
             q1, q2 = np.asarray([q1]), np.asarray([q2])
 
         self.f = hydrogen_molecule.anstatz(thetas, q1, q2)
-        self._thetass = thetas
+        self._thetas = thetas
         self._q1 = q1
         self._q2 = q2
 
@@ -120,36 +120,41 @@ class h2_wavefunction:
 
 
 def dE(q1, q2):
-    thetas_0 = [1., 1., 1.]
+    thetas_0 = [1., 1., 1.]  #  for minimiser
+    r_0 = np.ones(6, dtype=float)  #  for samples
+    stepsize = 1.08e-2  # for the differentiators
+    Ns = 100000
 
-    def wrapper_1(theta_1, r):
-        thetas = [theta_1, thetas_0[1], thetas_0[2]]
-        wf = h2_wavefunction(thetas, q1, q2)
-        return wf.E_exp(**r)
+    def wavefunction_wrapper(coords):
+        r1, r2 = coords[:, 0:3], coords[:, 3:6]
+        return wf.probability_density(r1, r2)
 
-    def wrapper_2(theta_2, r):
-        thetas = [thetas_0[0], theta_2, thetas_0[2]]
-        wf = h2_wavefunction(thetas, q1, q2)
-        return wf.E_exp(**r)
+    def df(thetas, coords):
+        r1, r2 = coords[:, 0:3], coords[:, 3:6]
 
-    def wrapper_3(theta_3, r):
-        thetas = [thetas_0[0], thetas_0[1], theta_3]
-        wf = h2_wavefunction(thetas, q1, q2)
-        return wf.E_exp(**r)
+        #  d/dt1
+        def wrapper_1(theta_1):
+            thetas = [theta_1, thetas_0[1], thetas_0[2]]
+            wf = h2_wavefunction(thetas, q1, q2)
+            return wf.E_exp(r1, r2)
 
-    thetas = np.linspace(-10., 10., 200)
-    stepsize = 1.08e-2
+        #  d/dt2
+        def wrapper_2(theta_2):
+            thetas = [thetas_0[0], theta_2, thetas_0[2]]
+            wf = h2_wavefunction(thetas, q1, q2)
+            return wf.E_exp(r1, r2)
 
-    # dE/dtheta
+        #  d/dt3
+        def wrapper_3(theta_3):
+            thetas = [thetas_0[0], thetas_0[1], theta_3]
+            wf = h2_wavefunction(thetas, q1, q2)
+            return wf.E_exp(r1, r2)
 
-    def minimisation_fn(theta_1, theta_2, theta_3, r):
-        return np.array([wrapper_1(theta_1, r), wrapper_2(theta_2, r), wrapper_3(theta_3, r)])
-
-    def df(thetas):
         dE_t1 = central_difference(wrapper_1, x=thetas[0], h=stepsize, order=8)
         dE_t2 = central_difference(wrapper_2, x=thetas[1], h=stepsize, order=8)
         dE_t3 = central_difference(wrapper_3, x=thetas[2], h=stepsize, order=8)
 
+        # returns the gradient of E
         return np.array([dE_t1, dE_t2, dE_t3])
 
     theta_min, E_min = quasi_newton(f=minimisation_fn, df=df, x_0=thetas_0,
