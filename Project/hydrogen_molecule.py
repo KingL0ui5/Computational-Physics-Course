@@ -3,10 +3,10 @@ Simulation of the hydrogen molecule using variational Monte Carlo methods.
 Louis Liu 28/11
 """
 import numpy as np
-from modules.helpers import hydrogen_molecule
+from modules.helpers import hydrogen_molecule_helpers as hlp
 from modules.differentiators import double_central_difference
 from modules.function_sampling import metropolis_hastings
-from modules.minimisers import H2_gradient_descent
+from modules.minimisers import hydrogen_molecule_minimisers as min
 import matplotlib.pyplot as plt
 eps = 1e-15
 
@@ -24,7 +24,7 @@ class h2_wavefunction:
         if len(q1.shape) == 1:
             q1, q2 = np.asarray([q1]), np.asarray([q2])
 
-        self.f = hydrogen_molecule.anstatz(thetas, q1, q2)
+        self.f = hlp.anstatz(thetas, q1, q2)
         self._thetas = thetas
         self._q1 = q1
         self._q2 = q2
@@ -155,7 +155,7 @@ def test_samples():
     exp_energy = np.mean(E_l)
     print(f"Expected Energy: {exp_energy}")
 
-    hydrogen_molecule.plot_samples(
+    hlp.plot_samples(
         r1, r2, q1=q1, q2=q2, xlim=[-3, 3], ylim=[-3, 3], seaborn=True)
     plt.show()
 
@@ -166,6 +166,6 @@ if __name__ == '__main__':
     wf = h2_wavefunction(thetas=[1., 1., 1.], q1=q1, q2=q2)
 
     thetas_0 = [1., 1., 1.]  #  for minimiser
-    theta_min, E_min = H2_gradient_descent(q1, q2, x_0=thetas_0,
-                                           stepsize=0.5, stop_tol=1e-3, N_s=10000, detail=True)
+    theta_min, E_min = min.gradient_descent(q1, q2, x_0=thetas_0,
+                                            stepsize=0.5, stop_tol=1e-3, N_s=10000, detail=True)
     print(f"minimum theta: {theta_min}, minimum energy: {E_min}")

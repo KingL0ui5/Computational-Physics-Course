@@ -6,14 +6,14 @@ Louis Liu 22/11
 import numpy as np
 from modules.function_sampling import metropolis_hastings
 from modules.differentiators import double_central_difference
-from modules.helpers import hydrogen
-from modules.minimisers import hydrogen_adapted_gradient_desecent, hydrogen_adapted_stochastic_GD, hydrogen_adapted_quasi_newton
+from modules.helpers import hydrogen_atom_helpers as hlp
+from modules.minimisers import hydrogen_atom_minimisers as min
 e = 1e-15
 
 
 class hydrogen_wavefunction:
     def __init__(self, theta: float):
-        self._f = hydrogen.anstatz(theta)
+        self._f = hlp.anstatz(theta)
         self._theta = theta
 
     def psi(self, coords: np.ndarray) -> np.ndarray | float:
@@ -71,10 +71,10 @@ def ground_state():
     #  gradient function in terms of theta
     def hydrogen_energy_grad(theta, samples):
         wf = hydrogen_wavefunction(theta)
-        return hydrogen.H_partial_theta(wf, samples, analytic=False)
+        return hlp.H_partial_theta(wf, samples, analytic=False)
 
     theta0 = 0.8
-    theta_min, E_min = hydrogen_adapted_gradient_desecent(
+    theta_min, E_min = min.gradient_descent(
         hydrogen_wavefunction, hydrogen_energy_grad, x_0=theta0, stepsize=0.5, detail=True, N_s=100000, max_iter=1000, stop_tol=1e-9)
 
     print(f"minimum value of theta: {theta_min} \nminimum energy: {E_min}")

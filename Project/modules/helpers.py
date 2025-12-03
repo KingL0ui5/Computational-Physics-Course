@@ -33,7 +33,7 @@ def get_acf(series, max_lag=200):
     return corr[:max_lag]
 
 
-class hydrogen_molecule:
+class hydrogen_molecule_helpers:
     @staticmethod
     def anstatz(theta, q1, q2):
         """
@@ -133,7 +133,7 @@ class hydrogen_molecule:
             return fig
 
 
-class hydrogen:
+class hydrogen_atom_helpers:
     @staticmethod
     def anstatz(theta: float) -> Callable:
         """
@@ -202,7 +202,7 @@ class hydrogen:
         return 2 * np.mean(sum)
 
 
-class harmonic_oscillator:
+class harmonic_oscillator_helpers:
     @staticmethod
     def eigenfunctions(n: int) -> tuple:
         """
