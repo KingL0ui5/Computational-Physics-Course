@@ -8,12 +8,12 @@ import numpy as np
 import time
 
 
-def H2_gradient_descent(wf: Callable, dH: Callable, x_0: np.ndarray, stepsize: float, max_iter: int = 100, stop_tol: float = 1e-6, N_s: int = 10000, detail: bool = False) -> tuple:
+def H2_gradient_descent(q1, q2, x_0: np.ndarray, stepsize: float, max_iter: int = 100, stop_tol: float = 1e-6, N_s: int = 10000, detail: bool = False) -> tuple:
     """
     A method to find the minima of a function using the gradient descent method.
     Parameters:
-        E: callable, the function to minimise
-        dH: callable, the first derivative of the function, left for flexibility of method
+        q1 (np.ndarray): Position of the first nucleus.
+        q2 (np.ndarray): Position of the second nucleus.
         x_0: np.ndarray, the starting point of the minimiser
         stepsize: float, the stepsize of the minimizer
         max_iter: int, the number of iterations to run
@@ -26,32 +26,61 @@ def H2_gradient_descent(wf: Callable, dH: Callable, x_0: np.ndarray, stepsize: f
     """
     from modules.function_sampling import metropolis_hastings
     from hydrogen_molecule import h2_wavefunction
-    q1 = 0
-    q2 = 0
+    from modules.differentiators import central_difference
 
-    def wavefunction_wrapper(coords):
+    x = np.asarray(x_0, dtype=float)
+    d = 1
+
+    r_0 = np.ones(6, dtype=float)  #  for samples
+    stepsize = 1.08e-2  # for the differentiators
+
+    def wavefunction_wrapper(wf, coords):
         r1, r2 = coords[:, 0:3], coords[:, 3:6]
         return wf.probability_density(r1, r2)
 
-    def minimisation_fn(thetas):
+    def minimisation_fn(thetas, Ns):
         wf = h2_wavefunction(thetas, q1, q2)
-        r = metropolis_hastings(f=wavefunction_wrapper, f_prop='gaussian', x_0=r_0, xmin=[
-                                0.001, 0.001, 0.001, 0.001, 0.001, 0.001], xmax=[10., 10., 10., 10., 10., 10.], N=Ns, kwrgs={'sigma': 0.8})
-
+        samples = metropolis_hastings(f=wavefunction_wrapper, f_prop='gaussian', x_0=r_0, xmin=[
+            0.001, 0.001, 0.001, 0.001, 0.001, 0.001], xmax=[10., 10., 10., 10., 10., 10.], N=Ns, kwrgs={'sigma': 0.8})
+        r = samples[Ns_i//10:]
         return np.asarray(r)
-    x = x_0
-    d = 1
-    start = time.perf_counter()
 
+    def df(thetas, coords):
+        r1, r2 = coords[:, 0:3], coords[:, 3:6]
+
+        #  d/dt1
+        def wrapper_1(theta_1):
+            t = [theta_1, thetas[1], thetas[2]]
+            wf = h2_wavefunction(t, q1, q2)
+            return wf.E_exp(r1, r2)
+
+        #  d/dt2
+        def wrapper_2(theta_2):
+            t = [thetas[0], theta_2, thetas[2]]
+            wf = h2_wavefunction(t, q1, q2)
+            return wf.E_exp(r1, r2)
+
+        #  d/dt3
+        def wrapper_3(theta_3):
+            t = [thetas[0], thetas[1], theta_3]
+            wf = h2_wavefunction(t, q1, q2)
+            return wf.E_exp(r1, r2)
+
+        dE_t1 = central_difference(wrapper_1, x=thetas[0], h=stepsize, order=8)
+        dE_t2 = central_difference(wrapper_2, x=thetas[1], h=stepsize, order=8)
+        dE_t3 = central_difference(wrapper_3, x=thetas[2], h=stepsize, order=8)
+
+        # returns the gradient of E
+        return np.array([dE_t1, dE_t2, dE_t3])
+
+    #  minimisation loop
+    start = time.perf_counter()
     for i in range(max_iter):
-        psi = wf(theta=x)  # hydrogen wavefunction given theta
+        wf = h2_wavefunction(x, q1, q2)  # hydrogen wavefunction given theta
         Ns_i = N_s * int(np.exp((i+1)*0.05))
 
-        samples = metropolis_hastings(f=psi.probability_density, f_prop='gaussian', x_0=[
-                                      1., 1., 1.], xmin=[0.001, 0.001, 0.001], xmax=[10., 10., 10.], N=Ns_i, kwrgs={'sigma': 0.8})
-        samples = samples[Ns_i//10:]
-
-        d = dH(x, samples)
+        r = minimisation_fn(x, Ns_i)
+        d = df(x, r)
 
         #  test stopping condition
         if stop_tol:
@@ -74,7 +103,9 @@ def H2_gradient_descent(wf: Callable, dH: Callable, x_0: np.ndarray, stepsize: f
         print(f"iteration number GD: {i}")
         print(f"time elapsed GD: {time_elapsed}")
         print(f"final derivative: {d}")
-    return x, np.nanmean(psi.local_energy(coords=samples))
+
+    r1, r2 = r[:, 0:3], r[:, 3:6]
+    return x, np.nanmean(wf.local_energy(r1, r2))
 
 
 def hydrogen_adapted_quasi_newton(wf: Callable, dH: Callable, x_0: np.ndarray, stepsize: float, method: str = "DFP", max_iter: int = 1000, N_s: int = 1000, stop_tol: float = None, detail: bool = False) -> tuple:

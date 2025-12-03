@@ -121,50 +121,13 @@ class h2_wavefunction:
 
 def dE(q1, q2):
     thetas_0 = [1., 1., 1.]  #  for minimiser
-    r_0 = np.ones(6, dtype=float)  #  for samples
-    stepsize = 1.08e-2  # for the differentiators
-    Ns = 100000
-
-    def wavefunction_wrapper(coords):
-        r1, r2 = coords[:, 0:3], coords[:, 3:6]
-        return wf.probability_density(r1, r2)
-
-    def df(thetas, coords):
-        r1, r2 = coords[:, 0:3], coords[:, 3:6]
-
-        #  d/dt1
-        def wrapper_1(theta_1):
-            thetas = [theta_1, thetas_0[1], thetas_0[2]]
-            wf = h2_wavefunction(thetas, q1, q2)
-            return wf.E_exp(r1, r2)
-
-        #  d/dt2
-        def wrapper_2(theta_2):
-            thetas = [thetas_0[0], theta_2, thetas_0[2]]
-            wf = h2_wavefunction(thetas, q1, q2)
-            return wf.E_exp(r1, r2)
-
-        #  d/dt3
-        def wrapper_3(theta_3):
-            thetas = [thetas_0[0], thetas_0[1], theta_3]
-            wf = h2_wavefunction(thetas, q1, q2)
-            return wf.E_exp(r1, r2)
-
-        dE_t1 = central_difference(wrapper_1, x=thetas[0], h=stepsize, order=8)
-        dE_t2 = central_difference(wrapper_2, x=thetas[1], h=stepsize, order=8)
-        dE_t3 = central_difference(wrapper_3, x=thetas[2], h=stepsize, order=8)
-
-        # returns the gradient of E
-        return np.array([dE_t1, dE_t2, dE_t3])
-
-    theta_min, E_min = quasi_newton(f=minimisation_fn, df=df, x_0=thetas_0,
-                                    stepsize=0.5, stop_tol=1e-3, detail=True)
-
+    theta_min, E_min = H2_gradient_descent(q1, q2, x_0=thetas_0,
+                                           stepsize=0.5, stop_tol=1e-3, detail=True)
     return theta_min, E_min
 
 
 if __name__ == '__main__':
-    wf = h2_wavefunction(theta=[1., 1., 1.], q1=[1, 0, 0], q2=[0, 1, 0])
+    wf = h2_wavefunction(thetas=[1., 1., 1.], q1=[1, 0, 0], q2=[0, 1, 0])
 
     def wrapper(coords):
         coords = np.asarray(coords)
@@ -185,6 +148,9 @@ if __name__ == '__main__':
     exp_energy = np.mean(E_l)
     print(f"Expected Energy: {exp_energy}")
 
-    import matplotlib.pyplot as plt
-    hydrogen_molecule.plot_samples(r1, r2, xlim=[-3, 3], ylim=[-3, 3])
-    plt.show()
+    theta_min, E_min = dE(q1=[0, 0, 1], q2=[0, 0, -1])
+    print(f"minimum theta: {theta_min}, minimum energy: {E_min}")
+
+    # import matplotlib.pyplot as plt
+    # hydrogen_molecule.plot_samples(r1, r2, xlim=[-3, 3], ylim=[-3, 3])
+    # plt.show()
