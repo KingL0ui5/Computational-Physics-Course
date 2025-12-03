@@ -167,5 +167,5 @@ if __name__ == '__main__':
 
     thetas_0 = [1., 1., 1.]  #  for minimiser
     theta_min, E_min = min.gradient_descent(q1, q2, x_0=thetas_0,
-                                            stepsize=0.5, stop_tol=1e-3, N_s=10000, detail=True)
+                                            alpha=0.5, stop_tol=1e-3, N_s=100000, detail=True)
     print(f"minimum theta: {theta_min}, minimum energy: {E_min}")

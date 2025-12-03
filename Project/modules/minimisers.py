@@ -9,14 +9,14 @@ import time
 
 
 class hydrogen_molecule_minimisers:
-    def gradient_descent(q1, q2, x_0: np.ndarray, stepsize: float, max_iter: int = 100, stop_tol: float = 1e-6, N_s: int = 10000, detail: bool = False) -> tuple:
+    def gradient_descent(q1, q2, x_0: np.ndarray, alpha: float, max_iter: int = 100, stop_tol: float = 1e-6, N_s: int = 10000, detail: bool = False) -> tuple:
         """
         A method to find the minima of a function using the gradient descent method.
         Parameters:
             q1 (np.ndarray): Position of the first nucleus.
             q2 (np.ndarray): Position of the second nucleus.
             x_0: np.ndarray, the starting point of the minimiser
-            stepsize: float, the stepsize of the minimizer
+            alpha: float, the stepsize of the minimizer
             max_iter: int, the number of iterations to run
             stop_tol: float, default = 1e-6, the value of the gradient at which convergence is determined
             N_s: number of samples to take per wavefunction iteration
@@ -43,7 +43,7 @@ class hydrogen_molecule_minimisers:
 
             samples = metropolis_hastings(f=wavefunction_wrapper, f_prop='gaussian', x_0=r_0, xmin=[
                 0.001, 0.001, 0.001, 0.001, 0.001, 0.001], xmax=[10., 10., 10., 10., 10., 10.], N=Ns, kwrgs={'sigma': 0.8})
-            r = samples[Ns_i//10:]
+            r = samples[Ns//10:]
             return np.asarray(r)
 
         def df(thetas, coords):
@@ -67,7 +67,6 @@ class hydrogen_molecule_minimisers:
                 wf = h2_wavefunction(t, q1, q2)
                 return wf.E_exp(r1, r2)
 
-            print(thetas[0])
             dE_t1 = central_difference(
                 wrapper_1, x=[thetas[0]], h=[stepsize], order=8).item()
             dE_t2 = central_difference(
@@ -92,14 +91,14 @@ class hydrogen_molecule_minimisers:
                 if np.linalg.norm(d) < stop_tol:
                     break
 
-            x = x - stepsize * d
+            x = x - alpha * d
             #  restrict x to be positive
             if (x <= 1e-7).any():
                 x = np.maximum(x, 1e-7)
 
             if detail:
                 print(
-                    f"iteration {i}, x={x}, d/dx={d}, N_s={Ns_i}, alpha={stepsize}")
+                    f"iteration {i}, x={x}, d/dx={d}, N_s={Ns_i}, alpha={alpha}")
 
         end = time.perf_counter()
         time_elapsed = end - start
