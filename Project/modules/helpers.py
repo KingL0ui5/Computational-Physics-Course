@@ -163,19 +163,18 @@ class hydrogen:
         Returns:
             float: the local energy at the input coordinates
         """
-        e = 1e-15
         coords = np.asarray(coords)
 
         if len(coords.shape) == 1:
             coords = np.array([coords])
 
         x, y, z = coords[:, 0], coords[:, 1], coords[:, 2]
-        r = np.sqrt(x**2 + y**2 + z**2) + 1e-12
+        r = np.sqrt(x**2 + y**2 + z**2)
 
-        return -0.5 * (wf.theta()**2) + (wf.theta() - 1.0) / (r + e)
+        return -0.5 * (wf.theta()**2) + (wf.theta() - 1.0) / (r + 1e-15)
 
     @staticmethod
-    def H_partial_theta(wf, samples: np.ndarray, analytic: bool = False) -> float:
+    def H_partial_theta(wf, samples: np.ndarray, analytic: bool = True) -> float:
         """
         Returns the analytic derivative of the expectation value of the hamiltonian in the Hydrogen atom system for minimiser functions
         Parameters:
@@ -197,8 +196,9 @@ class hydrogen:
 
         x, y, z = samples[:, 0], samples[:, 1], samples[:, 2]
         r = np.sqrt(x**2 + y**2 + z**2)
+        E_exp = np.mean(E_l)
 
-        sum = (E_l - np.mean(E_l)) * (-r)
+        sum = (E_l - E_exp) * (-r)
         return 2 * np.mean(sum)
 
 

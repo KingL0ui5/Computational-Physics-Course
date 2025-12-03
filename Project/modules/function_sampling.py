@@ -52,7 +52,7 @@ def metropolis_hastings(f: Callable, f_prop: str, x_0: np.ndarray, xmin: np.ndar
     accepted_count = 0
 
     start1 = time.perf_counter()
-    for i in range(N - 1):
+    for i in range(N):
         proposal = np.array([f_prop(xi, kwrgs) for xi in current])
 
         if np.any(proposal < xmin) or np.any(proposal > xmax):

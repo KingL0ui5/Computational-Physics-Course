@@ -50,21 +50,18 @@ class hydrogen_wavefunction:
         """
         stepsize = 1.805e-02  # Optimal stepsize for order 8
 
-        coords = np.array(coords, dtype=float, copy=True)
+        coords = np.array(coords, dtype=float)
         if coords.ndim == 1:
             coords = coords.reshape(1, -1)
 
         r = np.linalg.norm(coords, axis=1)
+        psi_val = self.psi(coords)
 
-        #  filtering
-        safe_threshold = 1e-3
-        size_mask = r < safe_threshold
-
-        if np.any(size_mask):
-            current_r_small = np.maximum(r[size_mask], 1e-20)
-            scale = safe_threshold / current_r_small
-            coords[size_mask] *= scale[:, np.newaxis]
-            r[size_mask] = safe_threshold
+        # #  filtering
+        # epsilon = 1e-12
+        # mask = np.abs(psi_val) > epsilon
+        # psi_val[mask] = epsilon
+        # r[mask] = epsilon
 
         d2psi = double_central_difference(
             self.psi, coords, h=[stepsize, stepsize, stepsize], order=8)
@@ -72,7 +69,7 @@ class hydrogen_wavefunction:
         laplacian = np.sum(d2psi, axis=1)
 
         # worth trying to link this more effectively with the H_partial_theta code to avoid the blow up around r=0
-        E = -0.5 * (laplacian / self.psi(coords)) - 1.0 / (r + e)
+        E = -0.5 * (laplacian / psi_val) - 1.0 / (r + e)
 
         return E
 

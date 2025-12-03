@@ -233,7 +233,7 @@ def hydrogen_adapted_gradient_desecent(wf: Callable, dH: Callable, x_0: np.ndarr
         Ns_i = N_s * int(np.exp((i+1)*0.05))
 
         samples = metropolis_hastings(f=psi.probability_density, f_prop='gaussian', x_0=[
-                                      1., 1., 1.], xmin=[0.001, 0.001, 0.001], xmax=[10., 10., 10.], N=Ns_i, kwrgs={'sigma': 0.8})
+                                      0., 0., 0.], xmin=[-4., -4., -4.], xmax=[4., 4., 4.], N=Ns_i, kwrgs={'sigma': 0.8})
         samples = samples[Ns_i//10:]
 
         d = dH(x, samples)
