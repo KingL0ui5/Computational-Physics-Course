@@ -122,31 +122,31 @@ class h2_wavefunction:
 def dE(q1, q2):
     thetas_0 = [1., 1., 1.]  #  for minimiser
     theta_min, E_min = H2_gradient_descent(q1, q2, x_0=thetas_0,
-                                           stepsize=0.5, stop_tol=1e-3, detail=True)
+                                           stepsize=0.5, stop_tol=1e-3, N_s=10000, detail=True)
     return theta_min, E_min
 
 
 if __name__ == '__main__':
     wf = h2_wavefunction(thetas=[1., 1., 1.], q1=[1, 0, 0], q2=[0, 1, 0])
 
-    def wrapper(coords):
-        coords = np.asarray(coords)
-        r1 = coords[:, 0:3]
-        r2 = coords[:, 3:6]
+    # def wrapper(coords):
+    #     coords = np.asarray(coords)
+    #     r1 = coords[:, 0:3]
+    #     r2 = coords[:, 3:6]
 
-        return wf.probability_density(r1, r2)
+    #     return wf.probability_density(r1, r2)
 
-    x_0 = np.zeros(6)
-    N_s = 1000000
-    samples = metropolis_hastings(
-        wrapper, f_prop='gaussian', x_0=x_0, xmax=10., xmin=-10., N=N_s, kwrgs={
-            'sigma': 2.}, detail=True)
+    # x_0 = np.zeros(6)
+    # N_s = 1000000
+    # samples = metropolis_hastings(
+    #     wrapper, f_prop='gaussian', x_0=x_0, xmax=10., xmin=-10., N=N_s, kwrgs={
+    #         'sigma': 2.}, detail=True)
 
-    r1, r2 = samples[:, 0:3], samples[:, 3:6]
-    E_l = wf.local_energy(r1=r1, r2=r2)
-    print(f"local energy: {E_l}")
-    exp_energy = np.mean(E_l)
-    print(f"Expected Energy: {exp_energy}")
+    # r1, r2 = samples[:, 0:3], samples[:, 3:6]
+    # E_l = wf.local_energy(r1=r1, r2=r2)
+    # print(f"local energy: {E_l}")
+    # exp_energy = np.mean(E_l)
+    # print(f"Expected Energy: {exp_energy}")
 
     theta_min, E_min = dE(q1=[0, 0, 1], q2=[0, 0, -1])
     print(f"minimum theta: {theta_min}, minimum energy: {E_min}")

@@ -71,11 +71,9 @@ def central_difference(f: Callable, x: np.ndarray, h: float = 1e-5, order: int =
         float | np.ndarray: The first derivative of f at position x
     """
     x = np.asarray(x, dtype=float)
-    print(x.shape)
     if x.ndim == 1:
         x = x.reshape(-1, 1)
 
-    print(x.shape)
     n_samples, n_dims = x.shape
     df = np.zeros_like(x)
 

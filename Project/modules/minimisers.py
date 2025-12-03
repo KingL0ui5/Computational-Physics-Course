@@ -34,12 +34,12 @@ def H2_gradient_descent(q1, q2, x_0: np.ndarray, stepsize: float, max_iter: int 
     r_0 = np.ones(6, dtype=float)  #  for samples
     stepsize = 1.08e-2  # for the differentiators
 
-    def wavefunction_wrapper(wf, coords):
-        r1, r2 = coords[:, 0:3], coords[:, 3:6]
-        return wf.probability_density(r1, r2)
+    def minimisation_fn(wf, Ns):
+        def wavefunction_wrapper(coords):
+            coords = np.asarray(coords)
+            r1, r2 = coords[:, 0:3], coords[:, 3:6]
+            return wf.probability_density(r1, r2)
 
-    def minimisation_fn(thetas, Ns):
-        wf = h2_wavefunction(thetas, q1, q2)
         samples = metropolis_hastings(f=wavefunction_wrapper, f_prop='gaussian', x_0=r_0, xmin=[
             0.001, 0.001, 0.001, 0.001, 0.001, 0.001], xmax=[10., 10., 10., 10., 10., 10.], N=Ns, kwrgs={'sigma': 0.8})
         r = samples[Ns_i//10:]
@@ -66,10 +66,13 @@ def H2_gradient_descent(q1, q2, x_0: np.ndarray, stepsize: float, max_iter: int 
             wf = h2_wavefunction(t, q1, q2)
             return wf.E_exp(r1, r2)
 
-        dE_t1 = central_difference(wrapper_1, x=thetas[0], h=stepsize, order=8)
-        dE_t2 = central_difference(wrapper_2, x=thetas[1], h=stepsize, order=8)
-        dE_t3 = central_difference(wrapper_3, x=thetas[2], h=stepsize, order=8)
-
+        print(thetas[0])
+        dE_t1 = central_difference(
+            wrapper_1, x=[thetas[0]], h=[stepsize], order=8).item()
+        dE_t2 = central_difference(
+            wrapper_2, x=[thetas[1]], h=[stepsize], order=8).item()
+        dE_t3 = central_difference(
+            wrapper_3, x=[thetas[2]], h=[stepsize], order=8).item()
         # returns the gradient of E
         return np.array([dE_t1, dE_t2, dE_t3])
 
@@ -79,7 +82,7 @@ def H2_gradient_descent(q1, q2, x_0: np.ndarray, stepsize: float, max_iter: int 
         wf = h2_wavefunction(x, q1, q2)  # hydrogen wavefunction given theta
         Ns_i = N_s * int(np.exp((i+1)*0.05))
 
-        r = minimisation_fn(x, Ns_i)
+        r = minimisation_fn(wf, Ns_i)
         d = df(x, r)
 
         #  test stopping condition
@@ -89,8 +92,8 @@ def H2_gradient_descent(q1, q2, x_0: np.ndarray, stepsize: float, max_iter: int 
 
         x = x - stepsize * d
         #  restrict x to be positive
-        if x <= 1e-7:
-            x = 1e-7
+        if (x <= 1e-7).any():
+            x = np.maximum(x, 1e-7)
 
         if detail:
             print(
@@ -104,7 +107,7 @@ def H2_gradient_descent(q1, q2, x_0: np.ndarray, stepsize: float, max_iter: int 
         print(f"time elapsed GD: {time_elapsed}")
         print(f"final derivative: {d}")
 
-    r1, r2 = r[:, 0:3], r[:, 3:6]
+    r1, r2 = r[0:3], r[3:6]
     return x, np.nanmean(wf.local_energy(r1, r2))
 
 
