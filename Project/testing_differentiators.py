@@ -12,13 +12,13 @@ def test_first_order_diffrentiators():
     import matplotlib.pyplot as plt
     min_errors = []
 
-    N = 1  # quantum numbers to test
+    N = 12  # quantum numbers to test
     for n in range(1, N):
         f, _ = hlp.eigenfunctions(n)
 
         x = np.linspace(-10, 10, 200)
         df = hlp.first_derivative(n=n)
-        h = np.linspace(1e-5, 1, 500)
+        h = np.linspace(1e-10, 1e-1, 1000)
 
         mean_error_dc_h2 = []
         mean_error_dc_h4 = []
@@ -381,7 +381,7 @@ def test_hydrogen_laplacian():
 
 
 if __name__ == "__main__":
-    # test_first_order_diffrentiators()
-    test_second_order_diffrentiators()
+    test_first_order_diffrentiators()
+    # test_second_order_diffrentiators()
     # test_diffrentiators_3d()
     # test_hydrogen_laplacian()

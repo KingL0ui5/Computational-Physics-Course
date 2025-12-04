@@ -16,7 +16,7 @@ class hydrogen_molecule_minimisers:
         return np.nanmean(wf_temp.local_energy(r1, r2))
 
     @staticmethod
-    def grad(thetas, q1, q2, r1, r2, stepsize):
+    def grad(thetas, q1, q2, r1, r2, stepsize=1e-4, order=2):
         from hydrogen_molecule import h2_wavefunction
         from modules.differentiators import central_difference
         #  d/dt1
@@ -36,11 +36,11 @@ class hydrogen_molecule_minimisers:
             return hydrogen_molecule_minimisers.E_fn(t, q1, q2, r1, r2)
 
         dE_t1 = central_difference(
-            wrapper_1, x=[thetas[0]], h=[stepsize], order=2).item()
+            wrapper_1, x=[thetas[0]], h=[stepsize], order=order).item()
         dE_t2 = central_difference(
-            wrapper_2, x=[thetas[1]], h=[stepsize], order=2).item()
+            wrapper_2, x=[thetas[1]], h=[stepsize], order=order).item()
         dE_t3 = central_difference(
-            wrapper_3, x=[thetas[2]], h=[stepsize], order=2).item()
+            wrapper_3, x=[thetas[2]], h=[stepsize], order=order).item()
 
         # returns the gradient of E
         return np.array([dE_t1, dE_t2, dE_t3])
@@ -83,7 +83,6 @@ class hydrogen_molecule_minimisers:
         x = np.asarray(x_0, dtype=float)
 
         r_0 = np.ones(6, dtype=float)  #  for samples
-        stepsize = 1.08e-3  # for the differentiators
 
         #  minimisation loop
         start = time.perf_counter()
@@ -94,7 +93,7 @@ class hydrogen_molecule_minimisers:
             r1, r2 = hydrogen_molecule_minimisers.sample_coords(wf, Ns_i, r_0)
 
             df = hydrogen_molecule_minimisers.grad(
-                x, q1, q2, r1, r2, stepsize)
+                x, q1, q2, r1, r2)
 
             #  test stopping condition
             if stop_tol:
@@ -176,7 +175,6 @@ class hydrogen_molecule_minimisers:
             grad_update = BFGS
 
         r_0 = np.ones(6, dtype=float)  #  for samples
-        stepsize = 1.08e-3  # for the differentiators
 
         start = time.perf_counter()
         for i in range(max_iter):
@@ -184,7 +182,7 @@ class hydrogen_molecule_minimisers:
             Ns_i = N_s  # * int(np.exp((i+1)*0.05))
             r1, r2 = hydrogen_molecule_minimisers.sample_coords(wf, Ns_i, r_0)
             grad = hydrogen_molecule_minimisers.grad(
-                x, q1, q2, r1, r2, stepsize)
+                x, q1, q2, r1, r2)
 
             if stop_tol:
                 if np.linalg.norm(grad) < stop_tol:
@@ -197,7 +195,7 @@ class hydrogen_molecule_minimisers:
             r1_new, r2_new = hydrogen_molecule_minimisers.sample_coords(
                 wf_new, Ns_i, r_0)
             grad_new = hydrogen_molecule_minimisers.grad(
-                x_new, q1, q2, r1_new, r2_new, stepsize)
+                x_new, q1, q2, r1_new, r2_new)
 
             G = grad_update(x_new, grad_new, x, grad, G)
             x = x_new

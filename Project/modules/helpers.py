@@ -5,6 +5,7 @@ from typing import Callable
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+import math
 
 sns.set_style('darkgrid')
 sns.set_context('paper')
@@ -232,7 +233,8 @@ class harmonic_oscillator_helpers:
                     h_curr = h_next
 
                 H = h_curr
-            return np.array(np.exp(-x**2 / 2) * H)
+            normalization = 1 / np.sqrt((2**n) * math.factorial(n))
+            return normalization * np.exp(-x**2 / 2) * H
 
         return f, n + 0.5
 
