@@ -16,7 +16,8 @@ class hydrogen_molecule_minimisers:
         return np.nanmean(wf_temp.local_energy(r1, r2))
 
     @staticmethod
-    def grad(thetas, q1, q2, r1, r2, stepsize=1e-4, order=2):
+    #  optimal for order 2 is 1e-4, order 8 is 1.108e-2
+    def grad(thetas, q1, q2, r1, r2, stepsize=1e-5, order=2):
         from hydrogen_molecule import h2_wavefunction
         from modules.differentiators import central_difference
         #  d/dt1
@@ -80,6 +81,7 @@ class hydrogen_molecule_minimisers:
         from modules.function_sampling import metropolis_hastings
         from hydrogen_molecule import h2_wavefunction
 
+        print("Starting gradient descent minimiser...")
         x = np.asarray(x_0, dtype=float)
 
         r_0 = np.ones(6, dtype=float)  #  for samples
@@ -141,6 +143,8 @@ class hydrogen_molecule_minimisers:
             tuple: the coordinates of minima, the minimum value of the function at this point
         """
         from hydrogen_molecule import h2_wavefunction
+
+        print("Starting quasi-newton minimiser...")
         x = np.array(x_0, dtype=float)
         n_dim = len(x)
         G = np.eye(n_dim)
