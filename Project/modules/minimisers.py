@@ -9,7 +9,59 @@ import time
 
 
 class hydrogen_molecule_minimisers:
-    def gradient_descent(q1, q2, x_0: np.ndarray, alpha: float, max_iter: int = 100, stop_tol: float = 1e-6, N_s: int = 10000, detail: bool = False) -> tuple:
+    @staticmethod
+    def E_fn(thetas, q1, q2, r1, r2):
+        from hydrogen_molecule import h2_wavefunction
+        wf_temp = h2_wavefunction(thetas, q1, q2)
+        return np.nanmean(wf_temp.local_energy(r1, r2))
+
+    @staticmethod
+    def grad(thetas, q1, q2, r1, r2, stepsize):
+        from hydrogen_molecule import h2_wavefunction
+        from modules.differentiators import central_difference
+        #  d/dt1
+
+        def wrapper_1(theta_1):
+            t = [theta_1, thetas[1], thetas[2]]
+            return hydrogen_molecule_minimisers.E_fn(t, q1, q2, r1, r2)
+
+        #  d/dt2
+        def wrapper_2(theta_2):
+            t = [thetas[0], theta_2, thetas[2]]
+            return hydrogen_molecule_minimisers.E_fn(t, q1, q2, r1, r2)
+
+        #  d/dt3
+        def wrapper_3(theta_3):
+            t = [thetas[0], thetas[1], theta_3]
+            return hydrogen_molecule_minimisers.E_fn(t, q1, q2, r1, r2)
+
+        dE_t1 = central_difference(
+            wrapper_1, x=[thetas[0]], h=[stepsize], order=2).item()
+        dE_t2 = central_difference(
+            wrapper_2, x=[thetas[1]], h=[stepsize], order=2).item()
+        dE_t3 = central_difference(
+            wrapper_3, x=[thetas[2]], h=[stepsize], order=2).item()
+
+        # returns the gradient of E
+        return np.array([dE_t1, dE_t2, dE_t3])
+
+    @staticmethod
+    def sample_coords(wf, Ns, r_0):
+        from modules.function_sampling import metropolis_hastings
+
+        def wavefunction_wrapper(coords):
+            coords = np.asarray(coords)
+            r1, r2 = coords[:, 0:3], coords[:, 3:6]
+            return wf.probability_density(r1, r2)
+
+        #  sample once for current state
+        samples = metropolis_hastings(f=wavefunction_wrapper, f_prop='gaussian', x_0=r_0, xmin=[
+                                      -10.]*6, xmax=[10.]*6, N=Ns, kwrgs={'sigma': 0.8})
+        r = samples[len(samples)//10:]
+        r1, r2 = r[:, 0:3], r[:, 3:6]
+        return r1, r2
+
+    def gradient_descent(q1: np.ndarray, q2: np.ndarray, x_0: np.ndarray, alpha: float, max_iter: int = 100, stop_tol: float = 1e-6, N_s: int = 10000, detail: bool = False) -> tuple:
         """
         A method to find the minima of a function using the gradient descent method.
         Parameters:
@@ -27,78 +79,40 @@ class hydrogen_molecule_minimisers:
         """
         from modules.function_sampling import metropolis_hastings
         from hydrogen_molecule import h2_wavefunction
-        from modules.differentiators import central_difference
 
         x = np.asarray(x_0, dtype=float)
-        d = 1
 
         r_0 = np.ones(6, dtype=float)  #  for samples
-        stepsize = 1.08e-2  # for the differentiators
-
-        def minimisation_fn(wf, Ns):
-            def wavefunction_wrapper(coords):
-                coords = np.asarray(coords)
-                r1, r2 = coords[:, 0:3], coords[:, 3:6]
-                return wf.probability_density(r1, r2)
-
-            samples = metropolis_hastings(f=wavefunction_wrapper, f_prop='gaussian', x_0=r_0, xmin=[
-                0.001, 0.001, 0.001, 0.001, 0.001, 0.001], xmax=[10., 10., 10., 10., 10., 10.], N=Ns, kwrgs={'sigma': 0.8})
-            r = samples[Ns//10:]
-            return np.asarray(r)
-
-        def df(thetas, coords):
-            r1, r2 = coords[:, 0:3], coords[:, 3:6]
-
-            #  d/dt1
-            def wrapper_1(theta_1):
-                t = [theta_1, thetas[1], thetas[2]]
-                wf = h2_wavefunction(t, q1, q2)
-                return wf.E_exp(r1, r2)
-
-            #  d/dt2
-            def wrapper_2(theta_2):
-                t = [thetas[0], theta_2, thetas[2]]
-                wf = h2_wavefunction(t, q1, q2)
-                return wf.E_exp(r1, r2)
-
-            #  d/dt3
-            def wrapper_3(theta_3):
-                t = [thetas[0], thetas[1], theta_3]
-                wf = h2_wavefunction(t, q1, q2)
-                return wf.E_exp(r1, r2)
-
-            dE_t1 = central_difference(
-                wrapper_1, x=[thetas[0]], h=[stepsize], order=8).item()
-            dE_t2 = central_difference(
-                wrapper_2, x=[thetas[1]], h=[stepsize], order=8).item()
-            dE_t3 = central_difference(
-                wrapper_3, x=[thetas[2]], h=[stepsize], order=8).item()
-            # returns the gradient of E
-            return np.array([dE_t1, dE_t2, dE_t3])
+        stepsize = 1.08e-3  # for the differentiators
 
         #  minimisation loop
         start = time.perf_counter()
         for i in range(max_iter):
             # hydrogen wavefunction given theta
+            Ns_i = N_s  # * int(np.exp((i+1)*0.05))
             wf = h2_wavefunction(x, q1, q2)
-            Ns_i = N_s * int(np.exp((i+1)*0.05))
+            r1, r2 = hydrogen_molecule_minimisers.sample_coords(wf, Ns_i, r_0)
 
-            r = minimisation_fn(wf, Ns_i)
-            d = df(x, r)
+            df = hydrogen_molecule_minimisers.grad(
+                x, q1, q2, r1, r2, stepsize)
 
             #  test stopping condition
             if stop_tol:
-                if np.linalg.norm(d) < stop_tol:
+                if np.linalg.norm(df) < stop_tol:
                     break
 
-            x = x - alpha * d
+            if np.isnan(x.any()) or np.isinf(x.any()):
+                raise ValueError("Optimal parameters diverged to nan or inf")
+
+            x = x - alpha * df
+
             #  restrict x to be positive
             if (x <= 1e-7).any():
                 x = np.maximum(x, 1e-7)
 
             if detail:
                 print(
-                    f"iteration {i}, x={x}, d/dx={d}, N_s={Ns_i}, alpha={alpha}")
+                    f"iteration {i}, x={x}, d/dx={df}, N_s={Ns_i}, alpha={alpha}")
 
         end = time.perf_counter()
         time_elapsed = end - start
@@ -106,10 +120,99 @@ class hydrogen_molecule_minimisers:
         if detail:
             print(f"iteration number GD: {i}")
             print(f"time elapsed GD: {time_elapsed}")
-            print(f"final derivative: {d}")
+            print(f"final derivative: {df}")
 
-        r1, r2 = r[0:3], r[3:6]
-        return x, np.nanmean(wf.local_energy(r1, r2))
+        return x, hydrogen_molecule_minimisers.E_fn(x, q1, q2, r1, r2)
+
+    def quasi_newton(q1: np.ndarray, q2: np.ndarray, x_0: np.ndarray, alpha: float, method: str = "DFP", max_iter: int = 1000, stop_tol: float = None, N_s: int = 10000, detail: bool = False) -> tuple:
+        """
+        A method to find the minima of a function using the quasi-newton method using a chosen method to approximate the hessian
+        Parameters:
+            q1 (np.ndarray): Position of the first nucleus.
+            q2 (np.ndarray): Position of the second nucleus. 
+            x_0: np.ndarray, the starting point of the minimiser
+            alpha: float, the stepsize of the minimiser
+            method: str, default = "DFP" the method to use for the hessian approximation - allowed values "DFP", "BFGS"
+            stop_tol: float, default = None, the value of the gradient at which convergence is determined. defaults to none to give a chance to get off local minima
+            max_iter: int, default = 10000 the number of iterations to run
+            N_s: int, default = 10000, number of samples to take per wavefunction iteration
+            detail: bool, default = False, show the time elapsed for the method to run
+
+        Returns:
+            tuple: the coordinates of minima, the minimum value of the function at this point
+        """
+        from hydrogen_molecule import h2_wavefunction
+        x = np.array(x_0, dtype=float)
+        n_dim = len(x)
+        G = np.eye(n_dim)
+
+        def DFP(x_new, grad_new, x, grad, G):
+            delta = x_new - x
+            gamma = grad_new - grad
+
+            if np.dot(gamma, delta) == 0:
+                return G
+
+            G = G + np.outer(delta, delta) / np.dot(gamma, delta) - \
+                (G @ np.outer(gamma, gamma) @ G) / np.dot(gamma, G @ gamma)
+            return G
+
+        def BFGS(x_new, grad_new, x, grad, G):
+            delta = x_new - x
+            gamma = grad_new - grad
+            dim = len(delta)
+
+            temp = 1.0 / np.dot(gamma, delta)
+            I = np.eye(dim)
+            G = (I - temp * np.outer(delta, gamma)) @ G @ (I - temp * np.outer(gamma, delta)) \
+                + temp * np.outer(delta, delta)
+
+            return G
+
+        if method == "DFP":
+            grad_update = DFP
+
+        elif method == "BFGS":
+            grad_update = BFGS
+
+        r_0 = np.ones(6, dtype=float)  #  for samples
+        stepsize = 1.08e-3  # for the differentiators
+
+        start = time.perf_counter()
+        for i in range(max_iter):
+            wf = h2_wavefunction(x, q1, q2)
+            Ns_i = N_s  # * int(np.exp((i+1)*0.05))
+            r1, r2 = hydrogen_molecule_minimisers.sample_coords(wf, Ns_i, r_0)
+            grad = hydrogen_molecule_minimisers.grad(
+                x, q1, q2, r1, r2, stepsize)
+
+            if stop_tol:
+                if np.linalg.norm(grad) < stop_tol:
+                    print("halting QN")
+                    break
+
+            x_new = x - alpha * G @ grad
+
+            wf_new = h2_wavefunction(x_new, q1, q2)
+            r1_new, r2_new = hydrogen_molecule_minimisers.sample_coords(
+                wf_new, Ns_i, r_0)
+            grad_new = hydrogen_molecule_minimisers.grad(
+                x_new, q1, q2, r1_new, r2_new, stepsize)
+
+            G = grad_update(x_new, grad_new, x, grad, G)
+            x = x_new
+
+            if detail:
+                print(
+                    f'iteration number: {i}, x: {x}, dx: {grad}, Ns = {Ns_i}, alpha={alpha}')
+
+        end = time.perf_counter()
+        time_elapsed = end - start
+
+        if detail:
+            print(f"iteration number QN: {i}")
+            print(f"time elapsed QN: {time_elapsed}")
+        return x, hydrogen_molecule_minimisers.E_fn(x, q1, q2, r1, r2)
 
 
 class hydrogen_atom_minimisers:

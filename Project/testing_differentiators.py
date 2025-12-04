@@ -1,7 +1,7 @@
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
-from modules.helpers import harmonic_oscillator_helpers as hlp
+from modules.helpers import harmonic_oscillator_helpers as hlp, rms
 import modules.differentiators as differentiators
 sns.set_style('darkgrid')
 sns.set_context('paper')
@@ -31,27 +31,27 @@ def test_first_order_diffrentiators():
             dc_h2 = differentiators.central_difference(
                 f, x, h=step, order=2).flatten()
             error_dc_h2 = (np.abs(dc_h2 - df(x)))
-            mean_error_dc_h2.append(hlp.rms(error_dc_h2))
+            mean_error_dc_h2.append(rms(error_dc_h2))
 
             dc_h4 = differentiators.central_difference(
                 f, x, h=step, order=4).flatten()
             error_dc_h4 = (np.abs(dc_h4 - df(x)))
-            mean_error_dc_h4.append(hlp.rms(error_dc_h4))
+            mean_error_dc_h4.append(rms(error_dc_h4))
 
             dc_h6 = differentiators.central_difference(
                 f, x, h=step, order=6).flatten()
             error_dc_h6 = (np.abs(dc_h6 - df(x)))
-            mean_error_dc_h6.append(hlp.rms(error_dc_h6))
+            mean_error_dc_h6.append(rms(error_dc_h6))
 
             dc_h8 = differentiators.central_difference(
                 f, x, h=step, order=8).flatten()
             error_dc_h8 = (np.abs(dc_h8 - df(x)))
-            mean_error_dc_h8.append(hlp.rms(error_dc_h8))
+            mean_error_dc_h8.append(rms(error_dc_h8))
 
             dc_h10 = differentiators.central_difference(
                 f, x, h=step, order=10).flatten()
             error_dc_h10 = (np.abs(dc_h10 - df(x)))
-            mean_error_dc_h10.append(hlp.rms(error_dc_h10))
+            mean_error_dc_h10.append(rms(error_dc_h10))
 
             # methods = [
             #     ("Central Difference O(h^2)", dc_h2, error_dc_h2),
@@ -164,27 +164,27 @@ def test_second_order_diffrentiators():
             d2c_h2 = differentiators.double_central_difference(
                 f, x, h=step, order=2).flatten()
             error_d2c_h2 = (np.abs(d2c_h2 - d2f(x)))
-            mean_error_d2c_h2.append(hlp.rms(error_d2c_h2))
+            mean_error_d2c_h2.append(rms(error_d2c_h2))
 
             d2c_h4 = differentiators.double_central_difference(
                 f, x, h=step, order=4).flatten()
             error_d2c_h4 = (np.abs(d2c_h4 - d2f(x)))
-            mean_error_d2c_h4.append(hlp.rms(error_d2c_h4))
+            mean_error_d2c_h4.append(rms(error_d2c_h4))
 
             d2c_h6 = differentiators.double_central_difference(
                 f, x, h=step, order=6).flatten()
             error_d2c_h6 = (np.abs(d2c_h6 - d2f(x)))
-            mean_error_d2c_h6.append(hlp.rms(error_d2c_h6))
+            mean_error_d2c_h6.append(rms(error_d2c_h6))
 
             d2c_h8 = differentiators.double_central_difference(
                 f, x, h=step, order=8).flatten()
             error_d2c_h8 = (np.abs(d2c_h8 - d2f(x)))
-            mean_error_d2c_h8.append(hlp.rms(error_d2c_h8))
+            mean_error_d2c_h8.append(rms(error_d2c_h8))
 
             d2c_h10 = differentiators.double_central_difference(
                 f, x, h=step, order=10).flatten()
             error_d2c_h10 = (np.abs(d2c_h10 - d2f(x)))
-            mean_error_d2c_h10.append(hlp.rms(error_d2c_h10))
+            mean_error_d2c_h10.append(rms(error_d2c_h10))
 
             # methods = [
             #     ("Double Central Difference O(h^2)", d2c_h2, error_d2c_h2),
@@ -381,7 +381,7 @@ def test_hydrogen_laplacian():
 
 
 if __name__ == "__main__":
-    test_first_order_diffrentiators()
-    # test_second_order_diffrentiators()
+    # test_first_order_diffrentiators()
+    test_second_order_diffrentiators()
     # test_diffrentiators_3d()
     # test_hydrogen_laplacian()

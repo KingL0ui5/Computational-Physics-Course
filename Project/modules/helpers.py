@@ -245,7 +245,7 @@ class harmonic_oscillator_helpers:
         Returns:
             Callable: The second derivative function
         """
-        eigenfunction, _ = harmonic_oscillator.eigenfunctions(n)
+        eigenfunction, _ = harmonic_oscillator_helpers.eigenfunctions(n)
 
         def f(x):
             x = np.asarray(x)
@@ -261,7 +261,7 @@ class harmonic_oscillator_helpers:
         Returns:
             Callable: The first derivative function
         """
-        psi_n, _ = harmonic_oscillator.eigenfunctions(n)
+        psi_n, _ = harmonic_oscillator_helpers.eigenfunctions(n)
 
         if n == 0:
             def f_ground(x):
@@ -269,7 +269,7 @@ class harmonic_oscillator_helpers:
                 return -x * psi_n(x)
             return f_ground
 
-        psi_n_minus_1, _ = harmonic_oscillator.eigenfunctions(n - 1)
+        psi_n_minus_1, _ = harmonic_oscillator_helpers.eigenfunctions(n - 1)
         sqrt_2n = np.sqrt(2 * n)
 
         def f(x):
