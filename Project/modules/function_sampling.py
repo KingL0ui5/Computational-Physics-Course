@@ -57,7 +57,8 @@ def metropolis_hastings(f: Callable, f_prop: str, x_0: np.ndarray, xmin: np.ndar
         proposal = np.array([f_prop(xi, kwrgs) for xi in current])
 
         if np.any(proposal < xmin) or np.any(proposal > xmax):
-            samples[i] = (current.copy())
+            if i % thinning == 0:
+                samples[i // thinning] = (current)
             continue
 
         prob_current = f([current])

@@ -163,13 +163,15 @@ def test_samples():
 def test_minimiser():
     q1 = [0, 0, 1]
     q2 = [0, 0, -1]
-    wf = h2_wavefunction(thetas=[1., 1., 1.], q1=q1, q2=q2)
 
-    minimiser = min.gradient_descent
+    minimiser = min.quasi_newton
 
     thetas_0 = [1.]*3  #  for minimiser
-    theta_min, E_min = minimiser(q1, q2, x_0=thetas_0,
-                                 alpha=.5, stop_tol=1e-3, N_s=100000, detail=True, max_iter=60)
+    # theta_min, E_min = minimiser(q1, q2, x_0=thetas_0,
+    #                              alpha=1., stop_tol=1e-3, N_s=100000, detail=True, max_iter=60)
+
+    theta_min, E_min = min.simulated_annealing(
+        q1, q2, x_0=thetas_0, initial_temp=100., cooling_rate=0.9, max_iter=100, Ns=100000, std=0.25, detail=True)
     print(f"minimum theta: {theta_min}, minimum energy: {E_min}")
 
 

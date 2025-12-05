@@ -47,7 +47,17 @@ class hydrogen_molecule_minimisers:
         return np.array([dE_t1, dE_t2, dE_t3])
 
     @staticmethod
-    def sample_coords(wf, Ns, r_0):
+    def sample_coords(wf, Ns, r_0, thinning: int = 1) -> tuple:
+        """
+        Sample electron coordinates from the hydrogen molecule wavefunction using Metropolis-Hastings algorithm.
+        Parameters:
+            wf: h2_wavefunction, The hydrogen molecule wavefunction object.
+            Ns: int, The number of samples to generate.
+            r_0: np.ndarray, The initial position to start sampling from.
+            thinning: int, The thinning factor to reduce autocorrelation in samples.
+            Returns:
+            tuple: Two np.ndarrays representing the sampled positions of electron 1 and electron 2.
+        """
         from modules.function_sampling import metropolis_hastings
 
         def wavefunction_wrapper(coords):
@@ -57,10 +67,76 @@ class hydrogen_molecule_minimisers:
 
         #  sample once for current state
         samples = metropolis_hastings(f=wavefunction_wrapper, f_prop='gaussian', x_0=r_0, xmin=[
-                                      -10.]*6, xmax=[10.]*6, N=Ns, kwrgs={'sigma': 0.8})
+                                      -10.]*6, xmax=[10.]*6, N=Ns, kwrgs={'sigma': 0.8}, thinning=thinning)
         r = samples[len(samples)//10:]
         r1, r2 = r[:, 0:3], r[:, 3:6]
         return r1, r2
+
+    def simulated_annealing(q1: np.ndarray, q2: np.ndarray, x_0: np.ndarray, initial_temp: float, cooling_rate: float, std: float = 0.05, max_iter: int = 100, xmin: float = 0., xmax: float = 5., Ns: int = 10000, detail: bool = False):
+        """
+        Find the minima of a function using the simulated annealing method.
+        Parameters:
+            q1 (np.ndarray): Position of the first nucleus.
+            q2 (np.ndarray): Position of the second nucleus.
+            x_0: np.ndarray, the starting point of the minimiser
+            Ns: int, number of samples to take per wavefunction iteration
+            xmin: float, the minimum value for theta parameters
+            xmax: float, the maximum value for theta parameters
+            std: float, the standard deviation of the normal distribution used for proposing new states
+            initial_temp: float, the starting temperature of the system
+            cooling_rate: float, the rate at which the temperature decreases
+            max_iter: int, the number of iterations to run
+            detail: bool, default = False, show the time elapsed for the method to run
+        """
+        from hydrogen_molecule import h2_wavefunction
+
+        Ns_i = Ns
+        r_0 = np.ones(6, dtype=float)  #  for samples
+        x = np.array(x_0, dtype=float)
+        T = initial_temp
+
+        wf = h2_wavefunction(x, q1, q2)
+        r1, r2 = hydrogen_molecule_minimisers.sample_coords(wf, Ns_i, r_0)
+
+        E = hydrogen_molecule_minimisers.E_fn(x, q1, q2, r1, r2)
+        Es = [E]
+        Ts = [T]
+        for i in range(max_iter):
+            x_new = x + np.random.normal(0, std, size=x.shape)
+            #  bound the theta values
+            if any(x_new < xmin) or any(x_new > xmax):
+                continue
+
+            E_new = hydrogen_molecule_minimisers.E_fn(x_new, q1, q2, r1, r2)
+            delta_E = E_new - E
+            if delta_E < 0 or np.random.rand() < np.exp(-delta_E / T):
+                x, E = x_new, E_new
+
+            T *= cooling_rate
+
+            if detail:
+                print(f'iteration number: {i}, x: {x}, E: {E}, T: {T}')
+                Es.append(E)
+                Ts.append(T)
+
+        if detail:
+            import matplotlib.pyplot as plt
+            fig, ax = plt.subplots(1, 2, figsize=(12, 5))
+            ax[0].plot(range(len(Es)), Es[0], label='theta 1')
+            ax[0].plot(range(len(Es)), Es[1], label='theta 2')
+            ax[0].plot(range(len(Es)), Es[2], label='theta 3')
+            ax[0].set_xlabel("Iteration")
+            ax[0].set_ylabel("Energy")
+            ax[0].set_title("Energy over Simulated Annealing Iterations")
+            ax[0].legend()
+            ax[1].plot(range(len(Ts)), Ts)
+            ax[1].set_xlabel("Iteration")
+            ax[1].set_ylabel("Temperature")
+            ax[1].set_title("Temperature over Simulated Annealing Iterations")
+            plt.show()
+            print(
+                f"final iteration number SA: {i}, final energy: {E}, final x: {x}")
+        return x, E
 
     def gradient_descent(q1: np.ndarray, q2: np.ndarray, x_0: np.ndarray, alpha: float, max_iter: int = 100, stop_tol: float = 1e-6, N_s: int = 10000, detail: bool = False) -> tuple:
         """
@@ -126,11 +202,11 @@ class hydrogen_molecule_minimisers:
             import matplotlib.pyplot as plt
             iterations = range(i+1)
             gradient_changes = np.array(gradient_changes)
-            plt.scatter(
+            plt.plot(
                 iterations, gradient_changes[:, 0], color='r', label='dTheta1')
-            plt.scatter(
+            plt.plot(
                 iterations, gradient_changes[:, 1], color='g', label='dTheta2')
-            plt.scatter(
+            plt.plot(
                 iterations, gradient_changes[:, 2], color='b', label='dTheta3')
             plt.xlabel("Iteration")
             plt.ylabel("Change in Gradient")
@@ -259,6 +335,7 @@ class hydrogen_molecule_minimisers:
 
         r_0 = np.ones(6, dtype=float)  #  for samples
 
+        gradient_changes = []
         start = time.perf_counter()
         for i in range(max_iter):
             wf = h2_wavefunction(x, q1, q2)
@@ -284,6 +361,7 @@ class hydrogen_molecule_minimisers:
             x = x_new
 
             if detail:
+                gradient_changes.append(grad_new - grad)
                 print(
                     f'iteration number: {i}, x: {x}, dx: {grad}, Ns = {Ns_i}, alpha={alpha}')
 
@@ -291,6 +369,20 @@ class hydrogen_molecule_minimisers:
         time_elapsed = end - start
 
         if detail:
+            import matplotlib.pyplot as plt
+            iterations = range(i+1)
+            gradient_changes = np.array(gradient_changes)
+            plt.plot(
+                iterations, gradient_changes[:, 0], color='r', label='dTheta1')
+            plt.plot(
+                iterations, gradient_changes[:, 1], color='g', label='dTheta2')
+            plt.plot(
+                iterations, gradient_changes[:, 2], color='b', label='dTheta3')
+            plt.xlabel("Iteration")
+            plt.ylabel("Change in Gradient")
+            plt.title("Gradient Changes Over Iterations")
+            plt.legend()
+            plt.show()
             print(f"iteration number QN: {i}")
             print(f"time elapsed QN: {time_elapsed}")
         return x, hydrogen_molecule_minimisers.E_fn(x, q1, q2, r1, r2)
