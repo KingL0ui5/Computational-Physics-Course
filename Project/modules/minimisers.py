@@ -47,7 +47,7 @@ class hydrogen_molecule_minimisers:
         return np.array([dE_t1, dE_t2, dE_t3])
 
     @staticmethod
-    def sample_coords(wf, Ns, r_0, thinning: int = 1) -> tuple:
+    def sample_coords(wf, Ns, r_0, thinning: int = 10) -> tuple:
         """
         Sample electron coordinates from the hydrogen molecule wavefunction using Metropolis-Hastings algorithm.
         Parameters:
@@ -126,20 +126,21 @@ class hydrogen_molecule_minimisers:
 
             xs = np.array(xs)
             fig, ax = plt.subplots(1, 3, figsize=(12, 5))
-            ax[0].plot(range(i), xs[:, 0], label='theta 1')
-            ax[0].plot(range(i), xs[:, 1], label='theta 2')
-            ax[0].plot(range(i), xs[:, 2], label='theta 3')
+            iterations = range(len(xs))
+            ax[0].plot(iterations, xs[:, 0], label='theta 1')
+            ax[0].plot(iterations, xs[:, 1], label='theta 2')
+            ax[0].plot(iterations, xs[:, 2], label='theta 3')
             ax[0].set_xlabel("Iteration")
             ax[0].set_ylabel("Theta Values")
             ax[0].set_title("Theta Values over Simulated Annealing Iterations")
             ax[0].legend()
 
-            ax[1].plot(range(i), Ts)
+            ax[1].plot(range(len(Ts)), Ts)
             ax[1].set_xlabel("Iteration")
             ax[1].set_ylabel("Temperature")
             ax[1].set_title("Temperature over Simulated Annealing Iterations")
 
-            ax[2].plot(range(i), Es)
+            ax[2].plot(range(len(Es)), Es)
             ax[2].set_xlabel("Iteration")
             ax[2].set_ylabel("Energy")
             ax[2].set_title("Energy over Simulated Annealing Iterations")
