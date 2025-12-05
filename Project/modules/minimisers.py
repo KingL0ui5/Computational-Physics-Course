@@ -101,6 +101,7 @@ class hydrogen_molecule_minimisers:
         E = hydrogen_molecule_minimisers.E_fn(x, q1, q2, r1, r2)
         Es = [E]
         Ts = [T]
+        xs = [x.copy()]
         for i in range(max_iter):
             x_new = x + np.random.normal(0, std, size=x.shape)
             #  bound the theta values
@@ -118,21 +119,31 @@ class hydrogen_molecule_minimisers:
                 print(f'iteration number: {i}, x: {x}, E: {E}, T: {T}')
                 Es.append(E)
                 Ts.append(T)
+                xs.append(x.copy())
 
         if detail:
             import matplotlib.pyplot as plt
-            fig, ax = plt.subplots(1, 2, figsize=(12, 5))
-            ax[0].plot(range(len(Es)), Es[0], label='theta 1')
-            ax[0].plot(range(len(Es)), Es[1], label='theta 2')
-            ax[0].plot(range(len(Es)), Es[2], label='theta 3')
+
+            xs = np.array(xs)
+            fig, ax = plt.subplots(1, 3, figsize=(12, 5))
+            ax[0].plot(range(i), xs[:, 0], label='theta 1')
+            ax[0].plot(range(i), xs[:, 1], label='theta 2')
+            ax[0].plot(range(i), xs[:, 2], label='theta 3')
             ax[0].set_xlabel("Iteration")
-            ax[0].set_ylabel("Energy")
-            ax[0].set_title("Energy over Simulated Annealing Iterations")
+            ax[0].set_ylabel("Theta Values")
+            ax[0].set_title("Theta Values over Simulated Annealing Iterations")
             ax[0].legend()
-            ax[1].plot(range(len(Ts)), Ts)
+
+            ax[1].plot(range(i), Ts)
             ax[1].set_xlabel("Iteration")
             ax[1].set_ylabel("Temperature")
             ax[1].set_title("Temperature over Simulated Annealing Iterations")
+
+            ax[2].plot(range(i), Es)
+            ax[2].set_xlabel("Iteration")
+            ax[2].set_ylabel("Energy")
+            ax[2].set_title("Energy over Simulated Annealing Iterations")
+
             plt.show()
             print(
                 f"final iteration number SA: {i}, final energy: {E}, final x: {x}")
