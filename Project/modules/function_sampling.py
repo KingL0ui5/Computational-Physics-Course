@@ -22,7 +22,7 @@ class ProposalFunction:
         return np.random.normal(loc=x, scale=sigma)
 
 
-def metropolis_hastings(f: Callable, f_prop: str, x_0: np.ndarray, xmin: np.ndarray, xmax: np.ndarray, N: int = 10000, kwrgs: dict = None, detail: bool = False) -> np.ndarray:
+def metropolis_hastings(f: Callable, f_prop: str, x_0: np.ndarray, xmin: np.ndarray, xmax: np.ndarray, N: int = 10000, kwrgs: dict = None, thinning: int = 1, detail: bool = False) -> np.ndarray:
     """
     Metropolis algorithm to sample from a target distribution defined by nd function f.
 
@@ -33,6 +33,7 @@ def metropolis_hastings(f: Callable, f_prop: str, x_0: np.ndarray, xmin: np.ndar
         xmax : list or np.ndarray, The maximum bounds for each dimension.
         x_0 : list or np.ndarray, The initial position to start sampling from.
         N : int, The number of samples to generate.
+        thinning : int, The thinning factor to reduce autocorrelation in samples.
         kwrgs : dict, Additional keyword arguments to pass to the proposal function.
 
     Returns: np.ndarray, An array of sampled positions in coordinate format.
@@ -46,7 +47,7 @@ def metropolis_hastings(f: Callable, f_prop: str, x_0: np.ndarray, xmin: np.ndar
     n_dims = current.shape[0]
     xmin = np.array(xmin, dtype=float)
     xmax = np.array(xmax, dtype=float)
-    samples = np.zeros((N, n_dims))
+    samples = np.zeros((N // thinning, n_dims))
     samples[0] = current
 
     accepted_count = 0
@@ -71,7 +72,8 @@ def metropolis_hastings(f: Callable, f_prop: str, x_0: np.ndarray, xmin: np.ndar
             current = proposal
             accepted_count += 1
 
-        samples[i] = (current)
+        if i % thinning == 0:
+            samples[i // thinning] = (current)
     end1 = time.perf_counter()
 
     if detail:
