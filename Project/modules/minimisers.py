@@ -78,7 +78,6 @@ class hydrogen_molecule_minimisers:
         Returns:
             tuple: the coordinates of minima, the minimum value of the function at this point
         """
-        from modules.function_sampling import metropolis_hastings
         from hydrogen_molecule import h2_wavefunction
 
         print("Starting gradient descent minimiser...")
@@ -125,12 +124,71 @@ class hydrogen_molecule_minimisers:
 
         return x, hydrogen_molecule_minimisers.E_fn(x, q1, q2, r1, r2)
 
+    def RMSProp_GD(q1: np.ndarray, q2: np.ndarray, x_0: np.ndarray, alpha: float, forgetting: float, max_iter: int = 1000, stop_tol: float = 1e-6, N_s: int = 10000, detail: bool = False) -> tuple:
+        """
+        A method to find the minima of a function using the RMSProp adjusted gradient descent method.
+        Parameters:
+            q1 (np.ndarray): Position of the first nucleus.
+            q2 (np.ndarray): Position of the second nucleus.
+            x_0: np.ndarray, the starting point of the minimiser
+            N_s: int, number of samples to take per wavefunction iteration
+            stepsize: float, the stepsize of the minimiser
+            forgetting: float, the forgetting factor of the minimiser
+            max_iter: int, the number of iterations to run
+            stop_tol: float, default = 1e-6, the value of the gradient at which convergence is determined
+            detail: bool, default = False, show the time elapsed for the method to run
+
+        Returns:
+            tuple: the coordinates of minima, the minimum value of the function at this point
+        """
+        from hydrogen_molecule import h2_wavefunction
+        print("Starting RMSProp gradient descent minimiser...")
+
+        x = np.asarray(x_0, dtype=float)
+        r_0 = np.ones(6, dtype=float)  #  for samples
+        v = np.ones_like(x)
+
+        start = time.perf_counter()
+        for i in range(max_iter):
+            Ns_i = N_s  # * int(np.exp((i+1)*0.05))
+            wf = h2_wavefunction(x, q1, q2)
+            r1, r2 = hydrogen_molecule_minimisers.sample_coords(wf, Ns_i, r_0)
+
+            df = hydrogen_molecule_minimisers.grad(
+                x, q1, q2, r1, r2)
+
+            if stop_tol:
+                if np.linalg.norm(df) < stop_tol:
+                    break
+
+            if np.isnan(x.any()) or np.isinf(x.any()):
+                raise ValueError("Optimal parameters diverged to nan or inf")
+
+            v = forgetting * v + (1 - forgetting)*(df**2)
+            x = x - (alpha / np.sqrt(v)) * df
+
+            #  restrict x to be positive
+            if (x <= 1e-7).any():
+                x = np.maximum(x, 1e-7)
+
+            if detail:
+                print(
+                    f"iteration {i}, x={x}, d/dx={df}, N_s={Ns_i}, alpha={alpha}")
+
+        end = time.perf_counter()
+        time_elapsed = end - start
+
+        if detail:
+            print(f"iteration number RMS GD: {i}")
+            print(f"time elapsed RMS GD: {time_elapsed}")
+        return x, hydrogen_molecule_minimisers.E_fn(x, q1, q2, r1, r2)
+
     def quasi_newton(q1: np.ndarray, q2: np.ndarray, x_0: np.ndarray, alpha: float, method: str = "DFP", max_iter: int = 1000, stop_tol: float = None, N_s: int = 10000, detail: bool = False) -> tuple:
         """
         A method to find the minima of a function using the quasi-newton method using a chosen method to approximate the hessian
         Parameters:
             q1 (np.ndarray): Position of the first nucleus.
-            q2 (np.ndarray): Position of the second nucleus. 
+            q2 (np.ndarray): Position of the second nucleus.
             x_0: np.ndarray, the starting point of the minimiser
             alpha: float, the stepsize of the minimiser
             method: str, default = "DFP" the method to use for the hessian approximation - allowed values "DFP", "BFGS"
@@ -167,8 +225,9 @@ class hydrogen_molecule_minimisers:
 
             temp = 1.0 / np.dot(gamma, delta)
             I = np.eye(dim)
-            G = (I - temp * np.outer(delta, gamma)) @ G @ (I - temp * np.outer(gamma, delta)) \
-                + temp * np.outer(delta, delta)
+            G = (I - temp * np.outer(delta, gamma)
+                 ) @ G @ (I - temp * np.outer(gamma, delta))
+            + temp * np.outer(delta, delta)
 
             return G
 
@@ -222,8 +281,8 @@ class hydrogen_atom_minimisers:
         """
         A method to find the minima of a function using the quasi-newton method using a chosen method to approximate the hessian
         Parameters:
-            f: callable, the function to minimise 
-            df: callable, the first derivative of the function, left for flexibility of method 
+            f: callable, the function to minimise
+            df: callable, the first derivative of the function, left for flexibility of method
             x_0: np.ndarray, the starting point of the minimiser
             stepsize: float, the stepsize of the minimiser
             method: str, default = "DFP" the method to use for the hessian approximation - allowed values "DFP", "BFGS"
@@ -259,8 +318,9 @@ class hydrogen_atom_minimisers:
 
             temp = 1.0 / np.dot(gamma, delta)
             I = np.eye(dim)
-            G = (I - temp * np.outer(delta, gamma)) @ G @ (I - temp * np.outer(gamma, delta)) \
-                + temp * np.outer(delta, delta)
+            G = (I - temp * np.outer(delta, gamma)
+                 ) @ G @ (I - temp * np.outer(gamma, delta))
+            + temp * np.outer(delta, delta)
 
             return G
 
@@ -373,7 +433,7 @@ class hydrogen_atom_minimisers:
 
     def stochastic_gradient_descent(wf: Callable, dH: Callable, x_0: np.ndarray, stepsize: float, stop_tol: float = None, max_iter: int = 1000, noise: float = 0.1, N_s: int = 1000, detail: bool = False) -> tuple:
         """
-        A method to find the minima of a function using the gradient descent method with added noise. 
+        A method to find the minima of a function using the gradient descent method with added noise.
         Parameters:
             E: callable, the function to minimise
             dH: callable, the first derivative of the function, left for flexibility of method
@@ -426,12 +486,12 @@ class hydrogen_atom_minimisers:
 
 def gradient_desecent(f: Callable, df: Callable, x_0: np.ndarray, stepsize: float, max_iter: int = 1000, stop_tol: float = 1e-6, detail: bool = False, **kwargs) -> tuple:
     """
-    A method to find the minima of a function using the gradient descent method. 
+    A method to find the minima of a function using the gradient descent method.
     Parameters:
-        f: callable, the function to minimise 
-        df: callable, the first derivative of the function, left for flexibility of method 
+        f: callable, the function to minimise
+        df: callable, the first derivative of the function, left for flexibility of method
         x_0: np.ndarray, the starting point of the minimiser
-        stepsize: float, the stepsize of the minimizer 
+        stepsize: float, the stepsize of the minimizer
         max_iter: int, the number of iterations to run
         stop_tol: float, default = 1e-6, the value of the gradient at which convergence is determined
         detail: bool, default = False, show the time elapsed for the method to run
@@ -463,12 +523,12 @@ def gradient_desecent(f: Callable, df: Callable, x_0: np.ndarray, stepsize: floa
 
 def stochastic_GD(f: Callable, df: Callable, x_0: np.ndarray, stepsize: float, noise: float, max_iter: int = 1000, stop_tol: float = None, detail: bool = False, **kwargs) -> tuple:
     """
-    A method to find the minima of a function using the gradient descent method with added noise. 
+    A method to find the minima of a function using the gradient descent method with added noise.
     Parameters:
-        f: callable, the function to minimise 
-        df: callable, the first derivative of the function, left for flexibility of method 
+        f: callable, the function to minimise
+        df: callable, the first derivative of the function, left for flexibility of method
         x_0: np.ndarray, the starting point of the minimiser
-        stepsize: float, the stepsize of the minimizer 
+        stepsize: float, the stepsize of the minimizer
         noise: float, the level of noise to introduce to the derivative
         max_iter: int, the number of iterations to run
         stop_tol: float, default = None, the value of the gradient at which convergence is determined. Defaulted to none to give it a chance to get off local minima
@@ -498,12 +558,12 @@ def stochastic_GD(f: Callable, df: Callable, x_0: np.ndarray, stepsize: float, n
 
 def RMSProp_GD(f: Callable, df: Callable, x_0: np.ndarray, stepsize: float, forgetting: float, max_iter: int = 1000, stop_tol: float = 1e-6, detail: bool = False, **kwargs) -> tuple:
     """
-    A method to find the minima of a function using the RMSProp adjusted gradient descent method. 
+    A method to find the minima of a function using the RMSProp adjusted gradient descent method.
     Parameters:
-        f: callable, the function to minimise 
-        df: callable, the first derivative of the function, left for flexibility of method 
+        f: callable, the function to minimise
+        df: callable, the first derivative of the function, left for flexibility of method
         x_0: np.ndarray, the starting point of the minimiser
-        stepsize: float, the stepsize of the minimiser 
+        stepsize: float, the stepsize of the minimiser
         forgetting: float, the forgetting factor of the minimiser
         max_iter: int, the number of iterations to run
         stop_tol: float, default = 1e-6, the value of the gradient at which convergence is determined
@@ -536,8 +596,8 @@ def quasi_newton(f: Callable, df: Callable, x_0: np.ndarray, stepsize: float, me
     """
     A method to find the minima of a function using the quasi-newton method using a chosen method to approximate the hessian
     Parameters:
-        f: callable, the function to minimise 
-        df: callable, the first derivative of the function, left for flexibility of method 
+        f: callable, the function to minimise
+        df: callable, the first derivative of the function, left for flexibility of method
         x_0: np.ndarray, the starting point of the minimiser
         stepsize: float, the stepsize of the minimiser
         method: str, default = "DFP" the method to use for the hessian approximation - allowed values "DFP", "BFGS"
@@ -570,8 +630,9 @@ def quasi_newton(f: Callable, df: Callable, x_0: np.ndarray, stepsize: float, me
 
         temp = 1.0 / np.dot(gamma, delta)
         I = np.eye(dim)
-        G = (I - temp * np.outer(delta, gamma)) @ G @ (I - temp * np.outer(gamma, delta)) \
-            + temp * np.outer(delta, delta)
+        G = (I - temp * np.outer(delta, gamma)
+             ) @ G @ (I - temp * np.outer(gamma, delta))
+        + temp * np.outer(delta, delta)
 
         return G
 

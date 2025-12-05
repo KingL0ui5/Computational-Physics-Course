@@ -165,9 +165,9 @@ if __name__ == '__main__':
     q2 = [0, 0, -1]
     wf = h2_wavefunction(thetas=[1., 1., 1.], q1=q1, q2=q2)
 
-    minimiser = min.quasi_newton
+    minimiser = min.RMSProp_GD
 
     thetas_0 = [1.]*3  #  for minimiser
     theta_min, E_min = minimiser(q1, q2, x_0=thetas_0,
-                                 alpha=1., stop_tol=1e-3, N_s=100000, detail=True)
+                                 alpha=1., stop_tol=1e-3, N_s=100000, forgetting=0.99, detail=True)
     print(f"minimum theta: {theta_min}, minimum energy: {E_min}")
