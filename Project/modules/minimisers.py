@@ -124,13 +124,14 @@ class hydrogen_molecule_minimisers:
 
         if detail:
             import matplotlib.pyplot as plt
-            iterations = range(i)
+            iterations = range(i+1)
+            gradient_changes = np.array(gradient_changes)
             plt.scatter(
-                iterations, gradient_changes[0], color='r', label='dTheta1')
+                iterations, gradient_changes[:, 0], color='r', label='dTheta1')
             plt.scatter(
-                iterations, gradient_changes[1], color='g', label='dTheta2')
+                iterations, gradient_changes[:, 1], color='g', label='dTheta2')
             plt.scatter(
-                iterations, gradient_changes[2], color='b', label='dTheta3')
+                iterations, gradient_changes[:, 2], color='b', label='dTheta3')
             plt.xlabel("Iteration")
             plt.ylabel("Change in Gradient")
             plt.title("Gradient Changes Over Iterations")
