@@ -85,6 +85,9 @@ class hydrogen_molecule_minimisers:
 
         r_0 = np.ones(6, dtype=float)  #  for samples
 
+        gradient_changes = []
+        df_last = np.zeros_like(x)
+
         #  minimisation loop
         start = time.perf_counter()
         for i in range(max_iter):
@@ -113,11 +116,27 @@ class hydrogen_molecule_minimisers:
             if detail:
                 print(
                     f"iteration {i}, x={x}, d/dx={df}, N_s={Ns_i}, alpha={alpha}")
+                gradient_changes.append(df-df_last)
+                df_last = df
 
         end = time.perf_counter()
         time_elapsed = end - start
 
         if detail:
+            import matplotlib.pyplot as plt
+            iterations = range(i)
+            plt.scatter(
+                iterations, gradient_changes[0], color='r', label='dTheta1')
+            plt.scatter(
+                iterations, gradient_changes[1], color='g', label='dTheta2')
+            plt.scatter(
+                iterations, gradient_changes[2], color='b', label='dTheta3')
+            plt.xlabel("Iteration")
+            plt.ylabel("Change in Gradient")
+            plt.title("Gradient Changes Over Iterations")
+            plt.legend()
+            plt.show()
+
             print(f"iteration number GD: {i}")
             print(f"time elapsed GD: {time_elapsed}")
             print(f"final derivative: {df}")

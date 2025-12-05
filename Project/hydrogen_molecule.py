@@ -160,14 +160,40 @@ def test_samples():
     plt.show()
 
 
-if __name__ == '__main__':
+def test_minimiser():
     q1 = [0, 0, 1]
     q2 = [0, 0, -1]
     wf = h2_wavefunction(thetas=[1., 1., 1.], q1=q1, q2=q2)
 
-    minimiser = min.RMSProp_GD
+    minimiser = min.gradient_descent
 
     thetas_0 = [1.]*3  #  for minimiser
     theta_min, E_min = minimiser(q1, q2, x_0=thetas_0,
-                                 alpha=1., stop_tol=1e-3, N_s=100000, forgetting=0.99, detail=True)
+                                 alpha=.5, stop_tol=1e-3, N_s=100000, detail=True, max_iter=60)
     print(f"minimum theta: {theta_min}, minimum energy: {E_min}")
+
+
+if __name__ == '__main__':
+    test_minimiser()
+
+    # q1 = [0.] * 3
+    # q2 = [0., 0., i for i in np.linspace(0, 3.0, 10)]
+
+    # energies = []
+    # for q2_i in q2:
+    #     wf = h2_wavefunction(thetas=[1., 1., 1.], q1=q1, q2=q2_i)
+
+    #     minimiser = min.gradient_descent
+
+    #     thetas_0 = [3.]*3  #  for minimiser
+    #     theta_min, E_min = minimiser(q1, q2_i, x_0=thetas_0,
+    #                                  alpha=.5, stop_tol=1e-3, N_s=100000, detail=False, max_iter=60)
+    #     energies.append(E_min)
+    #     print(f"q2: {q2_i}, minimum theta: {theta_min}, minimum energy: {E_min}")
+
+    # plt.plot(np.linspace(0, 3.0, 10), energies, marker='o')
+    # plt.xlabel("Distance between nuclei (a.u.)")
+    # plt.ylabel("Minimum Energy (a.u.)")
+    # plt.title("Minimum Energy of H2 molecule vs Nuclear Separation")
+    # plt.grid()
+    # plt.show()

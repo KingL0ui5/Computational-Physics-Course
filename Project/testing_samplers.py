@@ -1,11 +1,112 @@
 import numpy as np
 import seaborn as sns
 from modules.function_sampling import metropolis_hastings, MALA, stochasticMALA
-from modules.helpers import harmonic_oscillator, get_acf
+from modules.helpers import harmonic_oscillator_helpers as hlp, get_acf
 import matplotlib.pyplot as plt
 sns.set_style('darkgrid')
 sns.set_context('paper')
 sns.set_palette("colorblind")
+
+
+def test_samples_H2():
+    from hydrogen_molecule import h2_wavefunction
+
+    def autocorrelation(x):
+        n = len(x)
+        variance = x.var()
+        x = x - x.mean()
+        # Use FFT for efficient computation
+        r = np.correlate(x, x, mode='full')[-n:]
+        result = r / (variance * (np.arange(n, 0, -1)))
+        return result
+
+    print("--- Setting up H2 System (for Sampling Probability) ---")
+    q1 = np.array([0, 0, 1])
+    q2 = np.array([0, 0, -1])
+    theta_A = np.array([1., 1., 1.])
+    wf_A = h2_wavefunction(thetas=theta_A, q1=q1, q2=q2)
+
+    theta_B = np.array([1., 1., 1.])
+    wf_B = h2_wavefunction(thetas=theta_B, q1=q1, q2=q2)
+
+    N_samples = 100000
+
+    # Define bounds and start
+    r_0 = np.array([0., 0., 0., 0., 0., 0.])
+
+    def wavefunction_wrapper_A(coords):
+        coords = np.asarray(coords)
+        r1, r2 = coords[:, 0:3], coords[:, 3:6]
+        return wf_A.probability_density(r1, r2)
+
+    def wavefunction_wrapper_B(coords):
+        coords = np.asarray(coords)
+        r1, r2 = coords[:, 0:3], coords[:, 3:6]
+        return wf_B.probability_density(r1, r2)
+
+    samples_A = metropolis_hastings(f=wavefunction_wrapper_A, f_prop='gaussian', x_0=r_0, xmin=[
+        -10.]*6, xmax=[10.]*6, N=N_samples, kwrgs={'sigma': 0.8})
+
+    samples_B = metropolis_hastings(f=wavefunction_wrapper_B, f_prop='gaussian', x_0=r_0, xmin=[
+        -10.]*6, xmax=[10.]*6, N=N_samples, kwrgs={'sigma': 0.8})
+
+    burn_in = int(N_samples * 0.1)
+
+    X_A = samples_A[burn_in:, 0]
+    X_B = samples_B[burn_in:, 0]
+
+    r1_A, r2_A = samples_A[burn_in:, 0:3], samples_A[burn_in:, 3:6]
+    r1_B, r2_B = samples_B[burn_in:, 0:3], samples_B[burn_in:, 3:6]
+
+    E_A = wf_A.local_energy(r1_A, r2_A)
+    E_B = wf_B.local_energy(r1_B, r2_B)
+
+    print(f"Energy Stats (Filtered |E| < 500 Ha):")
+    print(f"Mean E_A: {np.mean(E_A):.5f} Ha")
+    print(f"Mean E_B: {np.mean(E_B):.5f} Ha")
+    print(f"Difference: {abs(np.mean(E_A) - np.mean(E_B)):.5f} Ha")
+    print(f"Variance A: {np.var(E_A):.5f}")
+
+    fig, ax = plt.subplots(3, 1, figsize=(10, 12))
+
+    # 1. Trace Plot (Check for "Stuck" walkers)
+    ax[0].plot(X_A[::100], label='Chain A', alpha=0.7, linewidth=0.5)
+    ax[0].plot(X_B[::100], label='Chain B', alpha=0.7, linewidth=0.5)
+    ax[0].set_title(
+        f"Coordinate Trace (Electron 1, x-axis) - Subsampled 1:100")
+    ax[0].set_ylabel("Position (Bohr)")
+    ax[0].legend()
+
+    ax[1].hist(X_A, bins=100, density=True, alpha=0.5,
+               label='Chain A', color='blue')
+    ax[1].hist(X_B, bins=100, density=True, alpha=0.5,
+               label='Chain B', color='orange')
+    ax[1].set_title("Coordinate Distribution Histogram")
+    ax[1].set_xlabel("Position (x)")
+    ax[1].legend()
+
+    lag_max = 1000
+    ac_A = autocorrelation(X_A)[:lag_max]
+
+    ax[2].plot(ac_A, color='black', label='Autocorrelation')
+    ax[2].axhline(0, color='gray', linestyle='--')
+    ax[2].axhline(1/np.e, color='red', linestyle=':',
+                  label='Correlation Time (1/e)')
+    ax[2].set_title("Autocorrelation of Position")
+    ax[2].set_xlabel("Lag (steps)")
+    ax[2].set_ylabel("Correlation")
+    ax[2].legend()
+
+    try:
+        tau = np.where(ac_A < 1/np.e)[0][0]
+        ax[2].text(tau, 0.5, f"  tau ≈ {tau} steps", color='red')
+        print(f"\nEstimated Correlation Time (tau): {tau} steps")
+        print(f"If tau is high (>100), consider increasing sigma or thinning samples.")
+    except:
+        print("\nCorrelation time is > 1000 steps. Sampling is highly inefficient.")
+
+    plt.tight_layout()
+    plt.show()
 
 
 def test_samples():
@@ -13,8 +114,8 @@ def test_samples():
     N = 100000
 
     n = 3
-    f, _ = harmonic_oscillator.eigenfunctions(n)
-    df = harmonic_oscillator.harmonic_first_derivative(n)
+    f, _ = hlp.eigenfunctions(n)
+    df = hlp.harmonic_first_derivative(n)
     samples_MH = metropolis_hastings(lambda x: f(x)**2, 'gaussian', [0.], xmin=[0.], xmax=[10.], N=N, kwrgs={
         'sigma': 1.}, detail=True)
 
@@ -260,4 +361,5 @@ def test_samples_hydrogen():
 if __name__ == "__main__":
     # test_samples()
     # test_sampling_3d()
-    test_samples_hydrogen()
+    # test_samples_hydrogen()
+    test_samples_H2()
