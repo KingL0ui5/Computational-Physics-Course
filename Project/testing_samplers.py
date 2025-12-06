@@ -15,12 +15,10 @@ def test_samples_H2():
         n = len(x)
         variance = x.var()
         x = x - x.mean()
-        # Use FFT for efficient computation
         r = np.correlate(x, x, mode='full')[-n:]
         result = r / (variance * (np.arange(n, 0, -1)))
         return result
 
-    print("--- Setting up H2 System (for Sampling Probability) ---")
     q1 = np.array([0, 0, 1])
     q2 = np.array([0, 0, -1])
     theta_A = np.array([1., 1., 1.])
@@ -32,7 +30,7 @@ def test_samples_H2():
     N_samples = 100000
 
     # Define bounds and start
-    r_0 = np.array([0., 0., 0., 0., 0., 0.])
+    r_0 = [1.] * 6
 
     def wavefunction_wrapper_A(coords):
         coords = np.asarray(coords)
@@ -45,12 +43,15 @@ def test_samples_H2():
         return wf_B.probability_density(r1, r2)
 
     samples_A = metropolis_hastings(f=wavefunction_wrapper_A, f_prop='gaussian', x_0=r_0, xmin=[
-        -10.]*6, xmax=[10.]*6, N=N_samples, kwrgs={'sigma': 0.8})
+        -10.]*6, xmax=[10.]*6, N=N_samples, kwrgs={'sigma': 0.8}, thinning=20)
 
     samples_B = metropolis_hastings(f=wavefunction_wrapper_B, f_prop='gaussian', x_0=r_0, xmin=[
         -10.]*6, xmax=[10.]*6, N=N_samples, kwrgs={'sigma': 0.8})
 
-    burn_in = int(N_samples * 0.1)
+    A_acf = get_acf(samples_A)
+    B_acf = get_acf(samples_B)
+
+    burn_in = int(len(samples_A) * 0.1)
 
     X_A = samples_A[burn_in:, 0]
     X_B = samples_B[burn_in:, 0]
@@ -67,7 +68,7 @@ def test_samples_H2():
     print(f"Difference: {abs(np.mean(E_A) - np.mean(E_B)):.5f} Ha")
     print(f"Variance A: {np.var(E_A):.5f}")
 
-    fig, ax = plt.subplots(3, 1, figsize=(10, 12))
+    _, ax = plt.subplots(3, 1, figsize=(10, 12))
 
     # 1. Trace Plot (Check for "Stuck" walkers)
     ax[0].plot(X_A[::100], label='Chain A', alpha=0.7, linewidth=0.5)
@@ -87,8 +88,10 @@ def test_samples_H2():
 
     lag_max = 1000
     ac_A = autocorrelation(X_A)[:lag_max]
+    ac_B = autocorrelation(X_B)[:lag_max]
 
-    ax[2].plot(ac_A, color='black', label='Autocorrelation')
+    ax[2].plot(ac_A, color='black', label='Autocorrelation A')
+    ax[2].plot(ac_B, color='red', label='Autocorrelation B')
     ax[2].axhline(0, color='gray', linestyle='--')
     ax[2].axhline(1/np.e, color='red', linestyle=':',
                   label='Correlation Time (1/e)')
@@ -106,6 +109,17 @@ def test_samples_H2():
         print("\nCorrelation time is > 1000 steps. Sampling is highly inefficient.")
 
     plt.tight_layout()
+    plt.show()
+
+    plt.plot(A_acf, label='Metropolis-Hastings (A)', color='C0')
+    plt.plot(B_acf, label='Metropolis-Hastings (B)', color='C1')
+    plt.axhline(0, color='black', lw=0.5, ls='--')
+    plt.axhline(1/np.e, color='gray', lw=0.5, ls=':',
+                label='Correlation Time ($1/e$)')
+    plt.xlabel('Lag (k steps)')
+    plt.ylabel('Autocorrelation $C(k)$')
+    plt.title('Sampler Autocorrelation Comparison')
+    plt.legend()
     plt.show()
 
 
