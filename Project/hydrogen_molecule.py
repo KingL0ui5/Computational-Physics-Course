@@ -169,7 +169,7 @@ def test_minimiser():
 
     thetas_0 = [1.] * 3  #  for minimiser
     theta_min, E_min = minimiser(q1, q2, x_0=thetas_0,
-                                 alpha=0.2, stop_tol=1e-3, N_s=100000, detail=True, max_iter=60)
+                                 alpha=0.5, stop_tol=1e-3, N_s=100000, detail=True, max_iter=60)
 
     # theta_min, E_min = min.simulated_annealing(
     #     q1, q2, x_0=thetas_0, initial_temp=0.5, cooling_rate=0.95, max_iter=200, Ns=10000, std=0.05, detail=True)
@@ -182,32 +182,34 @@ if __name__ == '__main__':
     Fix notes: The local energy really doesn't seem to be changing much. Perhaps an error in finding the derivative with respect to theta?
     doesn't seem to be the local energy itself
     """
-    test_minimiser()
+    # test_minimiser()
 
-    # q1 = [0.] * 3
-    # q2 = [0., 0., i for i in np.linspace(0, 3.0, 10)]
+    r_0 = np.linspace(0, 3.0, 2)
+    q1 = [0.] * 3
+    q2 = [[0., 0., i] for i in r_0]
 
-    # energies = []
-    # for q2_i in q2:
-    #     wf = h2_wavefunction(thetas=[1., 1., 1.], q1=q1, q2=q2_i)
+    energies = []
+    for q2_i in q2:
+        wf = h2_wavefunction(thetas=[1., 1., 1.], q1=q1, q2=q2_i)
 
-    #     minimiser = min.gradient_descent
+        thetas_0 = [3.]*3  #  for minimiser
+        theta_min, E_min = min.simulated_annealing(
+            q1, q2_i, x_0=thetas_0, initial_temp=0.5, cooling_rate=0.95, max_iter=200, Ns=10000, std=0.05, detail=False)
+        energies.append(E_min)
+        print(f"q2: {q2_i}, minimum theta: {theta_min}, minimum energy: {E_min}")
 
-    #     thetas_0 = [3.]*3  #  for minimiser
-    #     theta_min, E_min = minimiser(q1, q2_i, x_0=thetas_0,
-    #                                  alpha=.5, stop_tol=1e-3, N_s=100000, detail=False, max_iter=60)
-    #     energies.append(E_min)
-    #     print(f"q2: {q2_i}, minimum theta: {theta_min}, minimum energy: {E_min}")
+    energies = np.array(energies)
+    plt.plot(r_0, energies, marker='o')
+    plt.xlabel("Distance between nuclei (a.u.)")
+    plt.ylabel("Minimum Energy (a.u.)")
+    plt.title("Minimum Energy of H2 molecule vs Nuclear Separation")
+    plt.grid()
+    plt.show()
 
-    # x = np.linspace(0, 3.0, 10)
-    # plt.plot(x, energies, marker='o')
-    # plt.xlabel("Distance between nuclei (a.u.)")
-    # plt.ylabel("Minimum Energy (a.u.)")
-    # plt.title("Minimum Energy of H2 molecule vs Nuclear Separation")
-    # plt.grid()
-    # plt.show()
+    from scipy.optimize import curve_fit
+    f = hlp.V_morse
+    fit, cov = curve_fit(f, r_0, energies, p0=[-1.0, 1.0, 1.0])
+    plt.plot(x, f(x, *fit), label='Morse Potential Fit', color='orange', label='Morse Potential Fit')
 
-    # from scipy.optimize import curve_fit
-    # f = hlp.V_morse
-    # fit, cov = curve_fit(x, x, energies, p0=[-1.0, 1.0, 1.0])
-    # plt.plot(x, f(x, *fit), label='Morse Potential Fit', color='orange')
+    print(
+        f"Fitted Parameters: De= {fit[0]}, a= {fit[1]}, re= {fit[2]} \n errors: {np.sqrt(np.diag(cov))}")
