@@ -69,8 +69,8 @@ class h2_wavefunction:
             np.ndarray: The local energy at the given position(s)
         """
 
-        # this method has the same issues as before. There is a probelm around r=0 due to numerical divergence when it should cancel
         r1, r2 = np.asarray(r1), np.asarray(r2)
+        #  reformat
         if len(r1.shape) == 1:
             r1, r2 = np.asarray([r1]), np.asarray([r2])
 
@@ -95,6 +95,7 @@ class h2_wavefunction:
             self.psi(r1, r2) * (np.sum(d2f_r1, axis=1) +
                                 np.sum(d2f_r2, axis=1))
 
+        #  computes r and subtracts them
         def d(a, b): return np.sqrt(np.sum((a - b)**2, axis=1))
 
         r1q1, r1q2 = d(r1, q1), d(r1, q2)
@@ -123,8 +124,8 @@ class h2_wavefunction:
 
 
 def test_samples():
-    q1 = [0, 1, 0]
-    q2 = [0, -1, 0]
+    q1 = [0, 2, 0]
+    q2 = [0, 0, 0]
     wf = h2_wavefunction(thetas=[1., 1., 1.], q1=q1, q2=q2)
 
     def wrapper(coords):
@@ -167,15 +168,20 @@ def test_minimiser():
     minimiser = min.gradient_descent
 
     thetas_0 = [1.] * 3  #  for minimiser
-    theta_min, E_min = minimiser(q1, q2, x_0=thetas_0,
-                                 alpha=0.2, stop_tol=1e-3, N_s=100000, detail=True, max_iter=60)
+    # theta_min, E_min = minimiser(q1, q2, x_0=thetas_0,
+    #                              alpha=0.2, stop_tol=1e-3, N_s=100000, detail=True, max_iter=60)
 
-    # theta_min, E_min = min.simulated_annealing(
-    #     q1, q2, x_0=thetas_0, initial_temp=100., cooling_rate=0.9, max_iter=1000, Ns=100000, std=0.25, detail=True)
+    theta_min, E_min = min.simulated_annealing(
+        q1, q2, x_0=thetas_0, initial_temp=1., cooling_rate=0.95, max_iter=200, Ns=10000, std=0.05, detail=True)
     print(f"minimum theta: {theta_min}, minimum energy: {E_min}")
 
 
 if __name__ == '__main__':
+
+    """
+    Fix notes: The local energy really doesn't seem to be changing much. Perhaps an error in finding the derivative with respect to theta?
+    doesn't seem to be the local energy itself
+    """
     test_minimiser()
 
     # q1 = [0.] * 3
@@ -193,9 +199,15 @@ if __name__ == '__main__':
     #     energies.append(E_min)
     #     print(f"q2: {q2_i}, minimum theta: {theta_min}, minimum energy: {E_min}")
 
-    # plt.plot(np.linspace(0, 3.0, 10), energies, marker='o')
+    # x = np.linspace(0, 3.0, 10)
+    # plt.plot(x, energies, marker='o')
     # plt.xlabel("Distance between nuclei (a.u.)")
     # plt.ylabel("Minimum Energy (a.u.)")
     # plt.title("Minimum Energy of H2 molecule vs Nuclear Separation")
     # plt.grid()
     # plt.show()
+
+    # from scipy.optimize import curve_fit
+    # f = hlp.V_morse
+    # fit, cov = curve_fit(x, x, energies, p0=[-1.0, 1.0, 1.0])
+    # plt.plot(x, f(x, *fit), label='Morse Potential Fit', color='orange')

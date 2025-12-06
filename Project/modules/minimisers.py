@@ -16,9 +16,8 @@ class hydrogen_molecule_minimisers:
         return np.nanmean(wf_temp.local_energy(r1, r2))
 
     @staticmethod
-    #  optimal for order 2 is 1e-4, order 8 is 1.108e-2
-    def grad(thetas, q1, q2, r1, r2, stepsize=1e-5, order=2):
-        from hydrogen_molecule import h2_wavefunction
+    #  optimal stepsize for order 2 is 1e-4, order 8 is 1.108e-2
+    def grad(thetas, q1, q2, r1, r2, stepsize=1e-5, order=8):
         from modules.differentiators import central_difference
         #  d/dt1
 
@@ -47,7 +46,7 @@ class hydrogen_molecule_minimisers:
         return np.array([dE_t1, dE_t2, dE_t3])
 
     @staticmethod
-    def sample_coords(wf, Ns, r_0, thinning: int = 10) -> tuple:
+    def sample_coords(wf, Ns, r_0, thinning: int = 20) -> tuple:
         """
         Sample electron coordinates from the hydrogen molecule wavefunction using Metropolis-Hastings algorithm.
         Parameters:
@@ -90,28 +89,36 @@ class hydrogen_molecule_minimisers:
         """
         from hydrogen_molecule import h2_wavefunction
 
-        Ns_i = Ns
+        print("starting simulated annealing...")
+
         r_0 = np.ones(6, dtype=float)  #  for samples
         x = np.array(x_0, dtype=float)
         T = initial_temp
 
         wf = h2_wavefunction(x, q1, q2)
-        r1, r2 = hydrogen_molecule_minimisers.sample_coords(wf, Ns_i, r_0)
+        r1, r2 = hydrogen_molecule_minimisers.sample_coords(wf, Ns, r_0)
 
         E = hydrogen_molecule_minimisers.E_fn(x, q1, q2, r1, r2)
         Es = [E]
         Ts = [T]
         xs = [x.copy()]
         for i in range(max_iter):
+            Ns_i = Ns
             x_new = x + np.random.normal(0, std, size=x.shape)
             #  bound the theta values
             if any(x_new < xmin) or any(x_new > xmax):
                 continue
 
-            E_new = hydrogen_molecule_minimisers.E_fn(x_new, q1, q2, r1, r2)
+            wf_new = h2_wavefunction(x_new, q1, q2)
+            r1_new, r2_new = hydrogen_molecule_minimisers.sample_coords(
+                wf_new, Ns_i, r_0)
+
+            E_new = hydrogen_molecule_minimisers.E_fn(
+                x_new, q1, q2, r1_new, r2_new)
             delta_E = E_new - E
+
             if delta_E < 0 or np.random.rand() < np.exp(-delta_E / T):
-                x, E = x_new, E_new
+                x, E, r1, r2 = x_new, E_new, r1_new, r2_new
 
             T *= cooling_rate
 
@@ -179,23 +186,25 @@ class hydrogen_molecule_minimisers:
         #  minimisation loop
         start = time.perf_counter()
         for i in range(max_iter):
-            # hydrogen wavefunction given theta
+            #   hydrogen wavefunction given theta
             Ns_i = N_s  # * int(np.exp((i+1)*0.05))
             wf = h2_wavefunction(x, q1, q2)
+
+            #   sample coordinates for current thetas
             r1, r2 = hydrogen_molecule_minimisers.sample_coords(wf, Ns_i, r_0)
 
             df = hydrogen_molecule_minimisers.grad(
                 x, q1, q2, r1, r2)
 
-            #  test stopping condition
+            #   test stopping condition
             if stop_tol:
                 if np.linalg.norm(df) < stop_tol:
                     break
-
+            #   halt at nan values
             if np.isnan(x.any()) or np.isinf(x.any()):
                 raise ValueError("Optimal parameters diverged to nan or inf")
 
-            x = x - alpha * df
+            x = x - (alpha * df)
 
             #  restrict x to be positive
             if (x <= 1e-7).any():
@@ -204,6 +213,8 @@ class hydrogen_molecule_minimisers:
             if detail:
                 print(
                     f"iteration {i}, x={x}, d/dx={df}, N_s={Ns_i}, alpha={alpha}")
+                E_min = hydrogen_molecule_minimisers.E_fn(x, q1, q2, r1, r2)
+                print(f"local energy: {E_min}")
                 gradient_changes.append(df-df_last)
                 df_last = df
 

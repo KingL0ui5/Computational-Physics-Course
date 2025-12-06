@@ -61,6 +61,24 @@ class hydrogen_molecule_helpers:
                 np.exp(-theta2 / (1.0 + theta3 * d(r1, r2)))
         return f
 
+    def V_morse(r: float | np.ndarray, D: float, a: float, r0: float, E_single: float) -> float | np.ndarray:
+        """
+        Calculate the Morse potential energy for a hydrogen molecule.
+
+        Parameters:
+            r: float or np.ndarray, interatomic distance
+            D: float, well depth
+            a: float, well width parameter
+            r0: float, Equilibrium bond distance
+            E_single, float: Energy of a single isolated atom (e.g., -0.5 for H)
+
+        Returns:
+            float | np.ndarray: The calculated potential energy.
+        """
+
+        V = D * (1.0 - np.exp(-a * (r - r0)))**2 - D + 2.0 * E_single
+        return V
+
     @staticmethod
     def plot_samples(r1: np.ndarray, r2: np.ndarray, q1: np.ndarray, q2: np.ndarray, xlim: np.ndarray | tuple, ylim: np.ndarray | tuple, seaborn: bool = False) -> None:
         """
@@ -188,7 +206,7 @@ class hydrogen_atom_helpers:
         samples = np.asarray(samples)
 
         if analytic:
-            E_l = hydrogen.analytic_local_energy(wf, samples)
+            E_l = hydrogen_atom_helpers.analytic_local_energy(wf, samples)
         else:
             E_l = wf.local_energy(samples)
 
