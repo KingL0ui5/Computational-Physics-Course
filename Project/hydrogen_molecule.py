@@ -168,11 +168,11 @@ def test_minimiser():
     minimiser = min.gradient_descent
 
     thetas_0 = [1.] * 3  #  for minimiser
-    theta_min, E_min = minimiser(q1, q2, x_0=thetas_0,
-                                 alpha=0.5, stop_tol=1e-3, N_s=100000, detail=True, max_iter=60)
+    # theta_min, E_min = minimiser(q1, q2, x_0=thetas_0,
+    #                              alpha=0.5, stop_tol=1e-3, N_s=100000, detail=True, max_iter=60)
 
-    # theta_min, E_min = min.simulated_annealing(
-    #     q1, q2, x_0=thetas_0, initial_temp=0.5, cooling_rate=0.95, max_iter=200, Ns=10000, std=0.05, detail=True)
+    theta_min, E_min = min.simulated_annealing(
+        q1, q2, x_0=thetas_0, initial_temp=0.5, cooling_rate=0.95, max_iter=200, Ns=10000, std=0.05, detail=True)
     print(f"minimum theta: {theta_min}, minimum energy: {E_min}")
 
 
@@ -184,20 +184,27 @@ if __name__ == '__main__':
     """
     # test_minimiser()
 
-    r_0 = np.linspace(0.1, 3.0, 4)
+    r_0 = np.linspace(0.1, 10., 100)
     q1 = [0.] * 3
     q2 = [[0., 0., i] for i in r_0]
 
     energies = []
+    count = 0
     for q2_i in q2:
+        count += 1
         wf = h2_wavefunction(thetas=[1., 1., 1.], q1=q1, q2=q2_i)
 
-        thetas_0 = [3.]*3  #  for minimiser
+        thetas_0 = [1.]*3  #  for minimiser
         theta_min, E_min = min.simulated_annealing(
             q1, q2_i, x_0=thetas_0, initial_temp=0.5, cooling_rate=0.95, max_iter=200, Ns=10000, std=0.05, detail=False)
         energies.append(E_min)
-        print(f"q2: {q2_i}, minimum theta: {theta_min}, minimum energy: {E_min}")
+        if count % 10 == 0:  #  checkpoint at every 10 steps
+            np.savetxt("output.txt", energies)
 
+        print(
+            f"iteration: {count}, q2: {q2_i}, minimum theta: {theta_min}, minimum energy: {E_min}")
+
+    np.savetxt("output.txt", energies)
     energies = np.array(energies)
     from scipy.optimize import curve_fit
     f = hlp.V_morse

@@ -89,8 +89,6 @@ class hydrogen_molecule_minimisers:
         """
         from hydrogen_molecule import h2_wavefunction
 
-        print("starting simulated annealing...")
-
         r_0 = np.ones(6, dtype=float)  #  for samples
         x = np.array(x_0, dtype=float)
         T = initial_temp
@@ -99,9 +97,12 @@ class hydrogen_molecule_minimisers:
         r1, r2 = hydrogen_molecule_minimisers.sample_coords(wf, Ns, r_0)
 
         E = hydrogen_molecule_minimisers.E_fn(x, q1, q2, r1, r2)
-        Es = [E]
-        Ts = [T]
-        xs = [x.copy()]
+
+        if detail:
+            print("starting simulated annealing...")
+            Es = [E]
+            Ts = [T]
+            xs = [x.copy()]
         for i in range(max_iter):
             Ns_i = Ns
             x_new = x + np.random.normal(0, std, size=x.shape)
