@@ -71,7 +71,7 @@ class hydrogen_molecule_minimisers:
         r1, r2 = r[:, 0:3], r[:, 3:6]
         return r1, r2
 
-    def simulated_annealing(q1: np.ndarray, q2: np.ndarray, x_0: np.ndarray, initial_temp: float, cooling_rate: float, std: float = 0.05, max_iter: int = 100, xmin: float = 0.7, xmax: float = 1.5, Ns: int = 10000, detail: bool = False):
+    def simulated_annealing(q1: np.ndarray, q2: np.ndarray, x_0: np.ndarray, initial_temp: float, cooling_rate: float, std: float = 0.05, max_iter: int = 100, xmin: float = 0.7, xmax: float = 5., Ns: int = 10000, detail: bool = False):
         """
         Find the minima of a function using the simulated annealing method.
         Parameters:

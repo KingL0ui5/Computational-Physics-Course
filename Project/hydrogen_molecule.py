@@ -183,8 +183,8 @@ if __name__ == '__main__':
     doesn't seem to be the local energy itself
     """
     # test_minimiser()
-
-    r_0 = np.linspace(0.1, 10., 100)
+    Ns = int(1e6)
+    r_0 = np.linspace(0.1, 4., 50)
     q1 = [0.] * 3
     q2 = [[0., 0., i] for i in r_0]
 
@@ -196,15 +196,15 @@ if __name__ == '__main__':
 
         thetas_0 = [1.]*3  #  for minimiser
         theta_min, E_min = min.simulated_annealing(
-            q1, q2_i, x_0=thetas_0, initial_temp=0.5, cooling_rate=0.95, max_iter=200, Ns=10000, std=0.05, detail=False)
+            q1, q2_i, x_0=thetas_0, initial_temp=0.5, cooling_rate=0.95, max_iter=200, Ns=Ns, std=0.05, detail=False)
         energies.append(E_min)
         if count % 10 == 0:  #  checkpoint at every 10 steps
-            np.savetxt("output.txt", energies)
+            np.savetxt(f"output_{Ns}.txt", [energies, r_0[:len(energies)]])
 
         print(
             f"iteration: {count}, q2: {q2_i}, minimum theta: {theta_min}, minimum energy: {E_min}")
 
-    np.savetxt("output.txt", energies)
+    np.savetxt(f"output_{Ns}.txt", [energies, r_0[:len(energies)]])
     energies = np.array(energies)
     from scipy.optimize import curve_fit
     f = hlp.V_morse
