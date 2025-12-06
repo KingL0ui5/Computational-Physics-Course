@@ -162,17 +162,17 @@ def test_samples():
 
 
 def test_minimiser():
-    q1 = [0, 0, 1]
-    q2 = [0, 0, -1]
+    q1 = [0, 0, 2]
+    q2 = [0, 0, 0]
 
     minimiser = min.gradient_descent
 
     thetas_0 = [1.] * 3  #  for minimiser
-    # theta_min, E_min = minimiser(q1, q2, x_0=thetas_0,
-    #                              alpha=0.2, stop_tol=1e-3, N_s=100000, detail=True, max_iter=60)
+    theta_min, E_min = minimiser(q1, q2, x_0=thetas_0,
+                                 alpha=0.2, stop_tol=1e-3, N_s=100000, detail=True, max_iter=60)
 
-    theta_min, E_min = min.simulated_annealing(
-        q1, q2, x_0=thetas_0, initial_temp=1., cooling_rate=0.95, max_iter=200, Ns=10000, std=0.05, detail=True)
+    # theta_min, E_min = min.simulated_annealing(
+    #     q1, q2, x_0=thetas_0, initial_temp=0.5, cooling_rate=0.95, max_iter=200, Ns=10000, std=0.05, detail=True)
     print(f"minimum theta: {theta_min}, minimum energy: {E_min}")
 
 

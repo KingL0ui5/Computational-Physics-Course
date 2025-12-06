@@ -10,30 +10,32 @@ import time
 
 class hydrogen_molecule_minimisers:
     @staticmethod
-    def E_fn(thetas, q1, q2, r1, r2):
+    def E_fn(thetas, q1, q2):
         from hydrogen_molecule import h2_wavefunction
         wf_temp = h2_wavefunction(thetas, q1, q2)
+        r1, r2 = hydrogen_molecule_minimisers.sample_coords(
+            wf_temp, 10000, r_0=[1.]*6)
         return np.nanmean(wf_temp.local_energy(r1, r2))
 
     @staticmethod
     #  optimal stepsize for order 2 is 1e-4, order 8 is 1.108e-2
-    def grad(thetas, q1, q2, r1, r2, stepsize=1e-5, order=8):
+    def grad(thetas, q1, q2, stepsize=1e-5, order=8):
         from modules.differentiators import central_difference
         #  d/dt1
 
         def wrapper_1(theta_1):
             t = [theta_1, thetas[1], thetas[2]]
-            return hydrogen_molecule_minimisers.E_fn(t, q1, q2, r1, r2)
+            return hydrogen_molecule_minimisers.E_fn(t, q1, q2)
 
         #  d/dt2
         def wrapper_2(theta_2):
             t = [thetas[0], theta_2, thetas[2]]
-            return hydrogen_molecule_minimisers.E_fn(t, q1, q2, r1, r2)
+            return hydrogen_molecule_minimisers.E_fn(t, q1, q2)
 
         #  d/dt3
         def wrapper_3(theta_3):
             t = [thetas[0], thetas[1], theta_3]
-            return hydrogen_molecule_minimisers.E_fn(t, q1, q2, r1, r2)
+            return hydrogen_molecule_minimisers.E_fn(t, q1, q2)
 
         dE_t1 = central_difference(
             wrapper_1, x=[thetas[0]], h=[stepsize], order=order).item()
@@ -71,7 +73,7 @@ class hydrogen_molecule_minimisers:
         r1, r2 = r[:, 0:3], r[:, 3:6]
         return r1, r2
 
-    def simulated_annealing(q1: np.ndarray, q2: np.ndarray, x_0: np.ndarray, initial_temp: float, cooling_rate: float, std: float = 0.05, max_iter: int = 100, xmin: float = 0., xmax: float = 5., Ns: int = 10000, detail: bool = False):
+    def simulated_annealing(q1: np.ndarray, q2: np.ndarray, x_0: np.ndarray, initial_temp: float, cooling_rate: float, std: float = 0.05, max_iter: int = 100, xmin: float = 0.7, xmax: float = 1.5, Ns: int = 10000, detail: bool = False):
         """
         Find the minima of a function using the simulated annealing method.
         Parameters:
@@ -186,15 +188,16 @@ class hydrogen_molecule_minimisers:
         #  minimisation loop
         start = time.perf_counter()
         for i in range(max_iter):
-            #   hydrogen wavefunction given theta
+
+            alpha_i = alpha / (1 + 0.1 * i)
             Ns_i = N_s  # * int(np.exp((i+1)*0.05))
             wf = h2_wavefunction(x, q1, q2)
 
             #   sample coordinates for current thetas
-            r1, r2 = hydrogen_molecule_minimisers.sample_coords(wf, Ns_i, r_0)
+            # r1, r2 = hydrogen_molecule_minimisers.sample_coords(wf, Ns_i, r_0)
 
             df = hydrogen_molecule_minimisers.grad(
-                x, q1, q2, r1, r2)
+                x, q1, q2)
 
             #   test stopping condition
             if stop_tol:
@@ -204,7 +207,7 @@ class hydrogen_molecule_minimisers:
             if np.isnan(x.any()) or np.isinf(x.any()):
                 raise ValueError("Optimal parameters diverged to nan or inf")
 
-            x = x - (alpha * df)
+            x = x - (alpha_i * df)
 
             #  restrict x to be positive
             if (x <= 1e-7).any():
@@ -213,7 +216,7 @@ class hydrogen_molecule_minimisers:
             if detail:
                 print(
                     f"iteration {i}, x={x}, d/dx={df}, N_s={Ns_i}, alpha={alpha}")
-                E_min = hydrogen_molecule_minimisers.E_fn(x, q1, q2, r1, r2)
+                E_min = hydrogen_molecule_minimisers.E_fn(x, q1, q2)
                 print(f"local energy: {E_min}")
                 gradient_changes.append(df-df_last)
                 df_last = df
@@ -241,7 +244,7 @@ class hydrogen_molecule_minimisers:
             print(f"time elapsed GD: {time_elapsed}")
             print(f"final derivative: {df}")
 
-        return x, hydrogen_molecule_minimisers.E_fn(x, q1, q2, r1, r2)
+        return x, hydrogen_molecule_minimisers.E_fn(x, q1, q2)
 
     def RMSProp_GD(q1: np.ndarray, q2: np.ndarray, x_0: np.ndarray, alpha: float, forgetting: float, max_iter: int = 1000, stop_tol: float = 1e-6, N_s: int = 10000, detail: bool = False) -> tuple:
         """
