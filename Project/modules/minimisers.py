@@ -16,8 +16,8 @@ class hydrogen_molecule_minimisers:
         return np.nanmean(wf_temp.local_energy(r1, r2))
 
     @staticmethod
-    #  optimal stepsize for order 2 is 1e-4, order 8 is 1.108e-2
-    def grad(thetas, q1, q2, r1, r2, stepsize=1.108e-2, order=8):
+    #  optimal stepsize for order 2 is 1e-4, order 8 is 8.008e-03
+    def grad(thetas, q1, q2, r1, r2, stepsize=4.004e-04, order=4) -> np.ndarray:
         from modules.differentiators import central_difference
         #  d/dt1
 
@@ -184,10 +184,11 @@ class hydrogen_molecule_minimisers:
         df_last = np.zeros_like(x)
 
         #  minimisation loop
+        Es = []
         start = time.perf_counter()
         for i in range(max_iter):
 
-            alpha_i = alpha / (1 + 0.1 * i)
+            alpha_i = alpha / (1 + 0.5 * i)
             Ns_i = N_s  # * int(np.exp((i+1)*0.05))
             wf = h2_wavefunction(x, q1, q2)
 
@@ -213,8 +214,9 @@ class hydrogen_molecule_minimisers:
 
             if detail:
                 print(
-                    f"iteration {i}, x={x}, d/dx={df}, N_s={Ns_i}, alpha={alpha}")
+                    f"iteration {i}, x={x}, d/dx={df}, N_s={Ns_i}, alpha={alpha_i}")
                 E_min = hydrogen_molecule_minimisers.E_fn(x, q1, q2, r1, r2)
+                Es.append(E_min)
                 print(f"local energy: {E_min}")
                 gradient_changes.append(df-df_last)
                 df_last = df
@@ -226,16 +228,23 @@ class hydrogen_molecule_minimisers:
             import matplotlib.pyplot as plt
             iterations = range(i+1)
             gradient_changes = np.array(gradient_changes)
-            plt.plot(
+
+            fig, ax = plt.subplots(1, 2, figsize=(12, 5))
+            ax[0].plot(
                 iterations, gradient_changes[:, 0], color='r', label='dTheta1')
-            plt.plot(
+            ax[0].plot(
                 iterations, gradient_changes[:, 1], color='g', label='dTheta2')
-            plt.plot(
+            ax[0].plot(
                 iterations, gradient_changes[:, 2], color='b', label='dTheta3')
-            plt.xlabel("Iteration")
-            plt.ylabel("Change in Gradient")
-            plt.title("Gradient Changes Over Iterations")
-            plt.legend()
+            ax[0].set_xlabel("Iteration")
+            ax[0].set_ylabel("Change in Gradient")
+            ax[0].set_title("Gradient Changes Over Iterations")
+            ax[0].legend()
+
+            ax[1].plot(range(len(Es)), Es)
+            ax[1].set_xlabel("Iteration")
+            ax[1].set_ylabel("Energy")
+            ax[1].set_title("Energy over Gradient Descent Iterations")
             plt.show()
 
             print(f"iteration number GD: {i}")

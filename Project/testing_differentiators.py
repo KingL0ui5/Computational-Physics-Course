@@ -123,11 +123,11 @@ def test_first_order_diffrentiators():
                            mean_error_dc_h10[min_h_index_h10]])
 
         print("optimal mean errors: \n"
-              f" Double Central Difference O(h^2): {mean_error_dc_h2[min_h_index_h2]:.3e} at h={min_h_h2:.3e}\n"
-              f" Double Central Difference O(h^4): {mean_error_dc_h4[min_h_index_h4]:.3e} at h={min_h_h4:.3e}\n"
-              f" Double Central Difference O(h^6): {mean_error_dc_h6[min_h_index_h6]:.3e} at h={min_h_h6:.3e}\n"
-              f" Double Central Difference O(h^8): {mean_error_dc_h8[min_h_index_h8]:.3e} at h={min_h_h8:.3e}\n"
-              f" Double Central Difference O(h^10): {mean_error_dc_h10[min_h_index_h10]:.3e} at h={min_h_h10:.3e}\n"
+              f" Central Difference O(h^2): {mean_error_dc_h2[min_h_index_h2]:.3e} at h={min_h_h2:.3e}\n"
+              f" Central Difference O(h^4): {mean_error_dc_h4[min_h_index_h4]:.3e} at h={min_h_h4:.3e}\n"
+              f" Central Difference O(h^6): {mean_error_dc_h6[min_h_index_h6]:.3e} at h={min_h_h6:.3e}\n"
+              f" Central Difference O(h^8): {mean_error_dc_h8[min_h_index_h8]:.3e} at h={min_h_h8:.3e}\n"
+              f" Central Difference O(h^10): {mean_error_dc_h10[min_h_index_h10]:.3e} at h={min_h_h10:.3e}\n"
               )
 
     for i in range(5):

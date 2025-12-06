@@ -184,7 +184,7 @@ if __name__ == '__main__':
     """
     # test_minimiser()
 
-    r_0 = np.linspace(0, 3.0, 2)
+    r_0 = np.linspace(0.1, 3.0, 4)
     q1 = [0.] * 3
     q2 = [[0., 0., i] for i in r_0]
 
@@ -199,17 +199,15 @@ if __name__ == '__main__':
         print(f"q2: {q2_i}, minimum theta: {theta_min}, minimum energy: {E_min}")
 
     energies = np.array(energies)
-    plt.plot(r_0, energies, marker='o')
-    plt.xlabel("Distance between nuclei (a.u.)")
-    plt.ylabel("Minimum Energy (a.u.)")
-    plt.title("Minimum Energy of H2 molecule vs Nuclear Separation")
-    plt.grid()
-    plt.show()
-
     from scipy.optimize import curve_fit
     f = hlp.V_morse
-    fit, cov = curve_fit(f, r_0, energies, p0=[-1.0, 1.0, 1.0])
-    plt.plot(x, f(x, *fit), label='Morse Potential Fit', color='orange', label='Morse Potential Fit')
+    fit, cov = curve_fit(f, r_0, energies, p0=[-1.0, 1.0, 1.0, 0.0])
 
+    plt.plot(r_0, f(r_0, *fit), label='Morse Potential Fit', color='orange')
+    plt.plot(r_0, energies, 'o', label='Data')
+    plt.xlabel("Distance between nuclei (a.u.)")
+    plt.ylabel("Minimum Energy (a.u.)")
+    plt.title("Morse Potential Fit to H2 Minimum Energy")
+    plt.legend()
     print(
         f"Fitted Parameters: De= {fit[0]}, a= {fit[1]}, re= {fit[2]} \n errors: {np.sqrt(np.diag(cov))}")
