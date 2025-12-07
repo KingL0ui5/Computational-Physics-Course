@@ -169,7 +169,7 @@ def test_minimiser():
 
     thetas_0 = [1.] * 3  #  for minimiser
     theta_min, E_min = minimiser(q1, q2, x_0=thetas_0,
-                                 alpha=0.02, stop_tol=1e-3, N_s=100000, detail=True, max_iter=60)
+                                 alpha=0.2, stop_tol=1e-3, N_s=10000, detail=True, max_iter=40)
 
     # theta_min, E_min = min.simulated_annealing(
     #     q1, q2, x_0=thetas_0, initial_temp=0.5, cooling_rate=0.95, max_iter=200, Ns=10000, std=0.05, detail=True)

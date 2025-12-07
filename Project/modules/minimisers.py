@@ -210,8 +210,8 @@ class hydrogen_molecule_minimisers:
             x = x - (alpha_i * df)
 
             #  restrict x to be positive
-            if (x <= 1e-7).any():
-                x = np.maximum(x, 1e-7)
+            # if (x <= 1e-7).any():
+            #     x = np.maximum(x, 1e-7)
 
             if detail:
                 print(
