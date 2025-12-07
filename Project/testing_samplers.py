@@ -40,7 +40,7 @@ def test_samples_H2():
     def wavefunction_wrapper_B(coords):
         coords = np.asarray(coords)
         r1, r2 = coords[:, 0:3], coords[:, 3:6]
-        return wf_B.psi(r1, r2)
+        return wf_B.probability_density(r1, r2)
 
     # samples_A = metropolis_hastings(f=wavefunction_wrapper_A, f_prop='gaussian', x_0=r_0, xmin=[
     #     -10.]*6, xmax=[10.]*6, N=N_samples, kwrgs={'sigma': 0.8}, thinning=20)
@@ -56,12 +56,12 @@ def test_samples_H2():
         -10.]*6, xmax=[10.]*6, N=N_samples, detail=True)
 
     samples_B = metropolis_hastings(f=wavefunction_wrapper_B, f_prop='gaussian', x_0=r_0, xmin=[
-        -10.]*6, xmax=[10.]*6, N=N_samples, kwrgs={'sigma': 0.8})
+        -10.]*6, xmax=[10.]*6, N=N_samples, kwrgs={'sigma': 0.8}, detail=True, thinning=20)
 
     A_acf = get_acf(samples_A)
     B_acf = get_acf(samples_B)
 
-    burn_in = int(len(samples_A) * 0.1)
+    burn_in = int(min(len(samples_B), len(samples_A)) * 0.1)
 
     X_A = samples_A[burn_in:, 0]
     X_B = samples_B[burn_in:, 0]

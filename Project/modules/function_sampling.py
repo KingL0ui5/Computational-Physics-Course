@@ -98,7 +98,7 @@ def metropolis_hastings(f: Callable, f_prop: str, x_0: np.ndarray, xmin: np.ndar
         plt.tight_layout()
         plt.show()
         elapsed = end1 - start1
-        print(f"Time elapsed: {elapsed} for number of samples: {N}")
+        print(f"Time elapsed: {elapsed} for number of samples: {N/thinning}")
 
     return np.asarray(samples)
 
@@ -161,6 +161,7 @@ def MALA(f: Callable, f_prime, x_0: np.ndarray | list, xmin: np.ndarray | list, 
 
     if detail:
         import matplotlib.pyplot as plt
+        samples = np.asarray(samples)
         n_dims = samples.shape[1]
         plot_dims = min(n_dims, 5)
 
