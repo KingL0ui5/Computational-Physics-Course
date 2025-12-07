@@ -16,7 +16,7 @@ class hydrogen_molecule_minimisers:
 
         r_0 = np.ones(6, dtype=float)
         r1, r2 = hydrogen_molecule_minimisers.sample_coords(
-            wf_temp, Ns=Ns, r_0=r_0)
+            wf_temp, Ns=Ns, r_0=np.ones(6))
         return np.nanmean(wf_temp.local_energy(r1, r2))
 
     @staticmethod
