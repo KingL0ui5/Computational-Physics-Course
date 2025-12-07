@@ -10,14 +10,18 @@ import time
 
 class hydrogen_molecule_minimisers:
     @staticmethod
-    def E_fn(thetas, q1, q2, r1, r2):
+    def E_fn(thetas, q1, q2, Ns=10000) -> float:
         from hydrogen_molecule import h2_wavefunction
         wf_temp = h2_wavefunction(thetas, q1, q2)
+
+        r_0 = np.ones(6, dtype=float)
+        r1, r2 = hydrogen_molecule_minimisers.sample_coords(
+            wf_temp, Ns=Ns, r_0=r_0)
         return np.nanmean(wf_temp.local_energy(r1, r2))
 
     @staticmethod
     #  optimal stepsize for order 2 is 1e-4, order 8 is 8.008e-03
-    def grad(thetas, q1, q2, r1, r2, stepsize=4.004e-04, order=4) -> np.ndarray:
+    def grad(thetas, q1, q2, Ns, stepsize=4.004e-04, order=4) -> np.ndarray:
         from modules.differentiators import central_difference
         #  d/dt1
 
