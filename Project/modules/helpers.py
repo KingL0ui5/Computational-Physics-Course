@@ -61,7 +61,7 @@ class hydrogen_molecule_helpers:
                 np.exp(-theta2 / (1.0 + theta3 * d(r1, r2)))
         return f
 
-    def V_morse(r: float | np.ndarray, D: float, a: float, r0: float, E_single: float) -> float | np.ndarray:
+    def V_morse(r: float | np.ndarray, D: float, a: float, r0: float, E_single: float = -0.5) -> float | np.ndarray:
         """
         Calculate the Morse potential energy for a hydrogen molecule.
 
@@ -70,7 +70,7 @@ class hydrogen_molecule_helpers:
             D: float, well depth
             a: float, well width parameter
             r0: float, Equilibrium bond distance
-            E_single, float: Energy of a single isolated atom (e.g., -0.5 for H)
+            E_single, float: Energy of a the single hydrogen atom, calculated before.
 
         Returns:
             float | np.ndarray: The calculated potential energy.

@@ -205,7 +205,7 @@ def ground_state_energies():
     energies = np.array(energies)
     from scipy.optimize import curve_fit
     f = hlp.V_morse
-    p_0 = [0.25, 1.3, 1.45, -0.5]
+    p_0 = [0.25, 1.3, 1.4]
     fit, cov = curve_fit(f, r_0, energies, p0=p_0)
 
     plt.plot(r_0, f(r_0, *fit), label='Morse Potential Fit', color='orange')

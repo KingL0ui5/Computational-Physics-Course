@@ -15,7 +15,7 @@ def plot_energies(filename="/Users/louis/Library/CloudStorage/OneDrive-ImperialC
              marker='o', linestyle='None', markersize=4)
 
     f = hlp.V_morse
-    p_0 = [0.25, 1.3, 1.4, -0.5]
+    p_0 = [0.17, 1.3, 1.4]
     fit, cov = curve_fit(f, r_0_filt, energies_filt, p0=p_0)
     plt.plot(r_0_filt, f(r_0_filt, *fit),
              label="Morse Potential Fit", color='red')

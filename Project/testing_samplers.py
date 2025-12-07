@@ -35,15 +35,25 @@ def test_samples_H2():
     def wavefunction_wrapper_A(coords):
         coords = np.asarray(coords)
         r1, r2 = coords[:, 0:3], coords[:, 3:6]
-        return wf_A.probability_density(r1, r2)
+        return wf_A.psi(r1, r2)
 
     def wavefunction_wrapper_B(coords):
         coords = np.asarray(coords)
         r1, r2 = coords[:, 0:3], coords[:, 3:6]
-        return wf_B.probability_density(r1, r2)
+        return wf_B.psi(r1, r2)
 
-    samples_A = metropolis_hastings(f=wavefunction_wrapper_A, f_prop='gaussian', x_0=r_0, xmin=[
-        -10.]*6, xmax=[10.]*6, N=N_samples, kwrgs={'sigma': 0.8}, thinning=20)
+    # samples_A = metropolis_hastings(f=wavefunction_wrapper_A, f_prop='gaussian', x_0=r_0, xmin=[
+    #     -10.]*6, xmax=[10.]*6, N=N_samples, kwrgs={'sigma': 0.8}, thinning=20)
+
+    def f_prime_A(coords):
+        from modules.differentiators import central_difference
+        coords = np.asarray(coords)
+        grad = central_difference(
+            wavefunction_wrapper_A, coords, h=[1e-4]*6, order=2)
+        return np.sum(grad, axis=0)
+
+    samples_A = MALA(f=wavefunction_wrapper_A, f_prime=f_prime_A, x_0=r_0, timestep=0.5, xmin=[
+        -10.]*6, xmax=[10.]*6, N=N_samples, detail=True)
 
     samples_B = metropolis_hastings(f=wavefunction_wrapper_B, f_prop='gaussian', x_0=r_0, xmin=[
         -10.]*6, xmax=[10.]*6, N=N_samples, kwrgs={'sigma': 0.8})
@@ -129,38 +139,46 @@ def test_samples():
 
     n = 3
     f, _ = hlp.eigenfunctions(n)
-    df = hlp.harmonic_first_derivative(n)
+    df = hlp.first_derivative(n)
+
     samples_MH = metropolis_hastings(lambda x: f(x)**2, 'gaussian', [0.], xmin=[0.], xmax=[10.], N=N, kwrgs={
         'sigma': 1.}, detail=True)
 
-    # samples = MALA(f=f, f_prime=f2x, x_0=[1.], timestep=0.0001, xmin=[
-    #                0.], xmax=[10.], N=N, detail=True)
+    samples_MALA = MALA(f=f, f_prime=df, x_0=[1.], timestep=0.5, xmin=[
+        0.], xmax=[10.], N=N, detail=True)
 
-    samples_MALA = stochasticMALA(f=f, f_prime=df, x_0=[1.], timestep=0.001, xmin=[
-        0.], xmax=[10.], N=N, p_kick=0.5, kick_sigma=0.5, detail=True)
+    samples_sMALA = stochasticMALA(f=f, f_prime=df, x_0=[1.], timestep=0.01, xmin=[
+        0.], xmax=[10.], N=N, p_kick=0.1, kick_sigma=0.5, detail=True)
 
     #  discard first 10% of samples as burn-in
     burn_in = N//10
     samples_MALA = samples_MALA[burn_in:]
+    samples_sMALA = samples_sMALA[burn_in:]
     samples_MH = samples_MH[burn_in:]
 
     acf_mala = get_acf(samples_MALA)
+    acf_s_mala = get_acf(samples_sMALA)
     acf_mh = get_acf(samples_MH)
 
-    fig, ax = plt.subplots(2, 1, figsize=(10, 6), sharex=True)
+    fig, ax = plt.subplots(3, 1, figsize=(10, 6), sharex=True)
     ax[0].hist(samples_MH, bins=100, density=True,
                alpha=1, label='Sampled Distribution')
     ax[1].hist(samples_MALA, bins=100, density=True,
                alpha=1, label='Sampled Distribution')
+    ax[2].hist(samples_sMALA, bins=100, density=True,
+               alpha=0.5, label='Sampled Distribution')
 
     pdf = f(x)**2
     pdf /= np.trapezoid(pdf, x)
     ax[0].plot(x, pdf, label='Target Distribution', color='red')
     ax[1].plot(x, pdf, label='Target Distribution', color='red')
+    ax[2].plot(x, pdf, label='Target Distribution', color='red')
     ax[0].set_title(f"Metropolis Hastings, nsamples: {N}")
-    ax[1].set_title(f"Stochastic Metropolis-adjusted Langevin, nsamples: {N}")
+    ax[1].set_title(f"Metropolis-adjusted Langevin, nsamples: {N}")
+    ax[2].set_title(f"Stochastic Metropolis-adjusted Langevin, nsamples: {N}")
     ax[0].legend()
     ax[1].legend()
+    ax[2].legend()
     plt.ylabel("$\psi (x)$")
     plt.xlabel("x")
     plt.show()
@@ -168,7 +186,8 @@ def test_samples():
     #  autocorrelation
     plt.figure(figsize=(10, 5))
     plt.plot(acf_mh, label='Metropolis-Hastings', color='C0')
-    plt.plot(acf_mala, label='Stochastic MALA', color='C1')
+    plt.plot(acf_mala, label='MALA', color='C1')
+    plt.plot(acf_s_mala, label='Stochastic MALA', color='C2')
 
     plt.axhline(0, color='black', lw=0.5, ls='--')
     plt.axhline(1/np.e, color='gray', lw=0.5, ls=':',
