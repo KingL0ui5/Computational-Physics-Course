@@ -1,17 +1,17 @@
 import pandas as pd
 
 
-def plot_energies(filename="/Users/louis/Library/CloudStorage/OneDrive-ImperialCollegeLondon/Computer Science/Computational Physics/output.txt"):
+def plot_energies(filename="/Users/louis/Library/CloudStorage/OneDrive-ImperialCollegeLondon/Computer Science/Computational Physics/output_10000.txt"):
     import matplotlib.pyplot as plt
     import numpy as np
     from scipy.optimize import curve_fit
     from modules.helpers import hydrogen_molecule_helpers as hlp
 
     data = np.loadtxt(filename)
-    r_0 = np.linspace(0.2, 5., len(data))
+    energies, r_0 = data[0], data[1]
 
     plt.figure(figsize=(8, 6))
-    plt.plot(r_0, data, label="Simulated Annealing Energies",
+    plt.plot(r_0, energies, label="Simulated Annealing Energies",
              marker='o', linestyle='None', markersize=4)
 
     # f = hlp.V_morse
@@ -29,4 +29,4 @@ def plot_energies(filename="/Users/louis/Library/CloudStorage/OneDrive-ImperialC
 
 
 if __name__ == '__main__':
-    plot_energies("output.txt")
+    plot_energies()

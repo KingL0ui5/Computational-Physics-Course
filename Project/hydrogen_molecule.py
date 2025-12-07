@@ -169,7 +169,7 @@ def test_minimiser():
 
     thetas_0 = [1.] * 3  #  for minimiser
     theta_min, E_min = minimiser(q1, q2, x_0=thetas_0,
-                                 alpha=0.2, stop_tol=1e-3, N_s=100000, detail=True, max_iter=400)
+                                 alpha=0.02, stop_tol=None, N_s=10000, detail=True, max_iter=100)
 
     # theta_min, E_min = min.simulated_annealing(
     #     q1, q2, x_0=thetas_0, initial_temp=0.5, cooling_rate=0.95, max_iter=200, Ns=10000, std=0.05, detail=True)
@@ -182,42 +182,42 @@ if __name__ == '__main__':
     Fix notes: The local energy really doesn't seem to be changing much. Perhaps an error in finding the derivative with respect to theta?
     doesn't seem to be the local energy itself
     """
-    test_minimiser()
-    # Ns = int(1e6)
-    # r_0 = np.linspace(0.1, 4., 10)
-    # q1 = [0.] * 3
-    # q2 = [[0., 0., i] for i in r_0]
+    # test_minimiser()
+    Ns = 10000
+    r_0 = np.linspace(0.1, 4., 100)
+    q1 = [0.] * 3
+    q2 = [[0., 0., i] for i in r_0]
 
-    # energies = []
-    # count = 0
-    # for q2_i in q2:
-    #     count += 1
-    #     wf = h2_wavefunction(thetas=[1., 1., 1.], q1=q1, q2=q2_i)
+    energies = []
+    count = 0
+    for q2_i in q2:
+        count += 1
+        wf = h2_wavefunction(thetas=[1., 1., 1.], q1=q1, q2=q2_i)
 
-    #     thetas_0 = [1.]*3  #  for minimiser
-    #     # theta_min, E_min = min.simulated_annealing(
-    #     #     q1, q2_i, x_0=thetas_0, initial_temp=0.5, cooling_rate=0.95, max_iter=200, Ns=Ns, std=0.05, detail=False)
+        thetas_0 = [1.]*3  #  for minimiser
+        # theta_min, E_min = min.simulated_annealing(
+        #     q1, q2_i, x_0=thetas_0, initial_temp=0.5, cooling_rate=0.95, max_iter=200, Ns=Ns, std=0.05, detail=False)
 
-    #     theta_min, E_min = min.gradient_descent(
-    #         q1, q2_i, x_0=thetas_0, alpha=0.2, stop_tol=1e-2, N_s=Ns, detail=False, max_iter=50)
-    #     energies.append(E_min)
-    #     if count % 10 == 0:  #  checkpoint at every 10 steps
-    #         np.savetxt(f"output_{Ns}.txt", [energies, r_0[:len(energies)]])
+        theta_min, E_min = min.gradient_descent(
+            q1, q2_i, x_0=thetas_0, alpha=0.02, stop_tol=1e-3, N_s=Ns, detail=False, max_iter=100)
+        energies.append(E_min)
+        if count % 10 == 0:  #  checkpoint at every 10 steps
+            np.savetxt(f"output_{Ns}.txt", [energies, r_0[:len(energies)]])
 
-    #     print(
-    #         f"iteration: {count}, q2: {q2_i}, minimum theta: {theta_min}, minimum energy: {E_min}")
+        print(
+            f"iteration: {count}, q2: {q2_i}, minimum theta: {theta_min}, minimum energy: {E_min}")
 
-    # np.savetxt(f"output_{Ns}.txt", [energies, r_0[:len(energies)]])
-    # energies = np.array(energies)
-    # from scipy.optimize import curve_fit
-    # f = hlp.V_morse
-    # fit, cov = curve_fit(f, r_0, energies, p0=[-1.0, 1.0, 1.0, 0.0])
+    np.savetxt(f"output_{Ns}.txt", [energies, r_0[:len(energies)]])
+    energies = np.array(energies)
+    from scipy.optimize import curve_fit
+    f = hlp.V_morse
+    fit, cov = curve_fit(f, r_0, energies, p0=[-1.0, 1.0, 1.0, 0.0])
 
-    # plt.plot(r_0, f(r_0, *fit), label='Morse Potential Fit', color='orange')
-    # plt.plot(r_0, energies, 'o', label='Data')
-    # plt.xlabel("Distance between nuclei (a.u.)")
-    # plt.ylabel("Minimum Energy (a.u.)")
-    # plt.title("Morse Potential Fit to H2 Minimum Energy")
-    # plt.legend()
-    # print(
-    #     f"Fitted Parameters: De= {fit[0]}, a= {fit[1]}, re= {fit[2]} \n errors: {np.sqrt(np.diag(cov))}")
+    plt.plot(r_0, f(r_0, *fit), label='Morse Potential Fit', color='orange')
+    plt.plot(r_0, energies, 'o', label='Data')
+    plt.xlabel("Distance between nuclei (a.u.)")
+    plt.ylabel("Minimum Energy (a.u.)")
+    plt.title("Morse Potential Fit to H2 Minimum Energy")
+    plt.legend()
+    print(
+        f"Fitted Parameters: De= {fit[0]}, a= {fit[1]}, re= {fit[2]} \n errors: {np.sqrt(np.diag(cov))}")
