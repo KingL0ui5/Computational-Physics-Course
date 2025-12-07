@@ -1,6 +1,3 @@
-import pandas as pd
-
-
 def plot_energies(filename="/Users/louis/Library/CloudStorage/OneDrive-ImperialCollegeLondon/Computer Science/Computational Physics/output_10000.txt"):
     import matplotlib.pyplot as plt
     import numpy as np
@@ -9,23 +6,27 @@ def plot_energies(filename="/Users/louis/Library/CloudStorage/OneDrive-ImperialC
 
     data = np.loadtxt(filename)
     energies, r_0 = data[0], data[1]
+    mask = energies < -0.9
+    energies_filt = energies[mask]
+    r_0_filt = r_0[mask]
 
     plt.figure(figsize=(8, 6))
-    plt.plot(r_0, energies, label="Simulated Annealing Energies",
+    plt.plot(r_0_filt, energies_filt, label="Simulated Annealing Energies",
              marker='o', linestyle='None', markersize=4)
 
-    # f = hlp.V_morse
-    # fit, cov = curve_fit(f, r_0, data, p0=[-1.0, 1.0, 1.0, 0.0])
-    # r_fit = np.linspace(0.1, 10., 200)
-    # plt.plot(r_fit, f(r_fit, *fit), label="Morse Potential Fit", color='red')
+    f = hlp.V_morse
+    p_0 = [0.25, 1.3, 1.4, -0.5]
+    fit, cov = curve_fit(f, r_0_filt, energies_filt, p0=p_0)
+    plt.plot(r_0_filt, f(r_0_filt, *fit),
+             label="Morse Potential Fit", color='red')
 
     plt.xlabel("$r_0$ (a.u.)")
     plt.ylabel("Energy")
-    plt.ylim([-1.5, 0])
     plt.title("Hydrogen Molecule Energy vs Interatomic Distance")
     plt.legend()
     plt.grid()
     plt.show()
+    print(f"Fitted parameters: {fit}")
 
 
 if __name__ == '__main__':

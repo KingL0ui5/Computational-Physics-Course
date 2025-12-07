@@ -176,13 +176,7 @@ def test_minimiser():
     print(f"minimum theta: {theta_min}, minimum energy: {E_min}")
 
 
-if __name__ == '__main__':
-
-    """
-    Fix notes: The local energy really doesn't seem to be changing much. Perhaps an error in finding the derivative with respect to theta?
-    doesn't seem to be the local energy itself
-    """
-    # test_minimiser()
+def ground_state_energies():
     Ns = 10000
     r_0 = np.linspace(0.1, 4., 100)
     q1 = [0.] * 3
@@ -211,7 +205,8 @@ if __name__ == '__main__':
     energies = np.array(energies)
     from scipy.optimize import curve_fit
     f = hlp.V_morse
-    fit, cov = curve_fit(f, r_0, energies, p0=[-1.0, 1.0, 1.0, 0.0])
+    p_0 = [0.25, 1.3, 1.45, -0.5]
+    fit, cov = curve_fit(f, r_0, energies, p0=p_0)
 
     plt.plot(r_0, f(r_0, *fit), label='Morse Potential Fit', color='orange')
     plt.plot(r_0, energies, 'o', label='Data')
@@ -221,3 +216,7 @@ if __name__ == '__main__':
     plt.legend()
     print(
         f"Fitted Parameters: De= {fit[0]}, a= {fit[1]}, re= {fit[2]} \n errors: {np.sqrt(np.diag(cov))}")
+
+
+if __name__ == '__main__':
+    test_minimiser()
