@@ -10,18 +10,24 @@ import time
 
 class hydrogen_molecule_minimisers:
     @staticmethod
-    def E_fn(thetas, q1, q2, Ns=10000) -> float:
+    def E_fn(thetas, q1, q2, Ns) -> float:
+
         from hydrogen_molecule import h2_wavefunction
         wf_temp = h2_wavefunction(thetas, q1, q2)
+        r_0 = np.zeros(6, dtype=float)  #  for samples
 
         r1, r2 = hydrogen_molecule_minimisers.sample_coords(
-            wf_temp, Ns=Ns, r_0=np.ones(6))
-        return np.nanmean(wf_temp.local_energy(r1, r2))
+            wf_temp, Ns=Ns, r_0=r_0)
+
+        E_l = np.nanmean(wf_temp.local_energy(r1, r2))
+        print(E_l)
+        return E_l
 
     @staticmethod
     #  optimal stepsize for order 2 is 1e-4, order 8 is 8.008e-03
-    def grad(thetas, q1, q2, Ns, stepsize=4.004e-04, order=4) -> np.ndarray:
+    def grad(thetas, q1, q2, Ns, stepsize=1e-4, order=2) -> np.ndarray:
         from modules.differentiators import central_difference
+        print(f"Calculating gradient at thetas: {thetas}")
         #  d/dt1
 
         def wrapper_1(theta_1):
@@ -70,7 +76,7 @@ class hydrogen_molecule_minimisers:
         #  sample once for current state
         samples = metropolis_hastings(f=wavefunction_wrapper, f_prop='gaussian', x_0=r_0, xmin=[
                                       -10.]*6, xmax=[10.]*6, N=Ns, kwrgs={'sigma': 0.8}, thinning=thinning)
-        r = samples[len(samples)//10:]
+        r = samples[len(samples)//10:]  #  burn in
         r1, r2 = r[:, 0:3], r[:, 3:6]
         return r1, r2
 
@@ -110,16 +116,12 @@ class hydrogen_molecule_minimisers:
             if any(x_new < xmin) or any(x_new > xmax):
                 continue
 
-            wf_new = h2_wavefunction(x_new, q1, q2)
-            r1_new, r2_new = hydrogen_molecule_minimisers.sample_coords(
-                wf_new, Ns_i, r_0)
-
             E_new = hydrogen_molecule_minimisers.E_fn(
                 x_new, q1, q2, Ns_i)
             delta_E = E_new - E
 
             if delta_E < 0 or np.random.rand() < np.exp(-delta_E / T):
-                x, E, r1, r2 = x_new, E_new, r1_new, r2_new
+                x, E = x_new, E_new
 
             T *= cooling_rate
 
@@ -178,8 +180,6 @@ class hydrogen_molecule_minimisers:
 
         print("Starting gradient descent minimiser...")
         x = np.asarray(x_0, dtype=float)
-
-        r_0 = np.ones(6, dtype=float)  #  for samples
 
         gradient_changes = []
         df_last = np.zeros_like(x)
