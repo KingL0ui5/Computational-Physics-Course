@@ -10,9 +10,15 @@ import time
 
 class hydrogen_molecule_minimisers:
     @staticmethod
-    def E_fn(thetas, q1, q2, r1, r2):
+    def E_fn(thetas, q1, q2):
         from hydrogen_molecule import h2_wavefunction
         wf_temp = h2_wavefunction(thetas, q1, q2)
+
+        samples = hydrogen_molecule_minimisers.sample_coords(
+            wf_temp, Ns=1, r_0=np.ones(6))
+        r = samples[len(samples)//10:]
+
+        r1, r2 = r[:, 0:3], r[:, 3:6]
         return np.nanmean(wf_temp.local_energy(r1, r2))
 
     @staticmethod
@@ -23,17 +29,17 @@ class hydrogen_molecule_minimisers:
 
         def wrapper_1(theta_1):
             t = [theta_1, thetas[1], thetas[2]]
-            return hydrogen_molecule_minimisers.E_fn(t, q1, q2, r1, r2)
+            return hydrogen_molecule_minimisers.E_fn(t, q1, q2)
 
         #  d/dt2
         def wrapper_2(theta_2):
             t = [thetas[0], theta_2, thetas[2]]
-            return hydrogen_molecule_minimisers.E_fn(t, q1, q2, r1, r2)
+            return hydrogen_molecule_minimisers.E_fn(t, q1, q2)
 
         #  d/dt3
         def wrapper_3(theta_3):
             t = [thetas[0], thetas[1], theta_3]
-            return hydrogen_molecule_minimisers.E_fn(t, q1, q2, r1, r2)
+            return hydrogen_molecule_minimisers.E_fn(t, q1, q2)
 
         dE_t1 = central_difference(
             wrapper_1, x=[thetas[0]], h=[stepsize], order=order).item()
@@ -48,7 +54,7 @@ class hydrogen_molecule_minimisers:
     @staticmethod
     def sample_coords(wf, Ns, r_0, thinning: int = 20) -> tuple:
         """
-        Sample electron coordinates from the hydrogen molecule wavefunction using Metropolis-Hastings algorithm.
+        Sample electron coordinates from the hydrogen molecule given the wavefunction.
         Parameters:
             wf: h2_wavefunction, The hydrogen molecule wavefunction object.
             Ns: int, The number of samples to generate.
@@ -93,10 +99,7 @@ class hydrogen_molecule_minimisers:
         x = np.array(x_0, dtype=float)
         T = initial_temp
 
-        wf = h2_wavefunction(x, q1, q2)
-        r1, r2 = hydrogen_molecule_minimisers.sample_coords(wf, Ns, r_0)
-
-        E = hydrogen_molecule_minimisers.E_fn(x, q1, q2, r1, r2)
+        E = hydrogen_molecule_minimisers.E_fn(x, q1, q2)
 
         if detail:
             print("starting simulated annealing...")
@@ -115,7 +118,7 @@ class hydrogen_molecule_minimisers:
                 wf_new, Ns_i, r_0)
 
             E_new = hydrogen_molecule_minimisers.E_fn(
-                x_new, q1, q2, r1_new, r2_new)
+                x_new, q1, q2)
             delta_E = E_new - E
 
             if delta_E < 0 or np.random.rand() < np.exp(-delta_E / T):
@@ -216,7 +219,7 @@ class hydrogen_molecule_minimisers:
             if detail:
                 print(
                     f"iteration {i}, x={x}, d/dx={df}, N_s={Ns_i}, alpha={alpha_i}")
-                E_min = hydrogen_molecule_minimisers.E_fn(x, q1, q2, r1, r2)
+                E_min = hydrogen_molecule_minimisers.E_fn(x, q1, q2)
                 Es.append(E_min)
                 print(f"local energy: {E_min}")
                 gradient_changes.append(df-df_last)
@@ -252,7 +255,7 @@ class hydrogen_molecule_minimisers:
             print(f"time elapsed GD: {time_elapsed}")
             print(f"final derivative: {df}")
 
-        return x, hydrogen_molecule_minimisers.E_fn(x, q1, q2, r1, r2)
+        return x, hydrogen_molecule_minimisers.E_fn(x, q1, q2)
 
     def RMSProp_GD(q1: np.ndarray, q2: np.ndarray, x_0: np.ndarray, alpha: float, forgetting: float, max_iter: int = 1000, stop_tol: float = 1e-6, N_s: int = 10000, detail: bool = False) -> tuple:
         """
@@ -311,7 +314,7 @@ class hydrogen_molecule_minimisers:
         if detail:
             print(f"iteration number RMS GD: {i}")
             print(f"time elapsed RMS GD: {time_elapsed}")
-        return x, hydrogen_molecule_minimisers.E_fn(x, q1, q2, r1, r2)
+        return x, hydrogen_molecule_minimisers.E_fn(x, q1, q2)
 
     def quasi_newton(q1: np.ndarray, q2: np.ndarray, x_0: np.ndarray, alpha: float, method: str = "DFP", max_iter: int = 1000, stop_tol: float = None, N_s: int = 10000, detail: bool = False) -> tuple:
         """
@@ -419,7 +422,7 @@ class hydrogen_molecule_minimisers:
             plt.show()
             print(f"iteration number QN: {i}")
             print(f"time elapsed QN: {time_elapsed}")
-        return x, hydrogen_molecule_minimisers.E_fn(x, q1, q2, r1, r2)
+        return x, hydrogen_molecule_minimisers.E_fn(x, q1, q2)
 
 
 class hydrogen_atom_minimisers:
