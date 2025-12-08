@@ -185,37 +185,57 @@ class hydrogen_molecule_minimisers:
         x = np.asarray(x_0, dtype=float)
         r_0 = np.ones(6, dtype=float)  # for samples
 
+        gradient_changes = []
+        df_last = np.zeros_like(x)
         Es = []
         start = time.perf_counter()
         for i in range(max_iter):
             #  adjust learning rate per iteration
-            alpha_i = alpha
+            alpha_i = alpha  # / (1 + 0.5 * i)
+            Ns_i = N_s  # * int(np.exp((i+1)*0.05))
             wf = h2_wavefunction(x, q1, q2)
 
             #   sample coordinates for current thetas
-            r1, r2 = hydrogen_molecule_minimisers.sample_coords(wf, N_s, r_0)
-
+            r1, r2 = hydrogen_molecule_minimisers.sample_coords(wf, Ns_i, r_0)
+            N_actual = len(r1)
             df = hydrogen_molecule_minimisers.grad(
                 x, q1, q2, r1, r2)
 
+            n_params = len(x)
+            h_diff = 1e-4
             #  find S matrix
-            def log_psi_wrapper(theta_point):
-                t = theta_point
-                wf_temp = h2_wavefunction(t, q1, q2)
-                prob = wf_temp.probability_density(r1, r2)
-                return 0.5 * np.log(prob + 1e-100)
+            O_k = np.zeros((N_actual, n_params))
 
-            O_k_raw = central_difference(
-                log_psi_wrapper, [x], step_size=1e-4, order=2)[0]
+            for k in range(n_params):
+                x_plus = x.copy()
+                x_plus[k] += h_diff
+                x_minus = x.copy()
+                x_minus[k] -= h_diff
 
-            O_mean = np.mean(O_k_raw, axis=0)
-            O_centered = O_k_raw - O_mean
+                wf_plus = h2_wavefunction(x_plus, q1, q2)
+                prob_plus = wf_plus.probability_density(r1, r2)
 
-            S = (O_centered.T @ O_centered) / N_s
+                wf_minus = h2_wavefunction(x_minus, q1, q2)
+                prob_minus = wf_minus.probability_density(r1, r2)
+
+                prob_plus = np.maximum(prob_plus, 1e-100)
+                prob_minus = np.maximum(prob_minus, 1e-100)
+                log_derivs = 0.5 * (np.log(prob_plus) -
+                                    np.log(prob_minus)) / (2 * h_diff)
+
+                O_k[:, k] = log_derivs
+
+            O_mean = np.mean(O_k, axis=0)
+            O_centered = O_k - O_mean
+            S = (O_centered.T @ O_centered) / N_actual
 
             S_reg = S + epsilon * np.eye(len(x))
 
-            delta_p = np.linalg.solve(S_reg, -df)
+            try:
+                delta_p = np.linalg.solve(S_reg, -df)
+            except np.linalg.LinAlgError:
+                print("Singular matrix, reverting to gradient descent.")
+                delta_p = -df
 
             #  stopping condition
             if stop_tol and np.linalg.norm(df) < stop_tol:
@@ -228,14 +248,17 @@ class hydrogen_molecule_minimisers:
             x = x + alpha_i * delta_p
 
             #  restrict x to be positive
-            # if (x <= 1e-7).any():
-            #     x = np.maximum(x, 1e-7)
+            if (x <= 1e-7).any():
+                x = np.maximum(x, 1e-7)
 
             if detail:
+                print(
+                    f"iteration {i}, x={x}, d/dx={df}, N_s={Ns_i}, Natural grad update: {delta_p}, alpha={alpha_i}")
                 E_min = hydrogen_molecule_minimisers.E_fn(x, q1, q2, r1, r2)
                 Es.append(E_min)
-                print(f"Iter {i}: E={E_min:.5f}, x={x}")
-                # print(f"  Gradient: {df}")
+                print(f"Local energy: {E_min}")
+                gradient_changes.append(df-df_last)
+                df_last = df
                 # print(f"  Natural Grad update: {delta_p}")
 
         end = time.perf_counter()
@@ -243,17 +266,30 @@ class hydrogen_molecule_minimisers:
 
         if detail:
             import matplotlib.pyplot as plt
-            fig, ax = plt.subplots(figsize=(8, 5))
-            ax.plot(range(len(Es)), Es, label='Energy')
-            ax.set_xlabel("Iteration")
-            ax.set_ylabel("Energy")
-            ax.set_title("Stochastic Reconfiguration Convergence")
+            iterations = range(i+1)
+            gradient_changes = np.array(gradient_changes)
+
+            fig, ax = plt.subplots(1, 2, figsize=(12, 5))
+            ax[0].plot(
+                iterations, gradient_changes[:, 0], color='r', label='dTheta1')
+            ax[0].plot(
+                iterations, gradient_changes[:, 1], color='g', label='dTheta2')
+            ax[0].plot(
+                iterations, gradient_changes[:, 2], color='b', label='dTheta3')
+            ax[0].set_xlabel("Iteration")
+            ax[0].set_ylabel("Change in Gradient")
+            ax[0].set_title("Gradient Changes Over Iterations")
+            ax[0].legend()
+
+            ax[1].plot(range(len(Es)), Es)
+            ax[1].set_xlabel("Iteration")
+            ax[1].set_ylabel("Energy")
+            ax[1].set_title("Energy over Gradient Descent Iterations")
             plt.show()
 
-            print(f"Iterations: {i}")
-            print(f"Time elapsed: {time_elapsed:.2f}s")
-            print(f"Final gradient norm: {np.linalg.norm(df)}")
-
+            print(f"iteration number GD: {i}")
+            print(f"time elapsed GD: {time_elapsed}")
+            print(f"final derivative: {df}")
         return x, hydrogen_molecule_minimisers.E_fn(x, q1, q2, r1, r2)
 
     def gradient_descent(q1: np.ndarray, q2: np.ndarray, x_0: np.ndarray, alpha: float, max_iter: int = 100, stop_tol: float = 1e-6, N_s: int = 10000, detail: bool = False) -> tuple:

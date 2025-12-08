@@ -177,11 +177,12 @@ def test_minimiser():
     q1 = [0, 0, 2]
     q2 = [0, 0, 0]
 
-    minimiser = min.gradient_descent
+    minimiser = min.stochastic_reconfiguration
 
+    N_s = 10000
     thetas_0 = [1.] * 3  #  for minimiser
     theta_min, E_min = minimiser(q1, q2, x_0=thetas_0,
-                                 alpha=0.02, stop_tol=None, N_s=10000, detail=True, max_iter=100)
+                                 alpha=0.02, stop_tol=None, N_s=N_s, detail=True, max_iter=100)
 
     # theta_min, E_min = min.simulated_annealing(
     #     q1, q2, x_0=thetas_0, initial_temp=0.5, cooling_rate=0.95, max_iter=200, Ns=10000, std=0.05, detail=True)
@@ -229,4 +230,4 @@ def ground_state_energies():
 
 
 if __name__ == '__main__':
-    test_samples()
+    test_minimiser()
