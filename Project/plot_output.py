@@ -1,4 +1,4 @@
-def plot_energies(filename="/Users/louis/Library/CloudStorage/OneDrive-ImperialCollegeLondon/Computer Science/Computational Physics/output_100000.txt"):
+def plot_energies(filename="/Users/louis/Library/CloudStorage/OneDrive-ImperialCollegeLondon/Computer Science/Computational Physics/SR_output_10000.txt"):
     import matplotlib.pyplot as plt
     import numpy as np
     from scipy.optimize import curve_fit

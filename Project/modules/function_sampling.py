@@ -22,7 +22,7 @@ class ProposalFunction:
         return np.random.normal(loc=x, scale=sigma)
 
 
-def metropolis_hastings(f: Callable, f_prop: str, x_0: np.ndarray, xmin: np.ndarray, xmax: np.ndarray, N: int = 10000, kwrgs: dict = None, thinning: int = 1, detail: bool = False) -> np.ndarray:
+def metropolis_hastings(f: Callable, f_prop: str, x_0: np.ndarray, xmin: np.ndarray, xmax: np.ndarray, N: int = 10000, kwrgs: dict = None, thinning: int = 1, detail: bool = False, return_acceptance: bool = False) -> np.ndarray:
     """
     Metropolis algorithm to sample from a target distribution defined by nd function f.
 
@@ -35,6 +35,8 @@ def metropolis_hastings(f: Callable, f_prop: str, x_0: np.ndarray, xmin: np.ndar
         N : int, The number of samples to generate.
         thinning : int, The thinning factor to reduce autocorrelation in samples.
         kwrgs : dict, Additional keyword arguments to pass to the proposal function.
+        detail : bool
+        return_acceptance : bool, Whether to return the acceptance rate along with samples.
 
     Returns: np.ndarray, An array of sampled positions in coordinate format.
     """
@@ -76,7 +78,7 @@ def metropolis_hastings(f: Callable, f_prop: str, x_0: np.ndarray, xmin: np.ndar
         if i % thinning == 0:
             samples[i // thinning] = (current)
     end1 = time.perf_counter()
-
+    acceptance_rate = accepted_count / N
     if detail:
         import matplotlib.pyplot as plt
         n_dims = samples.shape[1]
@@ -94,16 +96,19 @@ def metropolis_hastings(f: Callable, f_prop: str, x_0: np.ndarray, xmin: np.ndar
 
         axes[-1].set_xlabel('Iteration')
         plt.suptitle(
-            f'Trace \nacceptance: {accepted_count/N:.2f}, time: {end1-start1:.4f}s')
+            f'Trace \nacceptance: {acceptance_rate:.2f}, time: {end1-start1:.4f}s')
         plt.tight_layout()
         plt.show()
         elapsed = end1 - start1
         print(f"Time elapsed: {elapsed} for number of samples: {N/thinning}")
 
+    if return_acceptance:
+        return np.asarray(samples), acceptance_rate
+
     return np.asarray(samples)
 
 
-def MALA(f: Callable, f_prime, x_0: np.ndarray | list, xmin: np.ndarray | list, xmax: np.ndarray | list, timestep: float, N: int = 10000, detail: bool = False) -> np.ndarray:
+def MALA(f: Callable, f_prime, x_0: np.ndarray | list, xmin: np.ndarray | list, xmax: np.ndarray | list, timestep: float, N: int = 10000, detail: bool = False, return_acceptance: bool = False) -> np.ndarray:
     """
     Metropolis-Adjusted Langevin Algorithm (MALA) to sample from a target distribution defined by nd wavefunction probability density function f.
     Parameters:
@@ -114,6 +119,7 @@ def MALA(f: Callable, f_prime, x_0: np.ndarray | list, xmin: np.ndarray | list, 
         x_0 : list or np.ndarray, The initial position to start sampling from.
         timestep : float, The timestep for the Langevin dynamics.
         N : int, The number of samples to generate.
+        return_acceptance : bool, Whether to return the acceptance rate along with samples.
 
     Returns: np.ndarray, An array of sampled positions.
     """
@@ -158,6 +164,7 @@ def MALA(f: Callable, f_prime, x_0: np.ndarray | list, xmin: np.ndarray | list, 
 
         samples[i] = current.copy()
     end2 = time.perf_counter()
+    acceptance_rate = accepted_count / N
 
     if detail:
         import matplotlib.pyplot as plt
@@ -180,10 +187,12 @@ def MALA(f: Callable, f_prime, x_0: np.ndarray | list, xmin: np.ndarray | list, 
             f'Trace \nacceptance: {accepted_count/N:.2f}, time: {end2-start2:.4f}s')
         plt.tight_layout()
         plt.show()
-        print(f"MALA acceptance Rate: {accepted_count / N:.2f}")
+        print(f"MALA acceptance Rate: {acceptance_rate:.2f}")
         print(f"time elapsed: {end2 - start2} to iteration {i}")
 
-    # print(f"Acceptance Rate: {accepted_count / N:.2f}")
+    if return_acceptance:
+        return np.asarray(samples), acceptance_rate
+
     return np.asarray(samples)
 
 

@@ -46,7 +46,7 @@ class hydrogen_molecule_minimisers:
         return np.array([dE_t1, dE_t2, dE_t3])
 
     @staticmethod
-    def sample_coords(wf, Ns, r_0, thinning: int = 20) -> tuple:
+    def sample_coords(wf, Ns, r_0, thinning: int = 20, detail=False) -> tuple:
         """
         Sample wavefunction and process into r1, r2.
         Parameters:
@@ -69,6 +69,12 @@ class hydrogen_molecule_minimisers:
                                       -10.]*6, xmax=[10.]*6, N=Ns, kwrgs={'sigma': 0.8}, thinning=thinning)
         r = samples[len(samples)//10:]
         r1, r2 = r[:, 0:3], r[:, 3:6]
+
+        if detail:
+            from modules.helpers import get_acf
+            acf = get_acf(samples, max_lag=500)
+            ess = len(samples) / (1 + 2 * np.sum(acf[1:]))
+            print(f"Effective Sample Size (ESS): {ess:.1f}")
         return r1, r2
 
     def simulated_annealing(q1: np.ndarray, q2: np.ndarray, x_0: np.ndarray, initial_temp: float, cooling_rate: float, std: float = 0.05, max_iter: int = 100, xmin: float = 0.7, xmax: float = 5., Ns: int = 10000, detail: bool = False):
@@ -159,9 +165,7 @@ class hydrogen_molecule_minimisers:
         return x, E
 
     @staticmethod
-    def stochastic_reconfiguration(q1: np.ndarray, q2: np.ndarray, x_0: np.ndarray, alpha: float,
-                                   max_iter: int = 100, stop_tol: float = 1e-6, N_s: int = 10000,
-                                   epsilon: float = 1e-3, detail: bool = False) -> tuple:
+    def stochastic_reconfiguration(q1: np.ndarray, q2: np.ndarray, x_0: np.ndarray, alpha: float, max_iter: int = 100, stop_tol: float = 1e-6, N_s: int = 10000, epsilon: float = 1e-3, detail: bool = False) -> tuple:
         """
         Finds the minima using Stochastic Reconfiguration (Natural Gradient Descent).
 
@@ -179,7 +183,6 @@ class hydrogen_molecule_minimisers:
             tuple: the coordinates of minima, the minimum value of the function at this point
         """
         from hydrogen_molecule import h2_wavefunction
-        from modules.differentiators import central_difference
 
         print("Starting Stochastic Reconfiguration minimiser...")
         x = np.asarray(x_0, dtype=float)
@@ -196,13 +199,14 @@ class hydrogen_molecule_minimisers:
             wf = h2_wavefunction(x, q1, q2)
 
             #   sample coordinates for current thetas
-            r1, r2 = hydrogen_molecule_minimisers.sample_coords(wf, Ns_i, r_0)
+            r1, r2 = hydrogen_molecule_minimisers.sample_coords(
+                wf, Ns_i, r_0, detail=detail)
             N_actual = len(r1)
             df = hydrogen_molecule_minimisers.grad(
                 x, q1, q2, r1, r2)
 
             n_params = len(x)
-            h_diff = 1e-4
+            h_diff = 1e-6
             #  find S matrix
             O_k = np.zeros((N_actual, n_params))
 
@@ -213,15 +217,15 @@ class hydrogen_molecule_minimisers:
                 x_minus[k] -= h_diff
 
                 wf_plus = h2_wavefunction(x_plus, q1, q2)
-                prob_plus = wf_plus.probability_density(r1, r2)
+                prob_plus = wf_plus.psi(r1, r2)
 
                 wf_minus = h2_wavefunction(x_minus, q1, q2)
-                prob_minus = wf_minus.probability_density(r1, r2)
+                prob_minus = wf_minus.psi(r1, r2)
 
                 prob_plus = np.maximum(prob_plus, 1e-100)
                 prob_minus = np.maximum(prob_minus, 1e-100)
-                log_derivs = 0.5 * (np.log(prob_plus) -
-                                    np.log(prob_minus)) / (2 * h_diff)
+                log_derivs = (np.log(prob_plus) -
+                              np.log(prob_minus)) / (2 * h_diff)
 
                 O_k[:, k] = log_derivs
 
@@ -252,14 +256,12 @@ class hydrogen_molecule_minimisers:
                 x = np.maximum(x, 1e-7)
 
             if detail:
-                print(
-                    f"iteration {i}, x={x}, d/dx={df}, N_s={Ns_i}, Natural grad update: {delta_p}, alpha={alpha_i}")
                 E_min = hydrogen_molecule_minimisers.E_fn(x, q1, q2, r1, r2)
                 Es.append(E_min)
-                print(f"Local energy: {E_min}")
+                print(
+                    f"iteration {i}, x={x}, df = {df},||d/df|| = {np.linalg.norm(df)}, \nN_s={Ns_i}, Natural grad update: {delta_p}, alpha={alpha_i},\nLocal energy: {E_min}")
                 gradient_changes.append(df-df_last)
                 df_last = df
-                # print(f"  Natural Grad update: {delta_p}")
 
         end = time.perf_counter()
         time_elapsed = end - start

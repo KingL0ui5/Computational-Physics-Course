@@ -6,7 +6,7 @@ import numpy as np
 from modules.helpers import hydrogen_molecule_helpers as hlp
 from modules.differentiators import double_central_difference
 from modules.function_sampling import metropolis_hastings, MALA
-from modules.minimisers import hydrogen_molecule_minimisers as min
+from modules.minimisers import hydrogen_molecule_minimisers as minimisers
 import matplotlib.pyplot as plt
 eps = 1e-15
 
@@ -145,7 +145,7 @@ def test_samples():
     x_0 = np.ones(6, dtype=float)
     N_s = 1000000
     samples = MALA(wrapper, wrapper_grad, x_0=x_0, N=N_s,
-                   timestep=0.3, xmin=-10., xmax=10., detail=True)
+                   timestep=0.5, xmin=-10., xmax=10., detail=True)
 
     # samples = metropolis_hastings(
     #     wrapper, f_prop='gaussian', x_0=x_0, xmax=10., xmin=-10., N=N_s, kwrgs={
@@ -177,21 +177,21 @@ def test_minimiser():
     q1 = [0, 0, 2]
     q2 = [0, 0, 0]
 
-    minimiser = min.stochastic_reconfiguration
+    minimiser = minimisers.stochastic_reconfiguration
 
-    N_s = 10000
+    N_s = 100000
     thetas_0 = [1.] * 3  #  for minimiser
-    theta_min, E_min = minimiser(q1, q2, x_0=thetas_0,
-                                 alpha=0.02, stop_tol=None, N_s=N_s, detail=True, max_iter=100)
+    # theta_min, E_min = minimiser(q1, q2, x_0=thetas_0,
+    #                              alpha=0.02, stop_tol=None, N_s=N_s, detail=True, max_iter=50)
 
-    # theta_min, E_min = min.simulated_annealing(
-    #     q1, q2, x_0=thetas_0, initial_temp=0.5, cooling_rate=0.95, max_iter=200, Ns=10000, std=0.05, detail=True)
+    theta_min, E_min = minimisers.simulated_annealing(
+        q1, q2, x_0=thetas_0, initial_temp=0.5, cooling_rate=0.95, max_iter=200, Ns=10000, std=0.05, detail=True)
     print(f"minimum theta: {theta_min}, minimum energy: {E_min}")
 
 
 def ground_state_energies():
-    Ns = 100000
-    r_0 = np.linspace(0.1, 4., 100)
+    Ns = 10000
+    r_0 = np.linspace(0.5, 3., 40)
     q1 = [0.] * 3
     q2 = [[0., 0., i] for i in r_0]
 
@@ -200,14 +200,14 @@ def ground_state_energies():
     for q2_i in q2:
         count += 1
         thetas_0 = [1.]*3  #  for minimiser
-        # theta_min, E_min = min.simulated_annealing(
+        # theta_min, E_min = minimisers.simulated_annealing(
         #     q1, q2_i, x_0=thetas_0, initial_temp=0.5, cooling_rate=0.95, max_iter=200, Ns=Ns, std=0.05, detail=False)
 
-        theta_min, E_min = min.gradient_descent(
-            q1, q2_i, x_0=thetas_0, alpha=0.02, stop_tol=1e-3, N_s=Ns, detail=False, max_iter=100)
+        theta_min, E_min = minimisers.stochastic_reconfiguration(
+            q1, q2_i, x_0=thetas_0, alpha=0.02, stop_tol=1e-3, N_s=Ns, detail=False, max_iter=50)
         energies.append(E_min)
         if count % 10 == 0:  #  checkpoint at every 10 steps
-            np.savetxt(f"output_{Ns}.txt", [energies, r_0[:len(energies)]])
+            np.savetxt(f"SR_output_{Ns}.txt", [energies, r_0[:len(energies)]])
 
         print(
             f"iteration: {count}, q2: {q2_i}, minimum theta: {theta_min}, minimum energy: {E_min}")

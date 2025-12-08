@@ -2,108 +2,201 @@ import numpy as np
 import seaborn as sns
 from modules.function_sampling import metropolis_hastings, MALA, stochasticMALA
 from modules.helpers import harmonic_oscillator_helpers as hlp, get_acf
+from hydrogen_molecule import h2_wavefunction
 import matplotlib.pyplot as plt
 sns.set_style('darkgrid')
 sns.set_context('paper')
 sns.set_palette("colorblind")
 
 
-def test_samples_H2():
-    from hydrogen_molecule import h2_wavefunction
-
-    def autocorrelation(x):
-        n = len(x)
-        variance = x.var()
-        x = x - x.mean()
-        r = np.correlate(x, x, mode='full')[-n:]
-        result = r / (variance * (np.arange(n, 0, -1)))
-        return result
-
+def optimise_step_H2():
     q1 = np.array([0, 0, 1])
     q2 = np.array([0, 0, -1])
-    theta_A = np.array([1., 1., 1.])
-    wf_A = h2_wavefunction(thetas=theta_A, q1=q1, q2=q2)
+    theta_init = np.array([1., 1., 1.])
+    wf = h2_wavefunction(thetas=theta_init, q1=q1, q2=q2)
 
-    theta_B = np.array([1., 1., 1.])
-    wf_B = h2_wavefunction(thetas=theta_B, q1=q1, q2=q2)
+    def wavefunction_wrapper_MALA(coords):
+        coords = np.asarray(coords)
+        r1, r2 = coords[:, 0:3], coords[:, 3:6]
+        return wf.psi(r1, r2)
+
+    def f_prime_MALA(coords):
+        from modules.differentiators import central_difference
+        coords = np.asarray(coords)
+        grad = central_difference(
+            wavefunction_wrapper_MALA, coords, h=[1e-4]*6, order=2)
+        return np.sum(grad, axis=0)
+
+    timesteps = np.linspace(0.01, 1.5, 50)
+    acceptance_MALA = []
+
+    for t in timesteps:
+        _, acceptance_rate_MALA = MALA(f=wavefunction_wrapper_MALA, f_prime=f_prime_MALA, x_0=[
+            1., 1., 1., -1., -1., -1.], timestep=t, xmin=[-10.]*6, xmax=[10.]*6, N=10000, detail=False, return_acceptance=True)
+
+        acceptance_MALA.append(acceptance_rate_MALA)
+        print(
+            f"Timestep: {t:.3f}, Acceptance Rate: {acceptance_rate_MALA:.3f}")
+
+    plt.plot(timesteps, acceptance_MALA, marker='o')
+    plt.xlabel("Timestep")
+    plt.ylabel("Acceptance Rate")
+    plt.title("MALA Acceptance Rate vs Timestep")
+    plt.grid(True)
+    plt.show()
+
+    def wavefunction_wrapper_MH(coords):
+        coords = np.asarray(coords)
+        r1, r2 = coords[:, 0:3], coords[:, 3:6]
+        return wf.probability_density(r1, r2)
+
+    stepsize = np.linspace(0.01, 1.5, 50)
+    acceptance_MH = []
+
+    for s in stepsize:
+        _, acceptance_rate_MH = metropolis_hastings(f=wavefunction_wrapper_MH, f_prop='gaussian', x_0=np.ones(
+            6, dtype=float), xmax=[10.]*6, xmin=[-10.]*6, N=10000, kwrgs={'sigma': s}, detail=False, return_acceptance=True)
+        acceptance_MH.append(acceptance_rate_MH)
+        print(f"Stepsize: {s:.3f}, Acceptance Rate: {acceptance_rate_MH:.3f}")
+
+    plt.plot(stepsize, acceptance_MH, marker='o', color='orange')
+    plt.xlabel("Proposal Stepsize (sigma)")
+    plt.ylabel("Acceptance Rate")
+    plt.title("Metropolis-Hastings Acceptance Rate vs Proposal Stepsize")
+    plt.grid(True)
+    plt.show()
+
+
+def test_thinning():
+    q1 = np.array([0, 0, 1])
+    q2 = np.array([0, 0, -1])
+    theta = np.array([1., 1., 1.])
+    wf = h2_wavefunction(thetas=theta, q1=q1, q2=q2)
+
+    N_samples = 100000
+    r_0 = [1.] * 6
+    thinning = 20
+
+    def wavefunction_wrapper(coords):
+        coords = np.asarray(coords)
+        r1, r2 = coords[:, 0:3], coords[:, 3:6]
+        return wf.probability_density(r1, r2)
+
+    samples_no_thin = metropolis_hastings(f=wavefunction_wrapper, f_prop='gaussian', x_0=r_0, xmin=[
+        -10.]*6, xmax=[10.]*6, N=N_samples, kwrgs={'sigma': 0.8}, detail=True, thinning=1)
+
+    samples_thin = metropolis_hastings(f=wavefunction_wrapper, f_prop='gaussian', x_0=r_0, xmin=[
+        -10.]*6, xmax=[10.]*6, N=N_samples, kwrgs={'sigma': 0.8}, detail=True, thinning=thinning)
+
+    max_lag = 1000
+    ac_no_thin = get_acf(samples_no_thin, max_lag=max_lag)
+    ac_thin = get_acf(samples_thin, max_lag=max_lag)
+
+    tau_no_thin = np.where(ac_no_thin < 1/np.e)[0][0]
+    tau_thin = np.where(ac_thin < 1/np.e)[0][0]
+
+    print(f"Correlation time without thinning: {tau_no_thin} steps")
+    print(f"Correlation time with thinning: {tau_thin} steps")
+
+    ess_no_thin = len(samples_no_thin) / (1 + 2 * np.sum(ac_no_thin[1:]))
+    ess_thin = len(samples_thin) / (1 + 2 * np.sum(ac_thin[1:]))
+
+    print(f"Effective Sample Size without thinning: {ess_no_thin:.1f}")
+    print(f"Effective Sample Size with thinning: {ess_thin:.1f}")
+
+    plt.plot(ac_no_thin, label='No Thinning', color='C0')
+    plt.plot(ac_thin, label=f'Thinning {thinning}', color='C1')
+    plt.axhline(0, color='black', lw=0.5, ls='--')
+    plt.axhline(1/np.e, color='gray', lw=0.5, ls=':',
+                label='Correlation Time ($1/e$)')
+    plt.xlabel('Lag (k steps)')
+    plt.ylabel('Autocorrelation $C(k)$')
+    plt.title('Effect of Thinning on Autocorrelation')
+    plt.legend()
+    plt.show()
+
+
+def test_MALA_H2():
+    q1 = np.array([0, 0, 1])
+    q2 = np.array([0, 0, -1])
+    theta_MALA = np.array([1., 1., 1.])
+    wf_MALA = h2_wavefunction(thetas=theta_MALA, q1=q1, q2=q2)
+
+    theta_MH = np.array([1., 1., 1.])
+    wf_MH = h2_wavefunction(thetas=theta_MH, q1=q1, q2=q2)
 
     N_samples = 100000
 
     # Define bounds and start
     r_0 = [1.] * 6
 
-    def wavefunction_wrapper_A(coords):
+    def wavefunction_wrapper_MALA(coords):
         coords = np.asarray(coords)
         r1, r2 = coords[:, 0:3], coords[:, 3:6]
-        return wf_A.psi(r1, r2)
+        return wf_MALA.psi(r1, r2)
 
-    def wavefunction_wrapper_B(coords):
+    def wavefunction_wrapper_MH(coords):
         coords = np.asarray(coords)
         r1, r2 = coords[:, 0:3], coords[:, 3:6]
-        return wf_B.probability_density(r1, r2)
+        return wf_MH.probability_density(r1, r2)
 
-    # samples_A = metropolis_hastings(f=wavefunction_wrapper_A, f_prop='gaussian', x_0=r_0, xmin=[
-    #     -10.]*6, xmax=[10.]*6, N=N_samples, kwrgs={'sigma': 0.8}, thinning=20)
-
-    def f_prime_A(coords):
+    def f_prime_MALA(coords):
         from modules.differentiators import central_difference
         coords = np.asarray(coords)
         grad = central_difference(
-            wavefunction_wrapper_A, coords, h=[1e-4]*6, order=2)
+            wavefunction_wrapper_MALA, coords, h=[1e-4]*6, order=2)
         return np.sum(grad, axis=0)
 
-    samples_A = MALA(f=wavefunction_wrapper_A, f_prime=f_prime_A, x_0=r_0, timestep=0.5, xmin=[
+    samples_MALA = MALA(f=wavefunction_wrapper_MALA, f_prime=f_prime_MALA, x_0=r_0, timestep=0.5, xmin=[
         -10.]*6, xmax=[10.]*6, N=N_samples, detail=True)
 
-    samples_B = metropolis_hastings(f=wavefunction_wrapper_B, f_prop='gaussian', x_0=r_0, xmin=[
+    samples_MH = metropolis_hastings(f=wavefunction_wrapper_MH, f_prop='gaussian', x_0=r_0, xmin=[
         -10.]*6, xmax=[10.]*6, N=N_samples, kwrgs={'sigma': 0.8}, detail=True, thinning=20)
 
-    A_acf = get_acf(samples_A)
-    B_acf = get_acf(samples_B)
+    ac_MALA = get_acf(samples_MALA)
+    ac_MH = get_acf(samples_MH)
+    burn_in = int(min(len(samples_MH), len(samples_MALA)) * 0.1)
 
-    burn_in = int(min(len(samples_B), len(samples_A)) * 0.1)
+    X_MALA = samples_MALA[burn_in:, 0]
+    X_MH = samples_MH[burn_in:, 0]
 
-    X_A = samples_A[burn_in:, 0]
-    X_B = samples_B[burn_in:, 0]
-
-    r1_A, r2_A = samples_A[burn_in:, 0:3], samples_A[burn_in:, 3:6]
-    r1_B, r2_B = samples_B[burn_in:, 0:3], samples_B[burn_in:, 3:6]
-
-    E_A = wf_A.local_energy(r1_A, r2_A)
-    E_B = wf_B.local_energy(r1_B, r2_B)
+    r1_MALA, r2_MALA = samples_MALA[burn_in:, 0:3], samples_MALA[burn_in:, 3:6]
+    r1_MH, r2_MH = samples_MH[burn_in:, 0:3], samples_MH[burn_in:, 3:6]
+    E_MALA = wf_MALA.local_energy(r1_MALA, r2_MALA)
+    E_MH = wf_MH.local_energy(r1_MH, r2_MH)
 
     print(f"Energy Stats (Filtered |E| < 500 Ha):")
-    print(f"Mean E_A: {np.mean(E_A):.5f} Ha")
-    print(f"Mean E_B: {np.mean(E_B):.5f} Ha")
-    print(f"Difference: {abs(np.mean(E_A) - np.mean(E_B)):.5f} Ha")
-    print(f"Variance A: {np.var(E_A):.5f}")
+    print(f"Mean E_MALA: {np.mean(E_MALA):.5f} Ha")
+    print(f"Mean E_MH: {np.mean(E_MH):.5f} Ha")
+    print(f"Difference: {abs(np.mean(E_MALA) - np.mean(E_MH)):.5f} Ha")
+    print(f"Variance MALA: {np.var(E_MALA):.5f}")
 
     _, ax = plt.subplots(3, 1, figsize=(10, 12))
 
-    ax[0].plot(X_A[::100], label='Chain A', alpha=0.7, linewidth=0.5)
-    ax[0].plot(X_B[::100], label='Chain B', alpha=0.7, linewidth=0.5)
+    ax[0].plot(X_MALA[::100], label='Chain MALA', alpha=0.7, linewidth=0.5)
+    ax[0].plot(X_MH[::100], label='Chain MH', alpha=0.7, linewidth=0.5)
     ax[0].set_title(
         f"Coordinate Trace (Electron 1, x-axis) - Subsampled 1:100")
     ax[0].set_ylabel("Position (Bohr)")
     ax[0].legend()
 
-    ax[1].hist(X_A, bins=100, density=True, alpha=0.5,
-               label='Chain A', color='blue')
-    ax[1].hist(X_B, bins=100, density=True, alpha=0.5,
-               label='Chain B', color='orange')
+    ax[1].hist(X_MALA, bins=100, density=True, alpha=0.5,
+               label='Chain MALA', color='blue')
+    ax[1].hist(X_MH, bins=100, density=True, alpha=0.5,
+               label='Chain MH', color='orange')
     ax[1].set_title("Coordinate Distribution Histogram")
     ax[1].set_xlabel("Position (x)")
     ax[1].legend()
 
-    lag_max = 1000
-    ac_A = autocorrelation(X_A)[:lag_max]
-    ac_B = autocorrelation(X_B)[:lag_max]
+    max_lag = 1000
+    ac_MALA = get_acf(X_MALA, max_lag=max_lag)
+    ac_MH = get_acf(X_MH, max_lag=max_lag)
 
-    ESS_A = len(X_A) / (1 + 2 * np.sum(ac_A[1:]))
-    ESS_B = len(X_B) / (1 + 2 * np.sum(ac_B[1:]))
+    ESS_MALA = len(X_MALA) / (1 + 2 * np.sum(ac_MALA[1:]))
+    ESS_MH = len(X_MH) / (1 + 2 * np.sum(ac_MH[1:]))
 
-    ax[2].plot(ac_A, color='black', label='Autocorrelation A')
-    ax[2].plot(ac_B, color='red', label='Autocorrelation B')
+    ax[2].plot(ac_MALA, color='black', label='Autocorrelation MALA')
+    ax[2].plot(ac_MH, color='red', label='Autocorrelation MH')
     ax[2].axhline(0, color='gray', linestyle='--')
     ax[2].axhline(1/np.e, color='red', linestyle=':',
                   label='Correlation Time (1/e)')
@@ -113,19 +206,22 @@ def test_samples_H2():
     ax[2].legend()
 
     try:
-        tau = np.where(ac_A < 1/np.e)[0][0]
-        ax[2].text(tau, 0.5, f"  tau ≈ {tau} steps", color='red')
-        print(f"\nEstimated Correlation Time (tau): {tau} steps")
-        print(f"Effective Sample Size (ESS) Chain A: {ESS_A:.1f}")
-        print(f"Effective Sample Size (ESS) Chain B: {ESS_B:.1f}")
+        tau_MALA = np.where(ac_MALA < 1/np.e)[0][0]
+        tau_MH = np.where(ac_MH < 1/np.e)[0][0]
+        ax[2].text(tau_MALA, 0.5, f"  tau ≈ {tau_MALA} steps", color='red')
+        ax[2].text(tau_MH, 0.5, f"  tau ≈ {tau_MH} steps", color='red')
+        print(f"Estimated Correlation Time (tau) chain MALA: {tau_MALA} steps")
+        print(f"Estimated Correlation Time (tau) chain MH: {tau_MH} steps")
+        print(f"Effective Sample Size (ESS) Chain MALA: {ESS_MALA:.1f}")
+        print(f"Effective Sample Size (ESS) Chain MH: {ESS_MH:.1f}")
     except IndexError:
         print("\nCorrelation time (tau) exceeds lag max limit.")
 
     plt.tight_layout()
     plt.show()
 
-    plt.plot(A_acf, label='Metropolis-Hastings (A)', color='C0')
-    plt.plot(B_acf, label='Metropolis-Hastings (B)', color='C1')
+    plt.plot(ac_MALA, label='Metropolis adjusted Langevin (MALA)', color='C0')
+    plt.plot(ac_MH, label='Metropolis-Hastings (MH)', color='C1')
     plt.axhline(0, color='black', lw=0.5, ls='--')
     plt.axhline(1/np.e, color='gray', lw=0.5, ls=':',
                 label='Correlation Time ($1/e$)')
@@ -398,4 +494,6 @@ if __name__ == "__main__":
     # test_samples()
     # test_sampling_3d()
     # test_samples_hydrogen()
-    test_samples_H2()
+    # test_samples_H2()
+    optimise_step_H2()
+    # test_thinning()
