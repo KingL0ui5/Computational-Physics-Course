@@ -144,12 +144,12 @@ def test_samples():
 
     x_0 = np.ones(6, dtype=float)
     N_s = 1000000
-    # samples = MALA(wrapper, wrapper_grad, x_0=x_0, N=N_s, timestep=0.1, xmin=[
-    #                -10., xmax=10., detail=True)
+    samples = MALA(wrapper, wrapper_grad, x_0=x_0, N=N_s,
+                   timestep=0.3, xmin=-10., xmax=10., detail=True)
 
-    samples = metropolis_hastings(
-        wrapper, f_prop='gaussian', x_0=x_0, xmax=10., xmin=-10., N=N_s, kwrgs={
-            'sigma': 0.7}, detail=True)
+    # samples = metropolis_hastings(
+    #     wrapper, f_prop='gaussian', x_0=x_0, xmax=10., xmin=-10., N=N_s, kwrgs={
+    #         'sigma': 0.7}, detail=True)
 
     print('Finished Sampling')
 

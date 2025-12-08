@@ -85,7 +85,7 @@ class hydrogen_molecule_minimisers:
             initial_temp: float, the starting temperature of the system
             cooling_rate: float, the rate at which the temperature decreases
             max_iter: int, the number of iterations to run
-            detail: bool, default = False, show the time elapsed for the method to run
+            detail: bool, default = False
         """
         from hydrogen_molecule import h2_wavefunction
 
@@ -158,6 +158,104 @@ class hydrogen_molecule_minimisers:
                 f"final iteration number SA: {i}, final energy: {E}, final x: {x}")
         return x, E
 
+    @staticmethod
+    def stochastic_reconfiguration(q1: np.ndarray, q2: np.ndarray, x_0: np.ndarray, alpha: float,
+                                   max_iter: int = 100, stop_tol: float = 1e-6, N_s: int = 10000,
+                                   epsilon: float = 1e-3, detail: bool = False) -> tuple:
+        """
+        Finds the minima using Stochastic Reconfiguration (Natural Gradient Descent).
+
+        Parameters:
+            epsilon: float, regularization shift for the S-matrix inversion (stabilizer).
+            q1 (np.ndarray): Position of the first nucleus. 
+            q2 (np.ndarray): Position of the second nucleus.
+            x_0: np.ndarray, the starting point of the minimiser
+            alpha: float, the stepsize of the minimiser
+            max_iter: int, the number of iterations to run
+            stop_tol: float, default = 1e-6, the value of the gradient at which convergence is determined
+            N_s: number of samples to take per wavefunction iteration
+            detail: bool, default = False
+        Returns:
+            tuple: the coordinates of minima, the minimum value of the function at this point
+        """
+        from hydrogen_molecule import h2_wavefunction
+        from modules.differentiators import central_difference
+
+        print("Starting Stochastic Reconfiguration minimiser...")
+        x = np.asarray(x_0, dtype=float)
+        r_0 = np.ones(6, dtype=float)  # for samples
+
+        Es = []
+        start = time.perf_counter()
+        for i in range(max_iter):
+            #  adjust learning rate per iteration
+            alpha_i = alpha
+            wf = h2_wavefunction(x, q1, q2)
+
+            #   sample coordinates for current thetas
+            r1, r2 = hydrogen_molecule_minimisers.sample_coords(wf, N_s, r_0)
+
+            df = hydrogen_molecule_minimisers.grad(
+                x, q1, q2, r1, r2)
+
+            #  find S matrix
+            def log_psi_wrapper(theta_point):
+                t = theta_point
+                wf_temp = h2_wavefunction(t, q1, q2)
+                prob = wf_temp.probability_density(r1, r2)
+                return 0.5 * np.log(prob + 1e-100)
+
+            O_k_raw = central_difference(
+                log_psi_wrapper, [x], step_size=1e-4, order=2)[0]
+
+            O_mean = np.mean(O_k_raw, axis=0)
+            O_centered = O_k_raw - O_mean
+
+            S = (O_centered.T @ O_centered) / N_s
+
+            S_reg = S + epsilon * np.eye(len(x))
+
+            delta_p = np.linalg.solve(S_reg, -df)
+
+            #  stopping condition
+            if stop_tol and np.linalg.norm(df) < stop_tol:
+                break
+
+            if np.isnan(x.any()) or np.isinf(x.any()):
+                raise ValueError("Optimal parameters diverged to nan or inf")
+
+            # Update
+            x = x + alpha_i * delta_p
+
+            #  restrict x to be positive
+            # if (x <= 1e-7).any():
+            #     x = np.maximum(x, 1e-7)
+
+            if detail:
+                E_min = hydrogen_molecule_minimisers.E_fn(x, q1, q2, r1, r2)
+                Es.append(E_min)
+                print(f"Iter {i}: E={E_min:.5f}, x={x}")
+                # print(f"  Gradient: {df}")
+                # print(f"  Natural Grad update: {delta_p}")
+
+        end = time.perf_counter()
+        time_elapsed = end - start
+
+        if detail:
+            import matplotlib.pyplot as plt
+            fig, ax = plt.subplots(figsize=(8, 5))
+            ax.plot(range(len(Es)), Es, label='Energy')
+            ax.set_xlabel("Iteration")
+            ax.set_ylabel("Energy")
+            ax.set_title("Stochastic Reconfiguration Convergence")
+            plt.show()
+
+            print(f"Iterations: {i}")
+            print(f"Time elapsed: {time_elapsed:.2f}s")
+            print(f"Final gradient norm: {np.linalg.norm(df)}")
+
+        return x, hydrogen_molecule_minimisers.E_fn(x, q1, q2, r1, r2)
+
     def gradient_descent(q1: np.ndarray, q2: np.ndarray, x_0: np.ndarray, alpha: float, max_iter: int = 100, stop_tol: float = 1e-6, N_s: int = 10000, detail: bool = False) -> tuple:
         """
         A method to find the minima of a function using the gradient descent method.
@@ -169,7 +267,7 @@ class hydrogen_molecule_minimisers:
             max_iter: int, the number of iterations to run
             stop_tol: float, default = 1e-6, the value of the gradient at which convergence is determined
             N_s: number of samples to take per wavefunction iteration
-            detail: bool, default = False, show the time elapsed for the method to run
+            detail: bool, default = False
 
         Returns:
             tuple: the coordinates of minima, the minimum value of the function at this point
@@ -266,7 +364,7 @@ class hydrogen_molecule_minimisers:
             forgetting: float, the forgetting factor of the minimiser
             max_iter: int, the number of iterations to run
             stop_tol: float, default = 1e-6, the value of the gradient at which convergence is determined
-            detail: bool, default = False, show the time elapsed for the method to run
+            detail: bool, default = False
 
         Returns:
             tuple: the coordinates of minima, the minimum value of the function at this point
@@ -325,7 +423,7 @@ class hydrogen_molecule_minimisers:
             stop_tol: float, default = None, the value of the gradient at which convergence is determined. defaults to none to give a chance to get off local minima
             max_iter: int, default = 10000 the number of iterations to run
             N_s: int, default = 10000, number of samples to take per wavefunction iteration
-            detail: bool, default = False, show the time elapsed for the method to run
+            detail: bool, default = False
 
         Returns:
             tuple: the coordinates of minima, the minimum value of the function at this point
@@ -434,8 +532,7 @@ class hydrogen_atom_minimisers:
             method: str, default = "DFP" the method to use for the hessian approximation - allowed values "DFP", "BFGS"
             stop_tol: float, default = None, the value of the gradient at which convergence is determined. defaults to none to give a chance to get off local minima
             max_iter: int, default = 10000 the number of iterations to run
-            detail: bool, default = False, show the time elapsed for the method to run
-
+            detail: bool, default = False
         Returns:
             tuple: the coordinates of minima, the minimum value of the function at this point
         """
@@ -533,7 +630,7 @@ class hydrogen_atom_minimisers:
             max_iter: int, the number of iterations to run
             stop_tol: float, default = 1e-6, the value of the gradient at which convergence is determined
             N_s: number of samples to take per wavefunction iteration
-            detail: bool, default = False, show the time elapsed for the method to run
+            detail: bool, default = False
 
         Returns:
             tuple: the coordinates of minima, the minimum value of the function at this point
@@ -577,58 +674,6 @@ class hydrogen_atom_minimisers:
             print(f"final derivative: {d}")
         return x, np.nanmean(psi.local_energy(coords=samples))
 
-    def stochastic_gradient_descent(wf: Callable, dH: Callable, x_0: np.ndarray, stepsize: float, stop_tol: float = None, max_iter: int = 1000, noise: float = 0.1, N_s: int = 1000, detail: bool = False) -> tuple:
-        """
-        A method to find the minima of a function using the gradient descent method with added noise.
-        Parameters:
-            E: callable, the function to minimise
-            dH: callable, the first derivative of the function, left for flexibility of method
-            x_0: np.ndarray, the starting point of the minimiser
-            stepsize: float, the stepsize of the minimizer
-            max_iter: int, the number of iterations to run
-            noise: float, the level of noise to introduce to the derivative
-            stop_tol: float, default = 1e-6, the value of the gradient at which convergence is determined
-            N_s: number of samples to take per wavefunction iteration
-            detail: bool, default = False, show the time elapsed for the method to run
-
-        Returns:
-            tuple: the coordinates of minima, the minimum value of the function at this point
-        """
-        from modules.function_sampling import metropolis_hastings
-
-        x = np.asarray(x_0, dtype=float)
-        start = time.perf_counter()
-
-        for i in range(max_iter):
-            psi = wf(theta=x)  # hydrogen wavefunction given theta
-            samples = metropolis_hastings(f=psi.probability_density, f_prop='gaussian', x_0=[
-                1., 1., 1.], xmin=[-20., -20., -20.], xmax=[20., 20., 20.], N=N_s, kwrgs={'sigma': 0.8})
-            samples = samples[N_s//10:]
-
-            d = dH(x, samples)
-
-            #  stopping conditions
-            if stop_tol:
-                if np.linalg.norm(d) < stop_tol:
-                    break
-
-            sigma = noise * stepsize
-            d += np.random.normal(loc=0, scale=sigma, size=x.shape)
-            x = x - stepsize * d
-
-            if detail:
-                print(f"iteration {i}, x={x}")
-
-        end = time.perf_counter()
-        time_elapsed = end - start
-
-        if detail:
-            print(f"iteration number SGD: {i}")
-            print(f"time elapsed SGD: {time_elapsed}")
-            print(f"final derivative: {d}")
-
-        return x, np.nanmean(psi.local_energy(coords=samples))
-
 
 def gradient_desecent(f: Callable, df: Callable, x_0: np.ndarray, stepsize: float, max_iter: int = 1000, stop_tol: float = 1e-6, detail: bool = False, **kwargs) -> tuple:
     """
@@ -640,7 +685,7 @@ def gradient_desecent(f: Callable, df: Callable, x_0: np.ndarray, stepsize: floa
         stepsize: float, the stepsize of the minimizer
         max_iter: int, the number of iterations to run
         stop_tol: float, default = 1e-6, the value of the gradient at which convergence is determined
-        detail: bool, default = False, show the time elapsed for the method to run
+        detail: bool, default = False
 
     Returns:
         tuple: the coordinates of minima, the minimum value of the function at this point
@@ -667,41 +712,6 @@ def gradient_desecent(f: Callable, df: Callable, x_0: np.ndarray, stepsize: floa
     return x, f(x, **kwargs)
 
 
-def stochastic_GD(f: Callable, df: Callable, x_0: np.ndarray, stepsize: float, noise: float, max_iter: int = 1000, stop_tol: float = None, detail: bool = False, **kwargs) -> tuple:
-    """
-    A method to find the minima of a function using the gradient descent method with added noise.
-    Parameters:
-        f: callable, the function to minimise
-        df: callable, the first derivative of the function, left for flexibility of method
-        x_0: np.ndarray, the starting point of the minimiser
-        stepsize: float, the stepsize of the minimizer
-        noise: float, the level of noise to introduce to the derivative
-        max_iter: int, the number of iterations to run
-        stop_tol: float, default = None, the value of the gradient at which convergence is determined. Defaulted to none to give it a chance to get off local minima
-        detail: bool, default = False, show the time elapsed for the method to run
-
-    Returns:
-        tuple: the coordinates of minima, the minimum value of the function at this point
-    """
-    x = np.asarray(x_0, dtype=float)
-    start = time.perf_counter()
-    for i in range(max_iter):
-        d = df(x, **kwargs)
-        if stop_tol:
-            if np.linalg.norm(d) < stop_tol:
-                break
-        sigma = noise * stepsize
-        d += np.random.normal(loc=0, scale=sigma, size=x.shape)
-        x = x - stepsize * d
-    end = time.perf_counter()
-    time_elapsed = end - start
-
-    if detail:
-        print(f"iteration number SGD: {i}")
-        print(f"time elapsed SGD: {time_elapsed}")
-    return x, f(x, **kwargs)
-
-
 def RMSProp_GD(f: Callable, df: Callable, x_0: np.ndarray, stepsize: float, forgetting: float, max_iter: int = 1000, stop_tol: float = 1e-6, detail: bool = False, **kwargs) -> tuple:
     """
     A method to find the minima of a function using the RMSProp adjusted gradient descent method.
@@ -713,7 +723,7 @@ def RMSProp_GD(f: Callable, df: Callable, x_0: np.ndarray, stepsize: float, forg
         forgetting: float, the forgetting factor of the minimiser
         max_iter: int, the number of iterations to run
         stop_tol: float, default = 1e-6, the value of the gradient at which convergence is determined
-        detail: bool, default = False, show the time elapsed for the method to run
+        detail: bool, default = False
 
     Returns:
         tuple: the coordinates of minima, the minimum value of the function at this point
@@ -749,7 +759,7 @@ def quasi_newton(f: Callable, df: Callable, x_0: np.ndarray, stepsize: float, me
         method: str, default = "DFP" the method to use for the hessian approximation - allowed values "DFP", "BFGS"
         stop_tol: float, default = None, the value of the gradient at which convergence is determined. defaults to none to give a chance to get off local minima
         max_iter: int, default = 10000 the number of iterations to run
-        detail: bool, default = False, show the time elapsed for the method to run
+        detail: bool, default = False
 
     Returns:
         tuple: the coordinates of minima, the minimum value of the function at this point

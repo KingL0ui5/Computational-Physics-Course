@@ -80,7 +80,6 @@ def test_samples_H2():
 
     _, ax = plt.subplots(3, 1, figsize=(10, 12))
 
-    # 1. Trace Plot (Check for "Stuck" walkers)
     ax[0].plot(X_A[::100], label='Chain A', alpha=0.7, linewidth=0.5)
     ax[0].plot(X_B[::100], label='Chain B', alpha=0.7, linewidth=0.5)
     ax[0].set_title(
@@ -100,6 +99,9 @@ def test_samples_H2():
     ac_A = autocorrelation(X_A)[:lag_max]
     ac_B = autocorrelation(X_B)[:lag_max]
 
+    ESS_A = len(X_A) / (1 + 2 * np.sum(ac_A[1:]))
+    ESS_B = len(X_B) / (1 + 2 * np.sum(ac_B[1:]))
+
     ax[2].plot(ac_A, color='black', label='Autocorrelation A')
     ax[2].plot(ac_B, color='red', label='Autocorrelation B')
     ax[2].axhline(0, color='gray', linestyle='--')
@@ -114,9 +116,10 @@ def test_samples_H2():
         tau = np.where(ac_A < 1/np.e)[0][0]
         ax[2].text(tau, 0.5, f"  tau ≈ {tau} steps", color='red')
         print(f"\nEstimated Correlation Time (tau): {tau} steps")
-        print(f"If tau is high (>100), consider increasing sigma or thinning samples.")
-    except:
-        print("\nCorrelation time is > 1000 steps. Sampling is highly inefficient.")
+        print(f"Effective Sample Size (ESS) Chain A: {ESS_A:.1f}")
+        print(f"Effective Sample Size (ESS) Chain B: {ESS_B:.1f}")
+    except IndexError:
+        print("\nCorrelation time (tau) exceeds lag max limit.")
 
     plt.tight_layout()
     plt.show()
