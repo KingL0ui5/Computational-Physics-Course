@@ -124,14 +124,14 @@ def MALA(f: Callable, f_prime, x_0: np.ndarray | list, xmin: np.ndarray | list, 
 
     xmin = np.array(xmin, dtype=float)
     xmax = np.array(xmax, dtype=float)
-    samples = []
-    samples.append(current.copy())
+    samples = np.ones((N, n_dims))
+    samples[0] = current.copy()
 
     accepted_count = 0
     F_current = 2 * np.real(f_prime([current]) / f([current]))
 
     start2 = time.perf_counter()
-    for _ in range(N - 1):
+    for i in range(N):
         xi = np.random.normal(size=current.shape)
         forward_mean = current + timestep * F_current
 
@@ -139,7 +139,7 @@ def MALA(f: Callable, f_prime, x_0: np.ndarray | list, xmin: np.ndarray | list, 
             np.sqrt(2 * timestep) * xi
 
         if np.any(proposal < xmin) or np.any(proposal > xmax):
-            samples.append(current.copy())
+            samples[i] = current.copy()
             continue
 
         F_prop = 2 * np.real(f_prime([proposal]) / f([proposal]))
@@ -156,7 +156,7 @@ def MALA(f: Callable, f_prime, x_0: np.ndarray | list, xmin: np.ndarray | list, 
             F_current = F_prop
             accepted_count += 1
 
-        samples.append(current.copy())
+        samples[i] = current.copy()
     end2 = time.perf_counter()
 
     if detail:
@@ -181,7 +181,7 @@ def MALA(f: Callable, f_prime, x_0: np.ndarray | list, xmin: np.ndarray | list, 
         plt.tight_layout()
         plt.show()
         print(f"MALA acceptance Rate: {accepted_count / N:.2f}")
-        print(f"time elapsed: {end2 - start2}")
+        print(f"time elapsed: {end2 - start2} to iteration {i}")
 
     # print(f"Acceptance Rate: {accepted_count / N:.2f}")
     return np.asarray(samples)

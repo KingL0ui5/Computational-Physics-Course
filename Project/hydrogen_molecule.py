@@ -5,7 +5,7 @@ Louis Liu 28/11
 import numpy as np
 from modules.helpers import hydrogen_molecule_helpers as hlp
 from modules.differentiators import double_central_difference
-from modules.function_sampling import metropolis_hastings
+from modules.function_sampling import metropolis_hastings, MALA
 from modules.minimisers import hydrogen_molecule_minimisers as min
 import matplotlib.pyplot as plt
 eps = 1e-15
@@ -135,11 +135,23 @@ def test_samples():
 
         return wf.probability_density(r1, r2)
 
-    x_0 = np.zeros(6)
+    def wrapper_grad(coords):
+        from modules.differentiators import central_difference
+
+        coords = np.asarray(coords)
+        grad = central_difference(wrapper, coords, h=[1e-4]*6, order=2)
+        return np.sum(grad, axis=0)
+
+    x_0 = np.ones(6, dtype=float)
     N_s = 1000000
+    # samples = MALA(wrapper, wrapper_grad, x_0=x_0, N=N_s, timestep=0.1, xmin=[
+    #                -10., xmax=10., detail=True)
+
     samples = metropolis_hastings(
         wrapper, f_prop='gaussian', x_0=x_0, xmax=10., xmin=-10., N=N_s, kwrgs={
             'sigma': 0.7}, detail=True)
+
+    print('Finished Sampling')
 
     r1, r2 = samples[:, 0:3], samples[:, 3:6]
     E_l = wf.local_energy(r1=r1, r2=r2)
@@ -157,7 +169,7 @@ def test_samples():
     print(f"Expected Energy: {exp_energy}")
 
     hlp.plot_samples(
-        r1, r2, q1=q1, q2=q2, xlim=[-3, 3], ylim=[-3, 3], seaborn=True)
+        r1, r2, q1=q1, q2=q2, xlim=[-3, 3], ylim=[-3, 3], seaborn=False)
     plt.show()
 
 
@@ -177,7 +189,7 @@ def test_minimiser():
 
 
 def ground_state_energies():
-    Ns = 10000
+    Ns = 100000
     r_0 = np.linspace(0.1, 4., 100)
     q1 = [0.] * 3
     q2 = [[0., 0., i] for i in r_0]
@@ -186,8 +198,6 @@ def ground_state_energies():
     count = 0
     for q2_i in q2:
         count += 1
-        wf = h2_wavefunction(thetas=[1., 1., 1.], q1=q1, q2=q2_i)
-
         thetas_0 = [1.]*3  #  for minimiser
         # theta_min, E_min = min.simulated_annealing(
         #     q1, q2_i, x_0=thetas_0, initial_temp=0.5, cooling_rate=0.95, max_iter=200, Ns=Ns, std=0.05, detail=False)
@@ -219,4 +229,4 @@ def ground_state_energies():
 
 
 if __name__ == '__main__':
-    test_minimiser()
+    test_samples()
