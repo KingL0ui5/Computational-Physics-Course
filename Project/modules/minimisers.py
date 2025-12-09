@@ -3,6 +3,7 @@ A module containing the minimisers to find the ground state energy of wavefuncti
 Louis Liu 22/11
 """
 
+from tracemalloc import start
 from typing import Callable
 import numpy as np
 import time
@@ -24,10 +25,11 @@ class hydrogen_molecule_minimisers:
         from hydrogen_molecule import h2_wavefunction
 
         wf_current = h2_wavefunction(thetas, q1, q2)
-        el = wf_current.local_energy(r1, r2)
-        e_mean = np.nanmean(el)
+        E_l = wf_current.local_energy(r1, r2)
+        E_mean = np.nanmean(E_l)
+        E_error = np.std(E_l, ddof=1) / np.sqrt(len(E_l))
 
-        weights = 2.0 * (el - e_mean)
+        weights = 2.0 * (E_l - E_mean)
 
         def wrapper(t_array):
             t = t_array[0]
@@ -76,7 +78,7 @@ class hydrogen_molecule_minimisers:
         return np.array([dE_t1, dE_t2, dE_t3])
 
     @staticmethod
-    def sample_coords(wf, Ns, r_0, thinning: int = 20, detail=False) -> tuple:
+    def sample_coords(wf, Ns, r_0, thinning: int = 20, detail=False, trace=False) -> tuple:
         """
         Sample wavefunction and process into r1, r2.
         Parameters:
@@ -104,10 +106,11 @@ class hydrogen_molecule_minimisers:
             from modules.helpers import get_acf
             acf = get_acf(samples, max_lag=500)
             ess = len(samples) / (1 + 2 * np.sum(acf[1:]))
-            print(f"Effective Sample Size (ESS): {ess:.1f}")
+            if trace:
+                print(f"Effective Sample Size (ESS): {ess:.1f}")
         return r1, r2
 
-    def simulated_annealing(q1: np.ndarray, q2: np.ndarray, x_0: np.ndarray, initial_temp: float, cooling_rate: float, std: float = 0.05, max_iter: int = 100, xmin: float = 0.7, xmax: float = 5., Ns: int = 10000, detail: bool = False):
+    def simulated_annealing(q1: np.ndarray, q2: np.ndarray, x_0: np.ndarray, initial_temp: float, cooling_rate: float, std: float = 0.05, stop_tol: float = None, max_iter: int = 100, xmin: float = 0.7, xmax: float = 5., Ns: int = 10000, detail: bool = False, trace: bool = False) -> tuple:
         """
         Find the minima of a function using the simulated annealing method.
         Parameters:
@@ -115,6 +118,7 @@ class hydrogen_molecule_minimisers:
             q2 (np.ndarray): Position of the second nucleus.
             x_0: np.ndarray, the starting point of the minimiser
             Ns: int, number of samples to take per wavefunction iteration
+            stop_tol: float, the stopping tolerance based on the standard deviation of the last 10 energy values
             xmin: float, the minimum value for theta parameters
             xmax: float, the maximum value for theta parameters
             std: float, the standard deviation of the normal distribution used for proposing new states
@@ -122,6 +126,10 @@ class hydrogen_molecule_minimisers:
             cooling_rate: float, the rate at which the temperature decreases
             max_iter: int, the number of iterations to run
             detail: bool, default = False
+            trace: bool, default = False
+
+        Returns:
+            tuple: the coordinates of minima, the minimum value of the function at this point
         """
         from hydrogen_molecule import h2_wavefunction
 
@@ -130,16 +138,16 @@ class hydrogen_molecule_minimisers:
         T = initial_temp
 
         wf = h2_wavefunction(x, q1, q2)
-        r1, r2 = hydrogen_molecule_minimisers.sample_coords(wf, Ns, r_0)
+        r1, r2 = hydrogen_molecule_minimisers.sample_coords(
+            wf, Ns, r_0, detail=detail, trace=trace)
 
         E = hydrogen_molecule_minimisers.E_fn(x, q1, q2, r1, r2)
 
         if detail:
             print("starting simulated annealing...")
-            Es = [E]
             Ts = [T]
             xs = [x.copy()]
-
+        Es = [E]
         start = time.perf_counter()
         for i in range(max_iter):
             Ns_i = Ns
@@ -150,7 +158,7 @@ class hydrogen_molecule_minimisers:
 
             wf_new = h2_wavefunction(x_new, q1, q2)
             r1_new, r2_new = hydrogen_molecule_minimisers.sample_coords(
-                wf_new, Ns_i, r_0)
+                wf_new, Ns_i, r_0, detail=detail, trace=trace)
 
             E_new = hydrogen_molecule_minimisers.E_fn(
                 x_new, q1, q2, r1_new, r2_new)
@@ -160,47 +168,85 @@ class hydrogen_molecule_minimisers:
                 x, E, r1, r2 = x_new, E_new, r1_new, r2_new
 
             T *= cooling_rate
+            if stop_tol:
+                E_window = Es[-10:]
+                if len(E_window) > 1:
+                    std_dev_last_10 = np.std(E_window, ddof=1)
+                else:
+                    std_dev_last_10 = np.inf
+                if trace:
+                    print(
+                        f"Standard Deviation of last 10 steps: {std_dev_last_10}")
+                if std_dev_last_10 < stop_tol:
+                    if detail:
+                        print("Convergence reached based on energy stability.")
+                    break
 
             if detail:
-                print(f'iteration number: {i}, x: {x}, E: {E}, T: {T}')
                 Es.append(E)
                 Ts.append(T)
                 xs.append(x.copy())
+            if trace:
+                print(f'iteration number: {i}, x: {x}, E: {E}, T: {T}')
 
         end = time.perf_counter()
         if detail:
             import matplotlib.pyplot as plt
             time_elapsed = end - start
-            print(
-                f"time elapsed: {time_elapsed}, per iteration (avg)={time_elapsed/i}")
             xs = np.array(xs)
+
             fig, ax = plt.subplots(1, 3, figsize=(12, 5))
             iterations = range(len(xs))
-            ax[0].plot(iterations, xs[:, 0], label='theta 1')
-            ax[0].plot(iterations, xs[:, 1], label='theta 2')
-            ax[0].plot(iterations, xs[:, 2], label='theta 3')
+
+            # Plot Thetas
+            ax[0].plot(len(xs[0]), xs[:, 0], label='theta 1')
+            ax[0].plot(len(xs[0]), xs[:, 1], label='theta 2')
+            ax[0].plot(len(xs[0]), xs[:, 2], label='theta 3')
             ax[0].set_xlabel("Iteration")
             ax[0].set_ylabel("Theta Values")
-            ax[0].set_title("Theta Values over Simulated Annealing Iterations")
+            ax[0].set_title("Theta Values over Simulated Annealing")
             ax[0].legend()
 
+            # Plot Temperature
             ax[1].plot(range(len(Ts)), Ts)
             ax[1].set_xlabel("Iteration")
             ax[1].set_ylabel("Temperature")
-            ax[1].set_title("Temperature over Simulated Annealing Iterations")
+            ax[1].set_title("Temperature Schedule")
 
+            # Plot Energy
             ax[2].plot(range(len(Es)), Es)
             ax[2].set_xlabel("Iteration")
             ax[2].set_ylabel("Energy")
-            ax[2].set_title("Energy over Simulated Annealing Iterations")
+            ax[2].set_title("Energy Minimization")
 
-            plt.show()
-            print(
-                f"final iteration number SA: {i}, final energy: {E}, final x: {x}")
+            plt.tight_layout()
+
+            results = {
+                "meta": {
+                    "time_elapsed": time_elapsed,
+                    "time_per_iter_avg": time_elapsed / i,
+                    "final_iteration_count": i
+                },
+                "final_state": {
+                    "energy": E,
+                    "parameters": x
+                },
+                "history": {
+                    "thetas": xs,
+                    "temperatures": np.array(Ts),
+                    "energies": np.array(Es)
+                },
+                "figure": fig
+            }
+
+            print(f"Time elapsed: {results['meta']['time_elapsed']:.4f}s")
+            print(f"Final Energy: {results['final_state']['energy']}")
+
+            return x, E, results
         return x, E
 
     @staticmethod
-    def stochastic_reconfiguration(q1: np.ndarray, q2: np.ndarray, x_0: np.ndarray, alpha: float, max_iter: int = 100, stop_tol: float = 1e-6, N_s: int = 10000, epsilon: float = 1e-3, detail: bool = False) -> tuple:
+    def stochastic_reconfiguration(q1: np.ndarray, q2: np.ndarray, x_0: np.ndarray, alpha: float, max_iter: int = 100, stop_tol: float = 1e-6, N_s: int = 10000, epsilon: float = 1e-3, detail: bool = False, trace: bool = False) -> tuple:
         """
         Finds the minima using Stochastic Reconfiguration (Natural Gradient Descent).
 
@@ -211,9 +257,10 @@ class hydrogen_molecule_minimisers:
             x_0: np.ndarray, the starting point of the minimiser
             alpha: float, the stepsize of the minimiser
             max_iter: int, the number of iterations to run
-            stop_tol: float, default = 1e-6, the value of the gradient at which convergence is determined
+            stop_tol: float, default = 1e-6, the value of the natural gradient update at which convergence is determined
             N_s: number of samples to take per wavefunction iteration
             detail: bool, default = False
+            trace: bool, default = False
         Returns:
             tuple: the coordinates of minima, the minimum value of the function at this point
         """
@@ -234,15 +281,10 @@ class hydrogen_molecule_minimisers:
 
             #   sample coordinates for current thetas
             r1, r2 = hydrogen_molecule_minimisers.sample_coords(
-                wf, Ns_i, r_0, detail=detail)
+                wf, Ns_i, r_0, detail=detail, trace=trace)
             N_actual = len(r1)
             df = hydrogen_molecule_minimisers.log_grad(
                 x, q1, q2, r1, r2)
-
-            #  scale alpha based on the derivative
-            grad_norm = np.linalg.norm(df)
-            scaling_factor = np.clip(grad_norm, 0.1, 1.0)
-            alpha_i = alpha * scaling_factor
 
             n_params = len(x)
             h_diff = 1e-6
@@ -280,9 +322,26 @@ class hydrogen_molecule_minimisers:
                 print("Singular matrix, reverting to gradient descent.")
                 delta_p = -df
 
+            #  scale alpha based on the derivative
+            grad_norm = np.linalg.norm(delta_p)
+            scaling_factor = np.clip(grad_norm, 0.1, 1.0)
+            alpha_i = alpha * scaling_factor
+
             #  stopping condition
-            if stop_tol and np.linalg.norm(df) < stop_tol:
-                break
+            if stop_tol:
+                E_window = Es[-10:]
+                if len(E_window) > 1:
+                    std_dev_last_10 = np.std(E_window, ddof=1)
+                else:
+                    std_dev_last_10 = np.inf
+
+                if trace:
+                    print(
+                        f"Standard Deviation of last 10 steps: {std_dev_last_10}")
+                if std_dev_last_10 < stop_tol:
+                    if detail:
+                        print("Convergence reached based on energy stability.")
+                    break
 
             if np.isnan(x.any()) or np.isinf(x.any()):
                 raise ValueError("Optimal parameters diverged to nan or inf")
@@ -294,11 +353,13 @@ class hydrogen_molecule_minimisers:
             if (x <= 1e-7).any():
                 x = np.maximum(x, 1e-7)
 
-            if detail:
-                E_min = hydrogen_molecule_minimisers.E_fn(x, q1, q2, r1, r2)
-                Es.append(E_min)
+            E = hydrogen_molecule_minimisers.E_fn(x, q1, q2, r1, r2)
+            Es.append(E)
+
+            if trace:
                 print(
-                    f"iteration {i}, x={x}, df = {df},||d/df|| = {np.linalg.norm(df)}, \nN_s={Ns_i}, Natural grad update: {delta_p}, alpha={alpha_i},\nLocal energy: {E_min}")
+                    f"iteration {i}, x={x}, df = {df},||d/df|| = {grad_norm}, \nN_s={Ns_i}, Natural grad update: {delta_p}, alpha={alpha_i},\nLocal energy: {E}")
+            if detail:
                 gradient_changes.append(df-df_last)
                 df_last = df
 
@@ -307,34 +368,58 @@ class hydrogen_molecule_minimisers:
 
         if detail:
             import matplotlib.pyplot as plt
-            iterations = range(i+1)
             gradient_changes = np.array(gradient_changes)
-
             fig, ax = plt.subplots(1, 2, figsize=(12, 5))
-            ax[0].plot(
-                iterations, gradient_changes[:, 0], color='r', label='dTheta1')
-            ax[0].plot(
-                iterations, gradient_changes[:, 1], color='g', label='dTheta2')
-            ax[0].plot(
-                iterations, gradient_changes[:, 2], color='b', label='dTheta3')
+            fig.suptitle("Stochastic Reconfiguration Minimisation")
+
+            # Plot Gradient Changes
+            iterations = range(len(gradient_changes))
+            ax[0].plot(iterations, gradient_changes[:, 0],
+                       color='r', label='dTheta1')
+            ax[0].plot(iterations, gradient_changes[:, 1],
+                       color='g', label='dTheta2')
+            ax[0].plot(iterations, gradient_changes[:, 2],
+                       color='b', label='dTheta3')
             ax[0].set_xlabel("Iteration")
             ax[0].set_ylabel("Change in Gradient")
             ax[0].set_title("Gradient Changes Over Iterations")
             ax[0].legend()
 
+            # Plot Energy History
             ax[1].plot(range(len(Es)), Es)
             ax[1].set_xlabel("Iteration")
             ax[1].set_ylabel("Energy")
             ax[1].set_title("Energy over Gradient Descent Iterations")
-            plt.show()
 
-            print(f"iteration number stochastic reconfig: {i}")
+            plt.tight_layout()
+            results = {
+                "meta": {
+                    "method": "Stochastic Reconfiguration",
+                    "final_iteration_count": i,
+                    "time_elapsed": time_elapsed,
+                    "time_per_iter_avg": time_elapsed / i if i > 0 else 0
+                },
+                "final_state": {
+                    "derivative": df,
+                    "energy": Es[-1] if len(Es) > 0 else None
+                },
+                "history": {
+                    "gradient_changes": gradient_changes,
+                    "energies": np.array(Es)
+                },
+                "figure": fig
+            }
+
             print(
-                f"time elapsed stochastic reconfig: {time_elapsed}, per iteration (avg)={time_elapsed/i}")
-            print(f"final derivative: {df}")
+                f"Iteration number: {results['meta']['final_iteration_count']}")
+            print(f"Time elapsed: {results['meta']['time_elapsed']:.4f}s")
+            print(
+                f"Final derivative: {results['final_state']['derivative']}")
+
+            return x, Es[-1], results
         return x, hydrogen_molecule_minimisers.E_fn(x, q1, q2, r1, r2)
 
-    def gradient_descent(q1: np.ndarray, q2: np.ndarray, x_0: np.ndarray, alpha: float, max_iter: int = 100, stop_tol: float = 1e-6, N_s: int = 10000, detail: bool = False) -> tuple:
+    def gradient_descent(q1: np.ndarray, q2: np.ndarray, x_0: np.ndarray, alpha: float, max_iter: int = 100, stop_tol: float = 1e-6, N_s: int = 10000, detail: bool = False, trace: bool = False) -> tuple:
         """
         A method to find the minima of a function using the gradient descent method.
         Parameters:
@@ -346,6 +431,7 @@ class hydrogen_molecule_minimisers:
             stop_tol: float, default = 1e-6, the value of the gradient at which convergence is determined
             N_s: number of samples to take per wavefunction iteration
             detail: bool, default = False
+            trace: bool, default = False
 
         Returns:
             tuple: the coordinates of minima, the minimum value of the function at this point
@@ -369,7 +455,8 @@ class hydrogen_molecule_minimisers:
             wf = h2_wavefunction(x, q1, q2)
 
             #   sample coordinates for current thetas
-            r1, r2 = hydrogen_molecule_minimisers.sample_coords(wf, Ns_i, r_0)
+            r1, r2 = hydrogen_molecule_minimisers.sample_coords(
+                wf, Ns_i, r_0, detail=detail, trace=trace)
 
             df = hydrogen_molecule_minimisers.log_grad(
                 x, q1, q2, r1, r2)
@@ -381,8 +468,19 @@ class hydrogen_molecule_minimisers:
 
             #   test stopping condition
             if stop_tol:
-                if np.linalg.norm(df) < stop_tol:
+                E_window = Es[-10:]
+                if len(E_window) > 1:
+                    std_dev_last_10 = np.std(E_window, ddof=1)
+                else:
+                    std_dev_last_10 = np.inf
+                if trace:
+                    print(
+                        f"Standard Deviation of last 10 steps: {std_dev_last_10}")
+                if std_dev_last_10 < stop_tol:
+                    if detail:
+                        print("Convergence reached based on energy stability.")
                     break
+
             #   halt at nan values
             if np.isnan(x.any()) or np.isinf(x.any()):
                 raise ValueError("Optimal parameters diverged to nan or inf")
@@ -393,12 +491,13 @@ class hydrogen_molecule_minimisers:
             # if (x <= 1e-7).any():
             #     x = np.maximum(x, 1e-7)
 
-            if detail:
+            E = hydrogen_molecule_minimisers.E_fn(x, q1, q2, r1, r2)
+            Es.append(E)
+
+            if trace:
                 print(
-                    f"iteration {i}, x={x}, d/dx={df}, N_s={Ns_i}, alpha={alpha_i}")
-                E_min = hydrogen_molecule_minimisers.E_fn(x, q1, q2, r1, r2)
-                Es.append(E_min)
-                print(f"local energy: {E_min}")
+                    f"iteration {i}, x={x}, d/dx={df}, N_s={Ns_i}, alpha={alpha_i}, ||dx|| = {grad_norm} \nEnergy: {E}")
+            if detail:
                 gradient_changes.append(df-df_last)
                 df_last = df
 
@@ -407,35 +506,59 @@ class hydrogen_molecule_minimisers:
 
         if detail:
             import matplotlib.pyplot as plt
-            iterations = range(i+1)
             gradient_changes = np.array(gradient_changes)
-
             fig, ax = plt.subplots(1, 2, figsize=(12, 5))
-            ax[0].plot(
-                iterations, gradient_changes[:, 0], color='r', label='dTheta1')
-            ax[0].plot(
-                iterations, gradient_changes[:, 1], color='g', label='dTheta2')
-            ax[0].plot(
-                iterations, gradient_changes[:, 2], color='b', label='dTheta3')
+            fig.suptitle("Gradient Descent Minimisation")
+
+            # Plot Gradient Changes
+            iterations = range(len(gradient_changes))
+            ax[0].plot(iterations, gradient_changes[:, 0],
+                       color='r', label='dTheta1')
+            ax[0].plot(iterations, gradient_changes[:, 1],
+                       color='g', label='dTheta2')
+            ax[0].plot(iterations, gradient_changes[:, 2],
+                       color='b', label='dTheta3')
             ax[0].set_xlabel("Iteration")
             ax[0].set_ylabel("Change in Gradient")
             ax[0].set_title("Gradient Changes Over Iterations")
             ax[0].legend()
 
+            # Plot Energy History
             ax[1].plot(range(len(Es)), Es)
             ax[1].set_xlabel("Iteration")
             ax[1].set_ylabel("Energy")
             ax[1].set_title("Energy over Gradient Descent Iterations")
-            plt.show()
 
-            print(f"iteration number GD: {i}")
+            plt.tight_layout()
+            results = {
+                "meta": {
+                    "method": "Gradient Descent",
+                    "final_iteration_count": i,
+                    "time_elapsed": time_elapsed,
+                    "time_per_iter_avg": time_elapsed / i if i > 0 else 0
+                },
+                "final_state": {
+                    "derivative": df,
+                    "energy": Es[-1] if len(Es) > 0 else None
+                },
+                "history": {
+                    "gradient_changes": gradient_changes,
+                    "energies": np.array(Es)
+                },
+                "figure": fig
+            }
+
             print(
-                f"time elapsed GD: {time_elapsed}, per iteration (avg)={time_elapsed/i}")
-            print(f"final derivative: {df}")
+                f"Iteration number: {results['meta']['final_iteration_count']}")
+            print(f"Time elapsed: {results['meta']['time_elapsed']:.4f}s")
+            print(
+                f"Final derivative: {results['final_state']['derivative']}")
+
+            return x, Es[-1], results
 
         return x, hydrogen_molecule_minimisers.E_fn(x, q1, q2, r1, r2)
 
-    def RMSProp_GD(q1: np.ndarray, q2: np.ndarray, x_0: np.ndarray, alpha: float, forgetting: float, max_iter: int = 1000, stop_tol: float = 1e-6, N_s: int = 10000, detail: bool = False) -> tuple:
+    def RMSProp_GD(q1: np.ndarray, q2: np.ndarray, x_0: np.ndarray, alpha: float, forgetting: float, max_iter: int = 1000, stop_tol: float = 1e-6, N_s: int = 10000, detail: bool = False, trace: bool = False) -> tuple:
         """
         A method to find the minima of a function using the RMSProp adjusted gradient descent method.
         Parameters:
@@ -448,6 +571,7 @@ class hydrogen_molecule_minimisers:
             max_iter: int, the number of iterations to run
             stop_tol: float, default = 1e-6, the value of the gradient at which convergence is determined
             detail: bool, default = False
+            trace: bool, default = False
 
         Returns:
             tuple: the coordinates of minima, the minimum value of the function at this point
@@ -467,7 +591,8 @@ class hydrogen_molecule_minimisers:
             Ns_i = N_s  # * int(np.exp((i+1)*0.05))
 
             wf = h2_wavefunction(x, q1, q2)
-            r1, r2 = hydrogen_molecule_minimisers.sample_coords(wf, Ns_i, r_0)
+            r1, r2 = hydrogen_molecule_minimisers.sample_coords(
+                wf, Ns_i, r_0, detail=detail, trace=trace)
 
             df = hydrogen_molecule_minimisers.log_grad(
                 x, q1, q2, r1, r2)
@@ -478,7 +603,17 @@ class hydrogen_molecule_minimisers:
             alpha_i = alpha * scaling_factor
 
             if stop_tol:
-                if np.linalg.norm(df) < stop_tol:
+                E_window = Es[-10:]
+                if len(E_window) > 1:
+                    std_dev_last_10 = np.std(E_window, ddof=1)
+                else:
+                    std_dev_last_10 = np.inf
+                if trace:
+                    print(
+                        f"Standard Deviation of last 10 steps: {std_dev_last_10}")
+                if std_dev_last_10 < stop_tol:
+                    if detail:
+                        print("Convergence reached based on energy stability.")
                     break
 
             if np.isnan(x.any()) or np.isinf(x.any()):
@@ -491,12 +626,13 @@ class hydrogen_molecule_minimisers:
             if (x <= 1e-7).any():
                 x = np.maximum(x, 1e-7)
 
-            if detail:
+            E = hydrogen_molecule_minimisers.E_fn(x, q1, q2, r1, r2)
+            Es.append(E)
+
+            if trace:
                 print(
-                    f"iteration {i}, x={x}, d/dx={df}, N_s={Ns_i}, alpha={alpha_i}")
-                E_min = hydrogen_molecule_minimisers.E_fn(x, q1, q2, r1, r2)
-                Es.append(E_min)
-                print(f"local energy: {E_min}")
+                    f"iteration {i}, x={x}, d/dx={df}, N_s={Ns_i}, alpha={alpha_i}, ||dx|| = {grad_norm}, \nEnergy: {E}")
+            if detail:
                 gradient_changes.append(df-df_last)
                 df_last = df
 
@@ -505,33 +641,58 @@ class hydrogen_molecule_minimisers:
 
         if detail:
             import matplotlib.pyplot as plt
-            iterations = range(i+1)
             gradient_changes = np.array(gradient_changes)
-
             fig, ax = plt.subplots(1, 2, figsize=(12, 5))
-            ax[0].plot(
-                iterations, gradient_changes[:, 0], color='r', label='dTheta1')
-            ax[0].plot(
-                iterations, gradient_changes[:, 1], color='g', label='dTheta2')
-            ax[0].plot(
-                iterations, gradient_changes[:, 2], color='b', label='dTheta3')
+            fig.suptitle("RMSProp Gradient Descent Minimisation")
+
+            # Plot Gradient Changes
+            iterations = range(len(gradient_changes))
+            ax[0].plot(iterations, gradient_changes[:, 0],
+                       color='r', label='dTheta1')
+            ax[0].plot(iterations, gradient_changes[:, 1],
+                       color='g', label='dTheta2')
+            ax[0].plot(iterations, gradient_changes[:, 2],
+                       color='b', label='dTheta3')
             ax[0].set_xlabel("Iteration")
             ax[0].set_ylabel("Change in Gradient")
             ax[0].set_title("Gradient Changes Over Iterations")
             ax[0].legend()
 
+            # Plot Energy History
             ax[1].plot(range(len(Es)), Es)
             ax[1].set_xlabel("Iteration")
             ax[1].set_ylabel("Energy")
             ax[1].set_title("Energy over Gradient Descent Iterations")
-            plt.show()
 
-            print(f"iteration number GD: {i}")
-            print(f"time elapsed GD: {time_elapsed}")
-            print(f"final derivative: {df}")
+            plt.tight_layout()
+            results = {
+                "meta": {
+                    "method": "RMSProp Gradient Descent",
+                    "final_iteration_count": i,
+                    "time_elapsed": time_elapsed,
+                    "time_per_iter_avg": time_elapsed / i if i > 0 else 0
+                },
+                "final_state": {
+                    "derivative": df,
+                    "energy": Es[-1] if len(Es) > 0 else None
+                },
+                "history": {
+                    "gradient_changes": gradient_changes,
+                    "energies": np.array(Es)
+                },
+                "figure": fig
+            }
+
+            print(
+                f"Iteration number: {results['meta']['final_iteration_count']}")
+            print(f"Time elapsed: {results['meta']['time_elapsed']:.4f}s")
+            print(
+                f"Final derivative: {results['final_state']['derivative']}")
+
+            return x, Es[-1], results
         return x, hydrogen_molecule_minimisers.E_fn(x, q1, q2, r1, r2)
 
-    def quasi_newton(q1: np.ndarray, q2: np.ndarray, x_0: np.ndarray, alpha: float, method: str = "DFP", max_iter: int = 1000, stop_tol: float = None, N_s: int = 10000, detail: bool = False) -> tuple:
+    def quasi_newton(q1: np.ndarray, q2: np.ndarray, x_0: np.ndarray, alpha: float, method: str = "DFP", max_iter: int = 1000, stop_tol: float = None, N_s: int = 10000, detail: bool = False, trace: bool = False) -> tuple:
         """
         A method to find the minima of a function using the quasi-newton method using a chosen method to approximate the hessian
         Parameters:
@@ -544,6 +705,7 @@ class hydrogen_molecule_minimisers:
             max_iter: int, default = 10000 the number of iterations to run
             N_s: int, default = 10000, number of samples to take per wavefunction iteration
             detail: bool, default = False
+            trace: bool, default = False
 
         Returns:
             tuple: the coordinates of minima, the minimum value of the function at this point
@@ -592,32 +754,47 @@ class hydrogen_molecule_minimisers:
         for i in range(max_iter):
             wf = h2_wavefunction(x, q1, q2)
             Ns_i = N_s  # * int(np.exp((i+1)*0.05))
-            r1, r2 = hydrogen_molecule_minimisers.sample_coords(wf, Ns_i, r_0)
+            r1, r2 = hydrogen_molecule_minimisers.sample_coords(
+                wf, Ns_i, r_0, detail=detail, trace=trace)
             grad = hydrogen_molecule_minimisers.log_grad(
                 x, q1, q2, r1, r2)
 
+            alpha_i = alpha * np.clip(np.linalg.norm(grad), 0.01, 1.0)
+
+            grad_norm = np.linalg.norm(grad)
+
             if stop_tol:
-                if np.linalg.norm(grad) < stop_tol:
-                    print("halting QN")
+                E_window = Es[-10:]
+                if len(E_window) > 1:
+                    std_dev_last_10 = np.std(E_window, ddof=1)
+                else:
+                    std_dev_last_10 = np.inf
+                if trace:
+                    print(
+                        f"Standard Deviation of last 10 steps: {std_dev_last_10}")
+                if std_dev_last_10 < stop_tol:
+                    if detail:
+                        print("Convergence reached based on energy stability.")
                     break
 
-            x_new = x - alpha * G @ grad
+            x_new = x - alpha_i * G @ grad
 
             wf_new = h2_wavefunction(x_new, q1, q2)
             r1_new, r2_new = hydrogen_molecule_minimisers.sample_coords(
-                wf_new, Ns_i, r_0)
+                wf_new, Ns_i, r_0, detail=detail, trace=trace)
             grad_new = hydrogen_molecule_minimisers.log_grad(
                 x_new, q1, q2, r1_new, r2_new)
 
             G = grad_update(x_new, grad_new, x, grad, G)
             x = x_new
 
-            if detail:
+            E = hydrogen_molecule_minimisers.E_fn(x, q1, q2, r1, r2)
+            Es.append(E)
+
+            if trace:
                 print(
-                    f"iteration {i}, x={x}, d/dx={grad}, N_s={Ns_i}")
-                E_min = hydrogen_molecule_minimisers.E_fn(x, q1, q2, r1, r2)
-                Es.append(E_min)
-                print(f"local energy: {E_min}")
+                    f"iteration {i}, x={x}, d/dx={grad}, N_s={Ns_i}, alpha={alpha_i}, ||dx|| = {grad_norm}, \nEnergy: {E}")
+            if detail:
                 gradient_changes.append(grad_new-grad)
 
         end = time.perf_counter()
@@ -625,31 +802,55 @@ class hydrogen_molecule_minimisers:
 
         if detail:
             import matplotlib.pyplot as plt
-            iterations = range(i+1)
             gradient_changes = np.array(gradient_changes)
-
             fig, ax = plt.subplots(1, 2, figsize=(12, 5))
-            ax[0].plot(
-                iterations, gradient_changes[:, 0], color='r', label='dTheta1')
-            ax[0].plot(
-                iterations, gradient_changes[:, 1], color='g', label='dTheta2')
-            ax[0].plot(
-                iterations, gradient_changes[:, 2], color='b', label='dTheta3')
+            fig.suptitle("Quasi-Newton Minimisation")
+
+            # Plot Gradient Changes
+            iterations = range(len(gradient_changes))
+            ax[0].plot(iterations, gradient_changes[:, 0],
+                       color='r', label='dTheta1')
+            ax[0].plot(iterations, gradient_changes[:, 1],
+                       color='g', label='dTheta2')
+            ax[0].plot(iterations, gradient_changes[:, 2],
+                       color='b', label='dTheta3')
             ax[0].set_xlabel("Iteration")
             ax[0].set_ylabel("Change in Gradient")
             ax[0].set_title("Gradient Changes Over Iterations")
             ax[0].legend()
 
+            # Plot Energy History
             ax[1].plot(range(len(Es)), Es)
             ax[1].set_xlabel("Iteration")
             ax[1].set_ylabel("Energy")
             ax[1].set_title("Energy over Gradient Descent Iterations")
-            plt.show()
 
-            print(f"iteration number GD: {i}")
+            plt.tight_layout()
+            results = {
+                "meta": {
+                    "method": "Stochastic Reconfiguration",
+                    "final_iteration_count": i,
+                    "time_elapsed": time_elapsed,
+                    "time_per_iter_avg": time_elapsed / i if i > 0 else 0
+                },
+                "final_state": {
+                    "derivative": grad,
+                    "energy": Es[-1] if len(Es) > 0 else None
+                },
+                "history": {
+                    "gradient_changes": gradient_changes,
+                    "energies": np.array(Es)
+                },
+                "figure": fig
+            }
+
             print(
-                f"time elapsed GD: {time_elapsed}, per iteration (avg)={time_elapsed/i}")
-            print(f"final derivative: {grad}")
+                f"Iteration number: {results['meta']['final_iteration_count']}")
+            print(f"Time elapsed: {results['meta']['time_elapsed']:.4f}s")
+            print(
+                f"Final derivative: {results['final_state']['derivative']}")
+
+            return x, Es[-1], results
         return x, hydrogen_molecule_minimisers.E_fn(x, q1, q2, r1, r2)
 
 

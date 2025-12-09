@@ -8,7 +8,6 @@ from modules.differentiators import double_central_difference
 from modules.function_sampling import metropolis_hastings, MALA
 from modules.minimisers import hydrogen_molecule_minimisers as minimisers
 import matplotlib.pyplot as plt
-eps = 1e-15
 
 
 class h2_wavefunction:
@@ -177,14 +176,15 @@ def test_SR():
     q1 = [0, 0, 2]
     q2 = [0, 0, 0]
 
-    N_s = 10000
+    N_s = 100000
     thetas_0 = [.5] * 3  #  for minimiser
-    alphas = np.linspace(0.1, 1., 20)
+    alphas = [1.5]  #  np.linspace(0.1, 1., 20)
     for alpha in alphas:
-        theta_min, E_min = minimisers.stochastic_reconfiguration(q1, q2, x_0=thetas_0,
-                                                                 alpha=alpha, stop_tol=1e-3, N_s=N_s, detail=True, max_iter=30)
+        theta_min, E_min, results = minimisers.stochastic_reconfiguration(q1, q2, x_0=thetas_0,
+                                                                          alpha=alpha, stop_tol=1e-2, N_s=N_s, detail=True, max_iter=30)
 
         print(f"minimum theta: {theta_min}, minimum energy: {E_min}")
+        results['figure'].show()
 
 
 def test_QN():
@@ -192,51 +192,76 @@ def test_QN():
     q2 = [0, 0, 0]
 
     N_s = 100000
-    thetas_0 = [.5] * 3  #  for minimiser
-    theta_min, E_min = minimisers.quasi_newton(q1, q2, x_0=thetas_0,
-                                               alpha=0.2, stop_tol=1e-3, N_s=N_s, detail=True, max_iter=25, method='DFP')
+    thetas_0 = [.7] * 3  #  for minimiser
+    theta_min, E_min, results = minimisers.quasi_newton(q1, q2, x_0=thetas_0,
+                                                        alpha=0.2, stop_tol=1e-2, N_s=N_s, detail=True, max_iter=25, method='DFP')
 
     print(f"minimum theta: {theta_min}, minimum energy: {E_min}")
+    results['figure'].show()
+    print(f"Minimum Theta : {results['final_state']['parameters']}")
+    print(f"Minimum Energy: {results['final_state']['energy']:.6f}")
 
 
-def test_minimiser_startingalpha(alpha=0.2):
+def test_minimisers_convergence(alpha=0.2):
     q1 = [0, 0, 2]
     q2 = [0, 0, 0]
-
     N_s = 100000
-    thetas_0 = [.5] * 3  #  for minimiser
-    theta_min_SR, E_min_SR = minimisers.stochastic_reconfiguration(q1, q2, x_0=thetas_0,
-                                                                   alpha=alpha, stop_tol=1e-3, N_s=N_s, detail=True, max_iter=50)
-    theta_min_GD, E_min_GD = minimisers.gradient_descent(q1, q2, x_0=thetas_0,
-                                                         alpha=alpha, stop_tol=1e-3, N_s=N_s, detail=True, max_iter=50)
+    thetas_0 = [.7] * 3
 
-    theta_min_RMS, E_min_RMS = minimisers.RMSprop(q1, q2, x_0=thetas_0,
-                                                  alpha=alpha, stop_tol=1e-3, forgetting=0.9, N_s=N_s, detail=True, max_iter=50)
+    results = {}
 
-    theta_min_QN_DFP, E_min_QN_DFP = minimisers.quasi_newton(q1, q2, x_0=thetas_0,
-                                                             alpha=alpha, stop_tol=1e-3, N_s=N_s, detail=True, max_iter=50, method='DFP')
+    _, _, results['Stochastic Reconfiguration'] = minimisers.stochastic_reconfiguration(
+        q1, q2, x_0=thetas_0, alpha=alpha, stop_tol=1e-2, N_s=N_s, detail=True, max_iter=50
+    )
 
-    theta_min_QN_BFGS, E_min_QN_BFGS = minimisers.quasi_newton(q1, q2, x_0=thetas_0,
-                                                               alpha=alpha, stop_tol=1e-3, N_s=N_s, detail=True, max_iter=50, method='BFGS')
+    _, _, results['Gradient Descent'] = minimisers.gradient_descent(
+        q1, q2, x_0=thetas_0, alpha=alpha, stop_tol=1e-2, N_s=N_s, detail=True, max_iter=50
+    )
 
-    theta_min_SA, E_min_SA = minimisers.simulated_annealing(
-        q1, q2, x_0=thetas_0, initial_temp=0.5, cooling_rate=0.95, max_iter=200, Ns=10000, std=0.05, detail=True)
+    _, _, results['RMSprop'] = minimisers.RMSprop(
+        q1, q2, x_0=thetas_0, alpha=alpha, stop_tol=1e-2, forgetting=0.9, N_s=N_s, detail=True, max_iter=50
+    )
 
-    print(
-        f"Stochastic Reconfiguration \nminimum theta: {theta_min_SR}, minimum energy: {E_min_SR}")
-    print(
-        f"Gradient Descent \nminimum theta: {theta_min_GD}, minimum energy: {E_min_GD}")
-    print(
-        f"RMSprop \nminimum theta: {theta_min_RMS}, minimum energy: {E_min_RMS}")
+    _, _, results['Quasi-Newton DFP'] = minimisers.quasi_newton(
+        q1, q2, x_0=thetas_0, alpha=alpha, stop_tol=1e-2, N_s=N_s, detail=True, max_iter=50, method='DFP'
+    )
 
-    print(
-        f"Quasi-Newton DFP \nminimum theta: {theta_min_QN_DFP}, minimum energy: {E_min_QN_DFP}")
+    _, _, results['Quasi-Newton BFGS'] = minimisers.quasi_newton(
+        q1, q2, x_0=thetas_0, alpha=alpha, stop_tol=1e-2, N_s=N_s, detail=True, max_iter=50, method='BFGS'
+    )
 
-    print(
-        f"Quasi-Newton BFGS \nminimum theta: {theta_min_QN_BFGS}, minimum energy: {E_min_QN_BFGS}")
+    _, _, results['Simulated Annealing'] = minimisers.simulated_annealing(
+        q1, q2, x_0=thetas_0, initial_temp=0.5, cooling_rate=0.95, max_iter=200, Ns=10000, std=0.05, detail=True
+    )
 
-    print(
-        f"Simulated Annealing \nminimum theta: {theta_min_SA}, minimum energy: {E_min_SA}")
+    plt.figure(figsize=(10, 6))
+
+    for method_name, result_hash in results.items():
+        energies = result_hash['history']['energies']
+        iterations = range(len(energies))
+        plt.plot(iterations, energies, label=method_name,
+                 linewidth=2, alpha=0.8)
+
+    plt.xlabel("Iteration")
+    plt.ylabel("Energy (Hartree)")
+    plt.title(f"Convergence Comparison (Alpha={alpha})")
+    plt.grid(True, linestyle='--', alpha=0.6)
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
+
+    print("\n" + "="*50)
+    print("FINAL RESULTS SUMMARY")
+    print("="*50)
+
+    for method_name, result_hash in results.items():
+        final_theta = result_hash['final_state']['parameters']
+        final_energy = result_hash['final_state']['energy']
+
+        print(f"{method_name}")
+        print(f"Minimum Theta : {final_theta}")
+        print(f"Minimum Energy: {final_energy:.6f}")
+        print("-" * 30)
 
 
 def ground_state_energies():
@@ -280,4 +305,4 @@ def ground_state_energies():
 
 
 if __name__ == '__main__':
-    test_SR()
+    test_QN()
