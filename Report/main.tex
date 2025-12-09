@@ -292,16 +292,57 @@ sorting=ynt
 \maketitle
 
 \begin{abstract}
-    
+    This paper describes the Variational Quantum Monte Carlo (VMC) method for generating numerical solutions to the time-independent Schrödinger equation for the Hydrogen molecule, $H_2$. A parametrised anstatz was optimised using .... [minimisation algorithm] .... to find the variational minima of the Hamiltonian expectation value for a range of interatomic distances, $r_0$ between the two nuclei. The produced energy profile for $H_2$ at different distances $r_0$ was fitted to a Morse potential, yielding estimates for the equilibrium bond length and dissociation energy of the molecule. The results produced unequivocally confirm the theoretical behaviour of the system, especially as the distance $r_0$ between the nuclei tends to zero, and the energy increases rapidly. The method and results described here present support for the scalability of stochastic simulation methods in atomic physics.
 \end{abstract}
 
 
 \section{Introduction}
-    \IEEEPARstart{M}{\MakeLowercase{ichelson}}
+    \IEEEPARstart{I}{\MakeLowercase{n}} many physical systems, the Schrödinger equation cannot be solved analytically, requiring the use of numerical approximation. Furthermore, in many multi-particle systems, the dimensionality of the Hilbert space scales exponentially with the number of particles. Variational Quantum Monte Carlo (VMC) is a useful technique for extracting energy predictions from the Schrödinger Equation in these cases by stochastic means. In many cases, it is most useful to to determine the ground state and its associated energy, which is obtained, fortunately, by minimising the expectation value of the Hamiltonian operator, $\braket{H}$.
+
+    This paper will first consider the cases of the quantum harmonic oscillator, followed by the hydrogen atom, both of which have analytic solutions suitable for validation of the method. Finally, the case of the Hydrogen Molecule is considered, whose treatment demands further computational analysis.
+
+
+    %This is then used to find the expected energy, $\braket{H}$, of the coordinates, which leads to a determination of the ground state energy of the system
 \section{Theory} \label{Theory}
     
     
-\section{Experimental Method}
+\section{Numerical Derivatives} 
+    Finite difference methods were tested to obtain numerical estimates of the derivatives of the functions above. The second-order methods for computing the local energy were testsed first in one dimension using the simple harmonic oscillator, [see FIGURE]. The central difference method outperformed the backward and forward difference methods, with errors $\approx$3x smaller, whilst sharing the same optimal stepsize. Thus, the central difference method was adopted as the primary differentiator.
+
+    Tests for single derivatives and in 3 dimensions for the H$_2$ molecule yielded similar results [FIGURE]. In the tested cases, it was clear that the optimal method was to 8th order, having the lowest error for the largest stepsize, with very little runtime difference even for wavefunctions. In the particular case of determining the ground state energies in the H$_2$ system, the Jastrow factor present in the anstatz made minimising the stepsize the primary goal when singularly differentiating the function. This was verified looking at the self-consistency of the function, which indicated that the second-order differentiator was most suitable.
+    
+\section{Stochastic Function Sampling}
+    The methodology used to solve the systems aforementioned relies on the use of function sampling to calculate the value of the wavefunction at a given coordinate in space. Given their high dimensionality and nonlinearity, the wavefunctions we consider cannot be directly sample; thus, they are well-suited to rejection-based Markov Chain Monte Carlo (MCMC) type sampling methods.
+    
+    Here, we discuss the methods considered and tested for this implementation. 
+    
+    \subsection{Metropolis Hastings Sampling}
+        One of the primary methods used in this simulation was the Metropolis Hastings (MH) sampling algorithm. This algorithm is particularly useful given use of the Jastrow-Slater ansatz in the H$_2$ scenario, as the acceptance relies only on the ratio of probability densities. Therefore, the wavefunction can be sampled without the need to calculate the non-trivial normalisation constant.
+
+        In order to ensure effective sampling of the wavefunction, the proposal function was tuned to maintain the canonical acceptance rate of 0.234 [ref] [FIG? - include small justification on proposal function] whilst maintaining low autocorrelation. This was also confirmed visually and using STATISTICAL TESTS OF TARGET? initially for the quantum harmonic oscillator. 
+
+        The number of steps in the sampler, $N_S$, is the main factor affecting both the numerical error and runtime of the simulation. Therefore its tuning is an important consideration. From visual analysis, sample sizes below 10,000 produced distributions with slight deviation from the true function, whilst sample sizes in excess of 100,000 represented it well. However, the difference in numerical error with the different sample numbers was evident. When computing the ground state energy for the Hydrogen atom, $N_S = 10,000$ produced an error of [ERROR], whilst an $N_S$ of $100,000$ produced only [ERROR]. Therefore, $N_S = 100,000$ was used in the optimisation of the hydrogen molecule due to the necessity of accurate numerical calculations. Due to its significance, further rigorous optimisation of this parameter is warranted. 
+
+        The algorithm was initialised at 1 in each coordinate, since for all functions considered, the probability density at this point was non-zero. Due to the rapid decay of the wavefunction away from $r=0$ in all cases, a box of $\pm10$a.u. was used around the origin.
+
+        The use of thinning substantially reduced autocorrelation, at the expense of fewer samples for a given runtime. [FIGURE]
+
+    \subsection{Metropolis-adjusted Langevin algorithm}
+        Improving upon the efficiency of the standard Metropolis-Hastings algorithm, the Metropolis-adjusted Langevin Algorithm (MALA) was implemented. Standard Metropolis sampling uses a diffusive "random walk" that scales poorly with system size, whilst MALA utilizes the gradient of the wavefunction to propose moves towards regions of higher probability. 
+
+        Though this method undersamples low-probability regions, its efficacy is maintained for calculating the local energy by preferentially sampling regions that contribute more significantly. Additionally, for particular timesteps, MALA outperforms MH by acceptance rate and autocorrelation (without thinning). [FIGURE]
+
+        Mode locking can occur when this method is used, where the sampler becomes trapped in a single peak if the peaks are spatially separated, as is of particular concern in the H$_2$ case. Adapting this method was therefore necessary, that we call the Stochastic Metropolis-adjusted Langevin algorithm (sMALA), in which a proportion of proposals are generated via a random walk. In this implementation, the proportion is limited to 0.1 to mitigate mode-locking.
+        
+    \subsection{Other Methods}   
+        There are also some non-trivial examples of unsuitable methods.
+        
+        An example of a conceptually viable algorithm choice would be rejection sampling and its associated variants. However, the need to propose an efficient overlaying proposal distribution makes it hard to implement a general algorithm whilst maintaining computational efficiency. For a 6-dimensional, two-electron system, finding a bounding function that hugs the electron density tightly is tricky. Furthermore, as the dimensionality grows, the acceptance probability falls as the volume of the proposal distribution grows exponentially; hence, the usefulness of this method is limited to low dimensions.     
+
+        Additionally, whilst the Gibbs sampling method facilitates a 100\% acceptance rate, it is not viable for this case. It requires a conditional probability distribution that is precluded by the non-linear Jastrow factor in the anstatz that we use for the hydrogen molecule.
+        
+        
+\section{Computational Method}
 
 \section{Experimental Results and Discussion}
     
