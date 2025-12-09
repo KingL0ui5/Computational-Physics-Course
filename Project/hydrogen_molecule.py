@@ -173,20 +173,70 @@ def test_samples():
     plt.show()
 
 
-def test_minimiser():
+def test_SR():
     q1 = [0, 0, 2]
     q2 = [0, 0, 0]
 
-    minimiser = minimisers.stochastic_reconfiguration
+    N_s = 10000
+    thetas_0 = [.5] * 3  #  for minimiser
+    alphas = np.linspace(0.1, 1., 20)
+    for alpha in alphas:
+        theta_min, E_min = minimisers.stochastic_reconfiguration(q1, q2, x_0=thetas_0,
+                                                                 alpha=alpha, stop_tol=1e-3, N_s=N_s, detail=True, max_iter=30)
+
+        print(f"minimum theta: {theta_min}, minimum energy: {E_min}")
+
+
+def test_QN():
+    q1 = [0, 0, 2]
+    q2 = [0, 0, 0]
 
     N_s = 100000
     thetas_0 = [.5] * 3  #  for minimiser
-    theta_min, E_min = minimiser(q1, q2, x_0=thetas_0,
-                                 alpha=0.05, stop_tol=1e-3, N_s=N_s, detail=True, max_iter=50)
+    theta_min, E_min = minimisers.quasi_newton(q1, q2, x_0=thetas_0,
+                                               alpha=0.2, stop_tol=1e-3, N_s=N_s, detail=True, max_iter=25, method='DFP')
 
-    # theta_min, E_min = minimisers.simulated_annealing(
-    #     q1, q2, x_0=thetas_0, initial_temp=0.5, cooling_rate=0.95, max_iter=200, Ns=10000, std=0.05, detail=True)
     print(f"minimum theta: {theta_min}, minimum energy: {E_min}")
+
+
+def test_minimiser_startingalpha(alpha=0.2):
+    q1 = [0, 0, 2]
+    q2 = [0, 0, 0]
+
+    N_s = 100000
+    thetas_0 = [.5] * 3  #  for minimiser
+    theta_min_SR, E_min_SR = minimisers.stochastic_reconfiguration(q1, q2, x_0=thetas_0,
+                                                                   alpha=alpha, stop_tol=1e-3, N_s=N_s, detail=True, max_iter=50)
+    theta_min_GD, E_min_GD = minimisers.gradient_descent(q1, q2, x_0=thetas_0,
+                                                         alpha=alpha, stop_tol=1e-3, N_s=N_s, detail=True, max_iter=50)
+
+    theta_min_RMS, E_min_RMS = minimisers.RMSprop(q1, q2, x_0=thetas_0,
+                                                  alpha=alpha, stop_tol=1e-3, forgetting=0.9, N_s=N_s, detail=True, max_iter=50)
+
+    theta_min_QN_DFP, E_min_QN_DFP = minimisers.quasi_newton(q1, q2, x_0=thetas_0,
+                                                             alpha=alpha, stop_tol=1e-3, N_s=N_s, detail=True, max_iter=50, method='DFP')
+
+    theta_min_QN_BFGS, E_min_QN_BFGS = minimisers.quasi_newton(q1, q2, x_0=thetas_0,
+                                                               alpha=alpha, stop_tol=1e-3, N_s=N_s, detail=True, max_iter=50, method='BFGS')
+
+    theta_min_SA, E_min_SA = minimisers.simulated_annealing(
+        q1, q2, x_0=thetas_0, initial_temp=0.5, cooling_rate=0.95, max_iter=200, Ns=10000, std=0.05, detail=True)
+
+    print(
+        f"Stochastic Reconfiguration \nminimum theta: {theta_min_SR}, minimum energy: {E_min_SR}")
+    print(
+        f"Gradient Descent \nminimum theta: {theta_min_GD}, minimum energy: {E_min_GD}")
+    print(
+        f"RMSprop \nminimum theta: {theta_min_RMS}, minimum energy: {E_min_RMS}")
+
+    print(
+        f"Quasi-Newton DFP \nminimum theta: {theta_min_QN_DFP}, minimum energy: {E_min_QN_DFP}")
+
+    print(
+        f"Quasi-Newton BFGS \nminimum theta: {theta_min_QN_BFGS}, minimum energy: {E_min_QN_BFGS}")
+
+    print(
+        f"Simulated Annealing \nminimum theta: {theta_min_SA}, minimum energy: {E_min_SA}")
 
 
 def ground_state_energies():
@@ -230,4 +280,4 @@ def ground_state_energies():
 
 
 if __name__ == '__main__':
-    test_minimiser()
+    test_SR()
