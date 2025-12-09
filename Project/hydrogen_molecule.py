@@ -180,18 +180,18 @@ def test_minimiser():
     minimiser = minimisers.stochastic_reconfiguration
 
     N_s = 100000
-    thetas_0 = [1.] * 3  #  for minimiser
-    # theta_min, E_min = minimiser(q1, q2, x_0=thetas_0,
-    #                              alpha=0.02, stop_tol=None, N_s=N_s, detail=True, max_iter=50)
+    thetas_0 = [.5] * 3  #  for minimiser
+    theta_min, E_min = minimiser(q1, q2, x_0=thetas_0,
+                                 alpha=0.05, stop_tol=1e-3, N_s=N_s, detail=True, max_iter=50)
 
-    theta_min, E_min = minimisers.simulated_annealing(
-        q1, q2, x_0=thetas_0, initial_temp=0.5, cooling_rate=0.95, max_iter=200, Ns=10000, std=0.05, detail=True)
+    # theta_min, E_min = minimisers.simulated_annealing(
+    #     q1, q2, x_0=thetas_0, initial_temp=0.5, cooling_rate=0.95, max_iter=200, Ns=10000, std=0.05, detail=True)
     print(f"minimum theta: {theta_min}, minimum energy: {E_min}")
 
 
 def ground_state_energies():
-    Ns = 10000
-    r_0 = np.linspace(0.5, 3., 40)
+    Ns = 100000
+    r_0 = np.linspace(0.5, 3., 100)
     q1 = [0.] * 3
     q2 = [[0., 0., i] for i in r_0]
 
@@ -200,19 +200,19 @@ def ground_state_energies():
     for q2_i in q2:
         count += 1
         thetas_0 = [1.]*3  #  for minimiser
-        # theta_min, E_min = minimisers.simulated_annealing(
-        #     q1, q2_i, x_0=thetas_0, initial_temp=0.5, cooling_rate=0.95, max_iter=200, Ns=Ns, std=0.05, detail=False)
+        theta_min, E_min = minimisers.simulated_annealing(
+            q1, q2_i, x_0=thetas_0, initial_temp=0.5, cooling_rate=0.95, max_iter=200, Ns=Ns, std=0.05, detail=False)
 
-        theta_min, E_min = minimisers.stochastic_reconfiguration(
-            q1, q2_i, x_0=thetas_0, alpha=0.02, stop_tol=1e-3, N_s=Ns, detail=False, max_iter=50)
+        # theta_min, E_min = minimisers.stochastic_reconfiguration(
+        #     q1, q2_i, x_0=thetas_0, alpha=0.02, stop_tol=1e-3, N_s=Ns, detail=False, max_iter=50)
         energies.append(E_min)
         if count % 10 == 0:  #  checkpoint at every 10 steps
-            np.savetxt(f"SR_output_{Ns}.txt", [energies, r_0[:len(energies)]])
+            np.savetxt(f"SA_output_{Ns}.txt", [energies, r_0[:len(energies)]])
 
         print(
             f"iteration: {count}, q2: {q2_i}, minimum theta: {theta_min}, minimum energy: {E_min}")
 
-    np.savetxt(f"output_{Ns}.txt", [energies, r_0[:len(energies)]])
+    np.savetxt(f"SA_output_{Ns}.txt", [energies, r_0[:len(energies)]])
     energies = np.array(energies)
     from scipy.optimize import curve_fit
     f = hlp.V_morse

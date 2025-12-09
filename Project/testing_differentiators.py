@@ -158,6 +158,8 @@ def test_second_order_diffrentiators():
         mean_error_d2c_h6 = []
         mean_error_d2c_h8 = []
         mean_error_d2c_h10 = []
+        mean_error_d2fw = []
+        mean_error_d2bc = []
 
         for step in h:
             step = np.array([step], dtype=float)
@@ -185,6 +187,16 @@ def test_second_order_diffrentiators():
                 f, x, h=step, order=10).flatten()
             error_d2c_h10 = (np.abs(d2c_h10 - d2f(x)))
             mean_error_d2c_h10.append(rms(error_d2c_h10))
+
+            d2fw = differentiators.double_forward_difference(
+                f, x, h=step).flatten()
+            error_d2fw = (np.abs(d2fw - d2f(x)))
+            mean_error_d2fw.append(rms(error_d2fw))
+
+            d2bc = differentiators.double_backward_difference(
+                f, x, h=step).flatten()
+            error_d2bc = (np.abs(d2bc - d2f(x)))
+            mean_error_d2bc.append(rms(error_d2bc))
 
             # methods = [
             #     ("Double Central Difference O(h^2)", d2c_h2, error_d2c_h2),
@@ -225,11 +237,10 @@ def test_second_order_diffrentiators():
                  label="Central Difference O($h^8$)")
         plt.plot(h, mean_error_d2c_h10,
                  label="Central Difference O($h^{10}$)")
-
-        # plt.plot(h, mean_error_d2fw,
-        #          label="Mean Error Double Forward Difference O(h^2)")
-        # plt.plot(h, mean_error_d2bc,
-        #          label="Mean Error Double Backward Difference O(h^2)")
+        plt.plot(h, mean_error_d2fw,
+                 label="Mean Error Double Forward Difference O(h^2)")
+        plt.plot(h, mean_error_d2bc,
+                 label="Mean Error Double Backward Difference O(h^2)")
 
         plt.yscale("log")
         plt.xscale("log")
@@ -245,15 +256,20 @@ def test_second_order_diffrentiators():
         min_h_index_h6 = np.argmin(mean_error_d2c_h6)
         min_h_index_h8 = np.argmin(mean_error_d2c_h8)
         min_h_index_h10 = np.argmin(mean_error_d2c_h10)
+        min_h_index_d2fw = np.argmin(mean_error_d2fw)
+        min_h_index_d2bc = np.argmin(mean_error_d2bc)
 
         min_h_h2 = h[min_h_index_h2]
         min_h_h4 = h[min_h_index_h4]
         min_h_h6 = h[min_h_index_h6]
         min_h_h8 = h[min_h_index_h8]
         min_h_h10 = h[min_h_index_h10]
+        min_h_d2fw = h[min_h_index_d2fw]
+        min_h_d2bc = h[min_h_index_d2bc]
         min_errors.append([mean_error_d2c_h2[min_h_index_h2], mean_error_d2c_h4[min_h_index_h4],
                            mean_error_d2c_h6[min_h_index_h6], mean_error_d2c_h8[min_h_index_h8],
-                           mean_error_d2c_h10[min_h_index_h10]])
+                           mean_error_d2c_h10[min_h_index_h10], mean_error_d2fw[min_h_index_d2fw],
+                           mean_error_d2bc[min_h_index_d2bc]])
 
         print("optimal mean errors: \n"
               f" Double Central Difference O(h^2): {mean_error_d2c_h2[min_h_index_h2]:.3e} at h={min_h_h2:.3e}\n"
@@ -261,9 +277,11 @@ def test_second_order_diffrentiators():
               f" Double Central Difference O(h^6): {mean_error_d2c_h6[min_h_index_h6]:.3e} at h={min_h_h6:.3e}\n"
               f" Double Central Difference O(h^8): {mean_error_d2c_h8[min_h_index_h8]:.3e} at h={min_h_h8:.3e}\n"
               f" Double Central Difference O(h^10): {mean_error_d2c_h10[min_h_index_h10]:.3e} at h={min_h_h10:.3e}\n"
+              f" Double Forward Difference O(h^2): {mean_error_d2fw[min_h_index_d2fw]:.3e} at h={min_h_d2fw:.3e}\n"
+              f" Double Backward Difference O(h^2): {mean_error_d2bc[min_h_index_d2bc]:.3e} at h={min_h_d2bc:.3e}\n"
               )
 
-    for i in range(5):
+    for i in range(7):
         plt.plot(range(1, N), [min_errors[n-1][i] for n in range(1, N)],
                  label=f"Order O(h^{2*(i+1)})")
     plt.yscale("log")
@@ -381,7 +399,7 @@ def test_hydrogen_laplacian():
 
 
 if __name__ == "__main__":
-    test_first_order_diffrentiators()
-    # test_second_order_diffrentiators()
+    # test_first_order_diffrentiators()
+    test_second_order_diffrentiators()
     # test_diffrentiators_3d()
     # test_hydrogen_laplacian()
