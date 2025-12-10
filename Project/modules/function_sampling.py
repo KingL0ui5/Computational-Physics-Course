@@ -134,7 +134,8 @@ def MALA(f: Callable, f_prime, x_0: np.ndarray | list, xmin: np.ndarray | list, 
     samples[0] = current.copy()
 
     accepted_count = 0
-    F_current = 2 * np.real(f_prime([current]) / f([current]))
+    current = current.reshape(1, -1)
+    F_current = 2 * np.real(f_prime(current) / f(current))
 
     start2 = time.perf_counter()
     for i in range(N):
@@ -148,13 +149,14 @@ def MALA(f: Callable, f_prime, x_0: np.ndarray | list, xmin: np.ndarray | list, 
             samples[i] = current.copy()
             continue
 
-        F_prop = 2 * np.real(f_prime([proposal]) / f([proposal]))
+        proposal = proposal.reshape(1, -1)
+        F_prop = 2 * np.real(f_prime(proposal) / f(proposal))
         backward_mean = proposal + timestep * F_prop
 
         Rev_distance = np.sum((current - backward_mean)**2)
         Frd_distance = np.sum((proposal - forward_mean)**2)
 
-        log_A = (np.log(pdf([proposal])) - np.log(pdf([current]))) + \
+        log_A = (np.log(pdf(proposal)) - np.log(pdf(current))) + \
             (Frd_distance - Rev_distance) / (4 * timestep)
 
         if np.log(np.random.uniform(0, 1)) < log_A:

@@ -170,7 +170,7 @@ class hydrogen_molecule_minimisers:
             T *= cooling_rate
             if stop_tol:
                 E_window = Es[-10:]
-                if len(E_window) > 1:
+                if len(E_window) > 5:
                     std_dev_last_10 = np.std(E_window, ddof=1)
                 else:
                     std_dev_last_10 = np.inf
@@ -330,7 +330,7 @@ class hydrogen_molecule_minimisers:
             #  stopping condition
             if stop_tol:
                 E_window = Es[-10:]
-                if len(E_window) > 1:
+                if len(E_window) > 5:
                     std_dev_last_10 = np.std(E_window, ddof=1)
                 else:
                     std_dev_last_10 = np.inf
@@ -401,7 +401,8 @@ class hydrogen_molecule_minimisers:
                 },
                 "final_state": {
                     "derivative": df,
-                    "energy": Es[-1] if len(Es) > 0 else None
+                    "energy": Es[-1] if len(Es) > 0 else None,
+                    "parameters": x
                 },
                 "history": {
                     "gradient_changes": gradient_changes,
@@ -469,7 +470,7 @@ class hydrogen_molecule_minimisers:
             #   test stopping condition
             if stop_tol:
                 E_window = Es[-10:]
-                if len(E_window) > 1:
+                if len(E_window) > 5:
                     std_dev_last_10 = np.std(E_window, ddof=1)
                 else:
                     std_dev_last_10 = np.inf
@@ -539,7 +540,8 @@ class hydrogen_molecule_minimisers:
                 },
                 "final_state": {
                     "derivative": df,
-                    "energy": Es[-1] if len(Es) > 0 else None
+                    "energy": Es[-1] if len(Es) > 0 else None,
+                    "parameters": x
                 },
                 "history": {
                     "gradient_changes": gradient_changes,
@@ -604,7 +606,7 @@ class hydrogen_molecule_minimisers:
 
             if stop_tol:
                 E_window = Es[-10:]
-                if len(E_window) > 1:
+                if len(E_window) > 5:
                     std_dev_last_10 = np.std(E_window, ddof=1)
                 else:
                     std_dev_last_10 = np.inf
@@ -674,7 +676,8 @@ class hydrogen_molecule_minimisers:
                 },
                 "final_state": {
                     "derivative": df,
-                    "energy": Es[-1] if len(Es) > 0 else None
+                    "energy": Es[-1] if len(Es) > 0 else None,
+                    "parameters": x
                 },
                 "history": {
                     "gradient_changes": gradient_changes,
@@ -765,7 +768,7 @@ class hydrogen_molecule_minimisers:
 
             if stop_tol:
                 E_window = Es[-10:]
-                if len(E_window) > 1:
+                if len(E_window) > 5:
                     std_dev_last_10 = np.std(E_window, ddof=1)
                 else:
                     std_dev_last_10 = np.inf
@@ -835,7 +838,8 @@ class hydrogen_molecule_minimisers:
                 },
                 "final_state": {
                     "derivative": grad,
-                    "energy": Es[-1] if len(Es) > 0 else None
+                    "energy": Es[-1] if len(Es) > 0 else None,
+                    "parameters": x
                 },
                 "history": {
                     "gradient_changes": gradient_changes,

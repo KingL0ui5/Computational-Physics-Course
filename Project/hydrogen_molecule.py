@@ -177,11 +177,11 @@ def test_SR():
     q2 = [0, 0, 0]
 
     N_s = 100000
-    thetas_0 = [.5] * 3  #  for minimiser
-    alphas = [1.5]  #  np.linspace(0.1, 1., 20)
+    thetas_0 = [1.3] * 3  #  for minimiser
+    alphas = [.1]  #  np.linspace(0.1, 1., 20)
     for alpha in alphas:
         theta_min, E_min, results = minimisers.stochastic_reconfiguration(q1, q2, x_0=thetas_0,
-                                                                          alpha=alpha, stop_tol=1e-2, N_s=N_s, detail=True, max_iter=30)
+                                                                          alpha=alpha, stop_tol=0.005, N_s=N_s, detail=True, trace=True, max_iter=30)
 
         print(f"minimum theta: {theta_min}, minimum energy: {E_min}")
         results['figure'].show()
@@ -192,9 +192,9 @@ def test_QN():
     q2 = [0, 0, 0]
 
     N_s = 100000
-    thetas_0 = [.7] * 3  #  for minimiser
+    thetas_0 = [0.5] * 3  #  for minimiser
     theta_min, E_min, results = minimisers.quasi_newton(q1, q2, x_0=thetas_0,
-                                                        alpha=0.2, stop_tol=1e-2, N_s=N_s, detail=True, max_iter=25, method='DFP')
+                                                        alpha=0.1, stop_tol=0.005, N_s=N_s, max_iter=50, method='DFP', detail=True, trace=True)
 
     print(f"minimum theta: {theta_min}, minimum energy: {E_min}")
     results['figure'].show()
@@ -202,32 +202,33 @@ def test_QN():
     print(f"Minimum Energy: {results['final_state']['energy']:.6f}")
 
 
-def test_minimisers_convergence(alpha=0.2):
+def test_minimisers_convergence(alpha=0.1):
     q1 = [0, 0, 2]
     q2 = [0, 0, 0]
     N_s = 100000
-    thetas_0 = [.7] * 3
+    thetas_0 = [1.3] * 3
+    stop_tol = 0.005
 
     results = {}
 
     _, _, results['Stochastic Reconfiguration'] = minimisers.stochastic_reconfiguration(
-        q1, q2, x_0=thetas_0, alpha=alpha, stop_tol=1e-2, N_s=N_s, detail=True, max_iter=50
+        q1, q2, x_0=thetas_0, alpha=alpha, stop_tol=stop_tol, N_s=N_s, detail=True, max_iter=50
     )
 
     _, _, results['Gradient Descent'] = minimisers.gradient_descent(
-        q1, q2, x_0=thetas_0, alpha=alpha, stop_tol=1e-2, N_s=N_s, detail=True, max_iter=50
+        q1, q2, x_0=thetas_0, alpha=alpha, stop_tol=stop_tol, N_s=N_s, detail=True, max_iter=50
     )
 
     _, _, results['RMSprop'] = minimisers.RMSprop(
-        q1, q2, x_0=thetas_0, alpha=alpha, stop_tol=1e-2, forgetting=0.9, N_s=N_s, detail=True, max_iter=50
+        q1, q2, x_0=thetas_0, alpha=alpha, stop_tol=stop_tol, forgetting=0.9, N_s=N_s, detail=True, max_iter=50
     )
 
     _, _, results['Quasi-Newton DFP'] = minimisers.quasi_newton(
-        q1, q2, x_0=thetas_0, alpha=alpha, stop_tol=1e-2, N_s=N_s, detail=True, max_iter=50, method='DFP'
+        q1, q2, x_0=thetas_0, alpha=alpha, stop_tol=stop_tol, N_s=N_s, detail=True, max_iter=50, method='DFP'
     )
 
     _, _, results['Quasi-Newton BFGS'] = minimisers.quasi_newton(
-        q1, q2, x_0=thetas_0, alpha=alpha, stop_tol=1e-2, N_s=N_s, detail=True, max_iter=50, method='BFGS'
+        q1, q2, x_0=thetas_0, alpha=alpha, stop_tol=stop_tol, N_s=N_s, detail=True, max_iter=50, method='BFGS'
     )
 
     _, _, results['Simulated Annealing'] = minimisers.simulated_annealing(

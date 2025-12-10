@@ -4,7 +4,7 @@ Louis Liu 19/11
 """
 
 import numpy as np
-from modules.function_sampling import metropolis_hastings
+from modules.function_sampling import metropolis_hastings, MALA
 from modules.differentiators import double_central_difference
 from modules.helpers import harmonic_oscillator_helpers as hlp
 
@@ -36,15 +36,18 @@ def localenergy(wf: wavefunction, x: np.ndarray) -> np.ndarray:
     x = np.asarray(x)
     d2psi = double_central_difference(wf.psi, x, h=[1e-5], order=8)
     E = -0.5 * (d2psi / wf.psi(x)) + 0.5 * x**2
-    mask = np.isfinite(E)
-    return E[mask]
+    return E
 
 
 if __name__ == "__main__":
     N_s = 100000
-    psi = wavefunction(n=1)
-    x = metropolis_hastings(f=psi.probability_density, f_prop='gaussian', x_0=[1.], xmin=[-10.], xmax=[10.], N=N_s, kwrgs={
-        'sigma': 2.})
+    n = 2
+    psi = wavefunction(n=n)
+    # x = metropolis_hastings(f=psi.probability_density, f_prop='gaussian', x_0=[1.], xmin=[-10.], xmax=[10.], N=N_s, kwrgs={
+    #     'sigma': 2.})
+
+    x = MALA(f=psi.probability_density, f_prime=hlp.first_derivative(
+        n), timestep=0.15, x_0=[1.4], N=N_s, xmin=[-10.], xmax=[10.], detail=True)
 
     #  discard burn in
     x = x[N_s//10:, :]
@@ -53,3 +56,15 @@ if __name__ == "__main__":
     exp_energy = np.mean(localenergy_arr)
     print(
         f"Expected Energy: {exp_energy}, Theoretical Energy: {psi.energy()}, error = {np.abs(exp_energy - psi.energy())}")
+
+    import matplotlib.pyplot as plt
+    plt.hist(x, bins=50, density=True, alpha=0.6,
+             label='Sampled Probability Density')
+    x_vals = np.linspace(-10, 10, 200)
+    plt.plot(x_vals, psi.probability_density(
+        x_vals), 'r-', label='Theoretical Probability Density')
+    plt.title(f'Harmonic Oscillator n={n} Wavefunction Sampling')
+    plt.xlabel('x')
+    plt.ylabel('Probability Density')
+    plt.legend()
+    plt.show()

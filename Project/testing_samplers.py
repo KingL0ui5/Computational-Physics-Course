@@ -246,8 +246,8 @@ def test_samples():
     samples_MALA = MALA(f=f, f_prime=df, x_0=[1.], timestep=0.5, xmin=[
         0.], xmax=[10.], N=N, detail=True)
 
-    samples_sMALA = stochasticMALA(f=f, f_prime=df, x_0=[1.], timestep=0.01, xmin=[
-        0.], xmax=[10.], N=N, p_kick=0.1, kick_sigma=0.5, detail=True)
+    samples_sMALA = stochasticMALA(f=f, f_prime=df, x_0=[1.], timestep=0.5, xmin=[
+        0.], xmax=[10.], N=N, p_kick=0.1, kick_sigma=0.1, detail=True)
 
     #  discard first 10% of samples as burn-in
     burn_in = N//10
@@ -491,9 +491,4 @@ def test_samples_hydrogen():
 
 
 if __name__ == "__main__":
-    # test_samples()
-    # test_sampling_3d()
-    # test_samples_hydrogen()
-    # test_samples_H2()
-    optimise_step_H2()
-    # test_thinning()
+    test_samples()
