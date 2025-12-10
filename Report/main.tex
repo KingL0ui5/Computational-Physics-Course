@@ -268,6 +268,8 @@
 % (Unless specifically asked to do so by the journal or conference you plan
 % to submit to, of course. )
 
+\usepackage{mathtools}
+
 \usepackage[
 backend=biber,
 style=alphabetic,
@@ -292,59 +294,199 @@ sorting=ynt
 \maketitle
 
 \begin{abstract}
-    This paper describes the Variational Quantum Monte Carlo (VMC) method for generating numerical solutions to the time-independent Schrödinger equation for the Hydrogen molecule, $H_2$. A parametrised anstatz was optimised using .... [minimisation algorithm] .... to find the variational minima of the Hamiltonian expectation value for a range of interatomic distances, $r_0$ between the two nuclei. The produced energy profile for $H_2$ at different distances $r_0$ was fitted to a Morse potential, yielding estimates for the equilibrium bond length and dissociation energy of the molecule. The results produced unequivocally confirm the theoretical behaviour of the system, especially as the distance $r_0$ between the nuclei tends to zero, and the energy increases rapidly. The method and results described here present support for the scalability of stochastic simulation methods in atomic physics.
+    This paper describes the Variational Quantum Monte Carlo (VMC) method for generating numerical solutions to the time-independent Schrödinger equation for the Hydrogen molecule, $H_2$. A parametrised ansatz was optimised using .... [minimisation algorithm] .... to find the variational minima of the Hamiltonian expectation value for a range of interatomic distances, $r_0$ between the two nuclei. The produced energy profile for $H_2$ at different distances $r_0$ was fitted to a Morse potential, yielding estimates for the equilibrium bond length and dissociation energy of the molecule. The results produced unequivocally confirm the theoretical behaviour of the system, especially as the distance $r_0$ between the nuclei tends to zero, and the energy increases rapidly. The method and results described here present support for the scalability of stochastic simulation methods in atomic physics.
 \end{abstract}
 
 
 \section{Introduction}
-    \IEEEPARstart{I}{\MakeLowercase{n}} many physical systems, the Schrödinger equation cannot be solved analytically, requiring the use of numerical approximation. Furthermore, in many multi-particle systems, the dimensionality of the Hilbert space scales exponentially with the number of particles. Variational Quantum Monte Carlo (VMC) is a useful technique for extracting energy predictions from the Schrödinger Equation in these cases by stochastic means. In many cases, it is most useful to to determine the ground state and its associated energy, which is obtained, fortunately, by minimising the expectation value of the Hamiltonian operator, $\braket{H}$.
+    \IEEEPARstart{I}{\MakeLowercase{n}} many physical systems, the Schrödinger equation does not have analytical solutions, requiring the use of numerical approximation. Furthermore, in many multi-particle systems, the dimensionality of the Hilbert space scales exponentially with the number of particles. Variational Quantum Monte Carlo (VMC) is a useful technique for extracting energy predictions from the Schrödinger Equation in these cases by stochastic means. In many cases, it is most useful to to determine the ground state and its associated energy. The variational principle [REF variational principle] states that for any trial wavefunction, the expectation value of the Hamiltonian provides an upper bound to the true ground-state energy. This is therefore approximated by minimising the expectation value of the Hamiltonian operator, 
+    \begin{equation} \label{hamiltonian}
+        \langle H \rangle =
+        \frac{
+        \int d^{3}r_{1} \ldots d^{3}r_{N}\,\psi^{*}(r_{1},\ldots,r_{N})\,H\psi(r_{1},\ldots,r_{N})
+        }{
+        \int d^{3}r_{1} \ldots d^{3}r_{N}\,\psi^{*}(r_{1},\ldots,r_{N})\,\psi(r_{1},\ldots,r_{N})
+        }.
+    \end{equation}  
 
     This paper will first consider the cases of the quantum harmonic oscillator, followed by the hydrogen atom, both of which have analytic solutions suitable for validation of the method. Finally, the case of the Hydrogen Molecule is considered, whose treatment demands further computational analysis.
 
 
     %This is then used to find the expected energy, $\braket{H}$, of the coordinates, which leads to a determination of the ground state energy of the system
 \section{Theory} \label{Theory}
+    The ground state can be approximated by proposing a general, parameterised ansatz for the wavefunction and minimising its associated energy with respect to the parameters. The wavefunctions associated energy at its minimum will be the ground state energy.
+
+    Most of the work involved lies in evaluating the integrals in Eq.~\ref{hamiltonian}. Owing to their high dimensionality, standard numerical integration techniques such as Newton–Cotes quadrature are impractical, having a computational cost that grows exponentially with dimension. For the case of the H$_2$ molecule, the effective dimensionality, $n_d = 6$. This makes stochastic sampling techniques far more suitable for solving the integral.
+
+    To derive the method method used to evaluate the hamiltonian expectation value, we first consider a quantity defined as the local energy,
+    \begin{equation*}
+        E_l = \frac{\hat{H} \psi(\boldsymbol{R})}{\psi(\boldsymbol{R})}
+    \end{equation*} 
+    where we have abbreviated $\{r_1, ..., r_n\}$ as $\boldsymbol{R}$. We can then substitute this result back into Eq.~\ref{hamiltonian}, resulting in, 
+    \begin{equation} \label{H_exp}
+        \langle H \rangle =
+        \frac{
+        \int d\boldsymbol{R}\,(|\psi(\boldsymbol{R})|^2 E_l)
+        }{
+        \int d\boldsymbol{R}\,(|\psi(\boldsymbol{R})|^2)
+        }.
+    \end{equation}
+    Where $|\psi(\boldsymbol{R})|^2 = \psi^{*}(\boldsymbol{R})\psi(\boldsymbol{R})$. We can then define a probability distribution, 
+    \begin{equation*}
+        \rho(\mathbf{R}) = \frac{|\psi(\mathbf{R})|^2}{\int d\mathbf{R'} \, |\psi(\mathbf{R'})|^2},
+    \end{equation*}
+    such that the relation is satisfied,
+    \begin{equation*}
+        \langle H \rangle = \int d\mathbf{R} \, \rho(\mathbf{R}) E_L(\mathbf{R}).
+    \end{equation*}
+    Then, following the treatment of [REF], we can use the Monte Carlo approximation, of a probability distribution to produce,
+    \begin{equation}
+        \langle H \rangle \approx \frac{1}{N_s} \sum_{i=1}^{N_s} E_l(\boldsymbol{R}^{(i)}) \pm \frac{1}{\sqrt{N_s}}\sigma_{(E_l)},
+    \end{equation}
+
+    \noindent where $\boldsymbol{R}^{(i)}$ are random samples distributed by the PDF, $\rho$, $N_s$ is the number of samples and $\sigma_{(E_l)}$ is the standard deviation of the local energies.
+    \subsection{The Quantum Harmonic Oscillator}
     
+        \noindent The first system which we consider in this paper is the 1D quantum harmonic oscillator, with the Schrödinger Equation, 
+        \begin{equation} \label{QHO Schrodinger}
+            -\frac{\hbar^{2}}{2 m_{e}} \frac{d^{2}}{d x^{2}} \psi(x)
+            + \frac{1}{2} m_{e} \omega^{2} x^{2} \psi(x)
+            = \mathcal{E}\,\psi(x),
+        \end{equation}
+        which has a hamiltonian that can be written in the form,
+        \begin{equation*}
+            \hat{H} = -\frac{1}{2}\frac{d^{2}}{d\hat{x}^{2}} + \frac{1}{2}\hat{x}^{2},
+        \end{equation*}
+        following the substitution $\hat{x} = \sqrt{({\hbar}/{m_e \omega})} \,x$ into natural units, with the natural length of the system, being $x_0 = \sqrt{(\hbar / m_e \omega})$.
+
+        This hamiltonian has eigenstates and eigenvalues given by,
+        \begin{equation} \label{QHO eigenstates}
+            \psi_n(x) = H_n(x)e^{-x^{2}/2}, 
+            \qquad
+            E_n = n + \frac{1}{2},
+        \end{equation} 
+        where $H_n{x}$ are the Hermite polynomials. The local energy, $E_l$ of this system is then given by, 
+        \begin{equation*}
+            E_{\ell}(x) = \frac{1}{\psi(x)} \hat{H}\psi(x)
+            = -\frac{1}{2}\frac{1}{\psi}\frac{d^{2}}{dx^{2}}\psi(x) + \frac{1}{2}x^{2}.
+        \end{equation*}
+        The kinetic term in this expression involves a second-order derivative, which must be evaluated using finite difference techniques, the details of which will be discussed subsequently.
+
+    \subsection{The Hydrogen Atom}
+        \noindent In this section we consider the Hydrogen atom under the Born-Oppenheimer approximation. In Hartree atomic units, the Hamiltonian is
+        \begin{equation}
+            \hat{H}_{\text{elec}} = -\frac{1}{2} \nabla^2 - \frac{1}{r},
+        \end{equation}
+        where energies are measured in Hartrees [REF hartrees], where $E_h = m_e e^4 / [(4\pi\epsilon_0)^2 \hbar^2]$, and $r=\sqrt{x^2 +y^2 + z^2}$. We proceed by expressing the parametrised wavefunction in terms of the variable, $\theta$ in the ansatz,
+        \begin{equation*}
+            \psi(x,y,z; \theta) = e^{-\theta r}.
+        \end{equation*}
+        This ansatz matches the known form of the ground state wavefunction, $\psi_{exact} \propto e^{-Zr/a_0}$. In order to obtain the ground state of this function, it will need to be minimised with respect to $\theta$. The value of $E_l$ at the optimal $\theta$ should yield the ground state energy which can be verified against the known $\braket{H_{min}} = -0.5$
+
+    \subsection{The Hydrogen Molecule}
+        \noindent The final component of this simulation was to calculate the ground state energy of the hydrogen molecule for various different interatomic distances. The hamiltonian, again in Hartree atomic units, is given by,
+        \begin{equation*}
+            H = -\frac{1}{2} \sum_{i=1}^{2} \nabla_i^2 - \sum_{i=1}^{2} \sum_{j=1}^{2} \frac{1}{|\mathbf{r}_i - \mathbf{q}_j|} + \frac{1}{|\mathbf{r}_1 - \mathbf{r}_2|} + \frac{1}{|\mathbf{q}_1 - \mathbf{q}_2|}
+        \end{equation*}
+
+        Here, we use a specific ansatz, parametrised by $\theta_{1,2,3}$, derived from the Heitler–London valence-bond theory to model the electronic coordinates. A Jastrow factor is incorporated to satisfy the expected 'cusp' behaviour, ensuring that the local energy remains finite at short interparticle distances: $r_{12} \rightarrow 0$, where $r_{12} = |r_1 - r_2|$.
+        \begin{equation}
+            \begin{split}
+                \psi(\mathbf{r}_1, \mathbf{r}_2; \boldsymbol{\theta}) = \bigg[ & e^{-\theta_1 (|\mathbf{r}_1 - \mathbf{q}_1| + |\mathbf{r}_2 - \mathbf{q}_2|)} \\
+                & + e^{-\theta_1 (|\mathbf{r}_1 - \mathbf{q}_2| + |\mathbf{r}_2 - \mathbf{q}_1|)} \bigg] e^{-\frac{\theta_2}{1+\theta_3 r_{12}}}
+            \end{split}
+        \end{equation}
+        Similarly to before, calculating the ground state energy is a matter of minimising $\braket{H}$ with respect to $\theta_{1,2,3}$. It is expeceted that performing this minimisation over a variety of distances should produce a Morse potential, 
+        \begin{equation}
+            V_{\text{Morse}}(r) = D \left( 1 - e^{-a(r-r_0)} \right)^2 - D + 2E_{\text{single}}
+        \end{equation}
+        where $D$ is the dissociation energy, $r_0$ is the bond length, $a$ is a fitting constant related to the width of the potential, and $E_{single}$ is the calculated ground state energy for the hydrogen atom.
     
 \section{Numerical Derivatives} 
     Finite difference methods were tested to obtain numerical estimates of the derivatives of the functions above. The second-order methods for computing the local energy were testsed first in one dimension using the simple harmonic oscillator, [see FIGURE]. The central difference method outperformed the backward and forward difference methods, with errors $\approx$3x smaller, whilst sharing the same optimal stepsize. Thus, the central difference method was adopted as the primary differentiator.
 
-    Tests for single derivatives and in 3 dimensions for the H$_2$ molecule yielded similar results [FIGURE]. In the tested cases, it was clear that the optimal method was to 8th order, having the lowest error for the largest stepsize, with very little runtime difference even for wavefunctions. In the particular case of determining the ground state energies in the H$_2$ system, the Jastrow factor present in the anstatz made minimising the stepsize the primary goal when singularly differentiating the function. This was verified looking at the self-consistency of the function, which indicated that the second-order differentiator was most suitable.
+    Tests for single derivatives and in 3 dimensions for the H$_2$ molecule yielded similar results [FIGURE]. In the tested cases, it was clear that the optimal method was to 8th order, having the lowest error for the largest stepsize, with very little runtime difference even for wavefunctions. In the particular case of determining the ground state energies in the H$_2$ system, the Jastrow factor present in the ansatz made minimising the stepsize the primary goal when singularly differentiating the function. This was verified looking at the self-consistency of the function, which indicated that the second-order differentiator was most suitable.
     
-\section{Stochastic Function Sampling}
-    The methodology used to solve the systems aforementioned relies on the use of function sampling to calculate the value of the wavefunction at a given coordinate in space. Given their high dimensionality and nonlinearity, the wavefunctions we consider cannot be directly sample; thus, they are well-suited to rejection-based Markov Chain Monte Carlo (MCMC) type sampling methods.
+\section{Stochastic Function Sampling} \label{sampling}
+    The methodology used to solve the systems aforementioned relies on the use of function sampling to calculate the value of the wavefunction at a given coordinate in space. Given their high dimensionality and nonlinearity, the wavefunctions we consider cannot be directly sampled; thus, they are well-suited to rejection-based Markov Chain Monte Carlo (MCMC) type sampling methods.
     
     Here, we discuss the methods considered and tested for this implementation. 
     
-    \subsection{Metropolis Hastings Sampling}
-        One of the primary methods used in this simulation was the Metropolis Hastings (MH) sampling algorithm. This algorithm is particularly useful given use of the Jastrow-Slater ansatz in the H$_2$ scenario, as the acceptance relies only on the ratio of probability densities. Therefore, the wavefunction can be sampled without the need to calculate the non-trivial normalisation constant.
+    \subsection{Metropolis-Hastings Sampling}
+        One of the principal methods used in this simulation was the Metropolis-Hastings (MH) sampling algorithm, which proved particularly effective in the H$_2$ scenario, where the Jastrow-Slater ansatz is challenging to sample by other means. Importantly, the wavefunction can be sampled without the need to calculate the non-trivial normalisation constant. % check this
 
-        In order to ensure effective sampling of the wavefunction, the proposal function was tuned to maintain the canonical acceptance rate of 0.234 [ref] [FIG? - include small justification on proposal function] whilst maintaining low autocorrelation. This was also confirmed visually and using STATISTICAL TESTS OF TARGET? initially for the quantum harmonic oscillator. 
+        To ensure effective sampling of the wavefunction, the proposal function was tuned to maintain the canonical acceptance rate of 0.234 [ref] [FIG? - include a small justification on proposal function] whilst maintaining low autocorrelation. This was also confirmed visually and using STATISTICAL TESTS OF TARGET? initially for the quantum harmonic oscillator. 
 
-        The number of steps in the sampler, $N_S$, is the main factor affecting both the numerical error and runtime of the simulation. Therefore its tuning is an important consideration. From visual analysis, sample sizes below 10,000 produced distributions with slight deviation from the true function, whilst sample sizes in excess of 100,000 represented it well. However, the difference in numerical error with the different sample numbers was evident. When computing the ground state energy for the Hydrogen atom, $N_S = 10,000$ produced an error of [ERROR], whilst an $N_S$ of $100,000$ produced only [ERROR]. Therefore, $N_S = 100,000$ was used in the optimisation of the hydrogen molecule due to the necessity of accurate numerical calculations. Due to its significance, further rigorous optimisation of this parameter is warranted. 
-
-        The algorithm was initialised at 1 in each coordinate, since for all functions considered, the probability density at this point was non-zero. Due to the rapid decay of the wavefunction away from $r=0$ in all cases, a box of $\pm10$a.u. was used around the origin.
+        The number of steps in the sampler, $N_s$, is the main factor affecting both the numerical error and runtime of the simulation. Therefore, its tuning is an important consideration. From visual analysis, sample sizes below 10,000 produced distributions with slight deviation from the true function, whilst sample sizes in excess of 100,000 represented it well. However, the difference in numerical error with the different sample numbers was evident. When computing the ground state energy for the Hydrogen atom, $N_s = 10,000$ produced an error of [ERROR], whilst an $N_s$ of $100,000$ produced only [ERROR]. Therefore, $N_s = 100,000$ was used in the optimisation of the hydrogen molecule due to the necessity of accurate numerical calculations. Due to its significance, further rigorous optimisation of this parameter is warranted. 
 
         The use of thinning substantially reduced autocorrelation, at the expense of fewer samples for a given runtime. [FIGURE]
 
     \subsection{Metropolis-adjusted Langevin algorithm}
-        Improving upon the efficiency of the standard Metropolis-Hastings algorithm, the Metropolis-adjusted Langevin Algorithm (MALA) was implemented. Standard Metropolis sampling uses a diffusive "random walk" that scales poorly with system size, whilst MALA utilizes the gradient of the wavefunction to propose moves towards regions of higher probability. 
+        Improving upon the efficiency of the standard Metropolis-Hastings algorithm, the Metropolis-adjusted Langevin Algorithm (MALA) was implemented. Standard Metropolis sampling uses a diffusive "random walk" that scales poorly with system size, whilst MALA uses the gradient of the wavefunction to propose moves towards regions of higher probability. This gives MALA better mixing properties, despite being more computationally expensive per step.
+
+        Proposals are generated using a discretized Langevin equation, which introduces a drift force based on the wavefunction gradient to guide the random walk, 
+        \begin{equation}
+            \mathbf{R}_{n+1} = \mathbf{R}_n + \Delta \mathbf{f}_n + \sqrt{2T\Delta}\,\mathbf{z}_n
+        \end{equation}
+        
+        where $\mathbf{R}_n$ is the electron configuration at step $n$, $\Delta$ is the time-step, and $\mathbf{z}_n$ is a random vector drawn from a standard normal distribution. In this context, $T$ represents the diffusion coefficient ($=1/2$ in a.u.), and $\mathbf{f}_n$ is the drift force, defined by the wavefunction gradient $\mathbf{f}_n \coloneq {\nabla \psi(\mathbf{R}_n)}/{\psi(\mathbf{R}_n)}$.
+        
+        Similarly to MH, the functions considered were best resolved with $N_s = 100,000$; however, to achieve the optimal acceptance of $\approx 0.54$ given by [MALA REF], the timestep, $\tau$ requires some tuning.
 
         Though this method undersamples low-probability regions, its efficacy is maintained for calculating the local energy by preferentially sampling regions that contribute more significantly. Additionally, for particular timesteps, MALA outperforms MH by acceptance rate and autocorrelation (without thinning). [FIGURE]
 
-        Mode locking can occur when this method is used, where the sampler becomes trapped in a single peak if the peaks are spatially separated, as is of particular concern in the H$_2$ case. Adapting this method was therefore necessary, that we call the Stochastic Metropolis-adjusted Langevin algorithm (sMALA), in which a proportion of proposals are generated via a random walk. In this implementation, the proportion is limited to 0.1 to mitigate mode-locking.
+        Mode locking can occur when this method is used, where the sampler becomes trapped in a single peak if the peaks are spatially separated, as is of particular concern in the H$_2$ case. Adapting this method was therefore necessary, which we call the Stochastic Metropolis-adjusted Langevin algorithm (sMALA), in which a proportion of proposals are generated via a random walk. In this implementation, the proportion is limited to 0.1 to mitigate mode-locking for all cases.
         
     \subsection{Other Methods}   
         There are also some non-trivial examples of unsuitable methods.
         
         An example of a conceptually viable algorithm choice would be rejection sampling and its associated variants. However, the need to propose an efficient overlaying proposal distribution makes it hard to implement a general algorithm whilst maintaining computational efficiency. For a 6-dimensional, two-electron system, finding a bounding function that hugs the electron density tightly is tricky. Furthermore, as the dimensionality grows, the acceptance probability falls as the volume of the proposal distribution grows exponentially; hence, the usefulness of this method is limited to low dimensions.     
 
-        Additionally, whilst the Gibbs sampling method facilitates a 100\% acceptance rate, it is not viable for this case. It requires a conditional probability distribution that is precluded by the non-linear Jastrow factor in the anstatz that we use for the hydrogen molecule.
+        Additionally, whilst the Gibbs sampling method facilitates a 100\% acceptance rate, it is not viable for this case. It requires a conditional probability distribution that is precluded by the non-linear Jastrow factor in the ansatz that we use for the hydrogen molecule.
         
-        
-\section{Computational Method}
+\section{Minimiser Functions}
+    The most complex part of the works presented here was the choice of minimiser function used to obtain the ground state energy. For a well-behaved parameter space such as that in the ansatz for the hydrogen atom situation, convergence on the minima was easily achieved using standard methods. However, for the more complicated H$_2$ molecule scenario, the calculation of the laplacian with respect to the $\theta_{i}$s was noisy and difficult
 
-\section{Experimental Results and Discussion}
+\section{Computational Process}
+    % now is an oppertunity to justify the specific parameters and methods for each system
+    \subsection{The Quantum Harmonic Oscillator}
+        In these works, the quantum harmonic oscillator is used as a benchmark system to validate sampling procedures and local energy approximations corresponding to the energy eigenstates of Eq.~\ref{QHO Schrodinger}. 
+        
+        To determine the local energies of the eigenstates $\braket{H}$, MALA sampling was used. Though the low probability regions are undersampled compared to standard MH, MALA samples the areas that contribute most to the energy evaluation are well sampled. [FIG show both MALA and MH ] shows examples of such sampling for eigenstate $n=3$. 
+         % consider having this figure in the sampling section.
+        MALA struggles in some cases though, if the initial guess is at a node of the function (where $\psi(x) \approx 0$), the drift force, $F(x) \rightarrow \infty$. This pushes the proposal out of the range of the function; thus, it and all subsequent proposals are rejected immediately. This is resolved by tuning the initial guess intelligently, which has been sufficient for our purposes. Additionally, the rapid decay of the eigenstates permits a tight sampling interval, set to $[-10,10]$. Furthermore, the timestep is set to optimise the acceptance rate as mentioned in section~\ref{sampling}. This was optimised similarly as in the H$_2$ case, producing an optimal timestep of $\tau=0.15$.
+       
+        Both methods produce similar errors from the known energies given by Eq.~\ref{QHO eigenstates}, as shown in [TABLE?].
+        
+    \subsection{The Hydrogen Atom}
+        For this investigation, the sampling and differentiation algorithms were extended to three dimensions [FIGURE]. Minimising the ansatz with respect to the parameters was straightforward using the standard gradient descent method.
+
+        It is given that the gradient of $\braket{H}$ with respect to $\theta$ is,  
+        \begin{equation} \label{H_gradient}
+            \partial_{\theta}\langle H\rangle \approx 
+            \frac{2}{N_s} \sum_{i=1}^{N_s} 
+            \left[ 
+            \big( E_l(\mathbf{R}^{(i)}) - \langle H \rangle \big)
+            \frac{\partial_{\theta}\psi(\mathbf{R}^{(i)};\theta)}{\psi(\mathbf{R}^{(i)};\theta)}
+            \right].
+        \end{equation}  
+
+        This is derived by differentiating the variational energy given in Eq.~\ref{H_exp}; however, this will not be shown here. In this system, this approximation will be shown to be sufficient to produce convergence of the minimiser. 
+
+    \subsection{The Hydrogen Molecule}
+        For the hydrogen molecule, the presence of two electrons increases the effective dimensionality of the sampling space to 6. Regardless, by partitioning each sampled configuration into the electron coordinates, $r_1$ and $r_2$, the remaining components of the calculation maintain their three-dimensional structure. Some examples of electron spatial probability distributions are included in [FIGURE]. 
+
+        Furthermore, due to the expanded parameter space in $\theta_{1,2,3}$, the use of Eq.~\ref{H_partial_theta} requires 3 separate evaluations of the local energy to obtain the derivative with respect to each parameter, $\nabla_{\theta_i}$. The use of Eq.~\ref{H_partial_theta} resulted in significant noise in the derivative calculations, thereby preventing gradient-based minimisation algorithms from converging. [FIG? non convergence]. Instead, a slight rearrangement of Eq.~\ref{H_partial_theta} produces, 
+        \begin{equation} \label{H_log_gradient}
+            \frac{\partial \langle H \rangle}{\partial \theta_k} \approx \frac{2}{N_s} \sum_{i=1}^{N_s} \left[ \left( E_L(\mathbf{R}^{(i)}) - \langle H \rangle \right) \frac{\partial \ln \Psi(\mathbf{R}^{(i)}}{\partial \theta_k} \right],
+        \end{equation}
+        which indeed, only requires one evaluation of the local energy at the coordinates $\boldsymbol{R^{(i)}}$. This results in much less noise in the calculation of the gradient, and thus convergence of the minimisers. 
+
+        
+        % include in caption: These distributions were sampled using Metropolis–Hastings, as the propensity of MALA to undersample low-probability regions would render these figures misleading.
+        
+    
+\section{Evaluation of Results}
     
 \section{Conclusion}
 
