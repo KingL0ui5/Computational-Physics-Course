@@ -107,7 +107,7 @@ class hydrogen_molecule_minimisers:
 
         elif method == "sMALA":
             samples, acceptance = stochasticMALA(f=wavefunction_wrapper, x_0=r_0, xmin=[-10.]*6, xmax=[
-                10.]*6, timestep=0.1, N=Ns, order=8, stepsize=8.008e-03, p_kick=0.4, kick_sigma=0.2, return_acceptance=True)
+                10.]*6, timestep=0.2, N=Ns, order=8, stepsize=8.008e-03, p_kick=0.4, kick_sigma=0.2, return_acceptance=True)
             if detail:
                 print(f"MALA Acceptance Rate: {acceptance*100:.2f}%")
         r = samples[len(samples)//10:]
@@ -761,9 +761,11 @@ class hydrogen_molecule_minimisers:
 
             temp = 1.0 / np.dot(gamma, delta)
             I = np.eye(dim)
-            G = (I - temp * np.outer(delta, gamma)
+            G = (
+                (I - temp * np.outer(delta, gamma)
                  ) @ G @ (I - temp * np.outer(gamma, delta))
-            + temp * np.outer(delta, delta)
+                + temp * np.outer(delta, delta)
+            )
             return G
 
         if method == "DFP":
@@ -924,10 +926,11 @@ class hydrogen_atom_minimisers:
 
             temp = 1.0 / np.dot(gamma, delta)
             I = np.eye(dim)
-            G = (I - temp * np.outer(delta, gamma)
+            G = (
+                (I - temp * np.outer(delta, gamma)
                  ) @ G @ (I - temp * np.outer(gamma, delta))
-            + temp * np.outer(delta, delta)
-
+                + temp * np.outer(delta, delta)
+            )
             return G
 
         if method == "DFP":
@@ -1149,10 +1152,11 @@ def quasi_newton(f: Callable, df: Callable, x_0: np.ndarray, stepsize: float, me
 
         temp = 1.0 / np.dot(gamma, delta)
         I = np.eye(dim)
-        G = (I - temp * np.outer(delta, gamma)
+        G = (
+            (I - temp * np.outer(delta, gamma)
              ) @ G @ (I - temp * np.outer(gamma, delta))
-        + temp * np.outer(delta, delta)
-
+            + temp * np.outer(delta, delta)
+        )
         return G
 
     if method == "DFP":

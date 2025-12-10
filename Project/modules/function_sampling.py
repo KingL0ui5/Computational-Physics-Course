@@ -312,7 +312,7 @@ def stochasticMALA(f: Callable, x_0: np.ndarray | list, xmin: np.ndarray | list,
             f'Trace \nacceptance: {accepted_count/N:.2f}, time: {end3-start3:.4f}s')
         plt.tight_layout()
         plt.show()
-        print(f"MALA acceptance Rate: {acceptance_rate:.2f}")
+        print(f"sMALA acceptance Rate: {acceptance_rate:.2f}")
         print(f"time elapsed: {end3 - start3} to iteration {i}")
 
     if return_acceptance:

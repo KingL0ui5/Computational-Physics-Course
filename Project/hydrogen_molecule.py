@@ -194,7 +194,7 @@ def test_QN():
     N_s = 100000
     thetas_0 = [0.5] * 3  #  for minimiser
     theta_min, E_min, results = minimisers.quasi_newton(q1, q2, x_0=thetas_0,
-                                                        alpha=0.1, stop_tol=0.005, N_s=N_s, max_iter=50, method='DFP', detail=True, trace=True)
+                                                        alpha=0.1, stop_tol=0.005, N_s=N_s, sampling="MH", max_iter=50, method='DFP', detail=True, trace=True)
 
     print(f"minimum theta: {theta_min}, minimum energy: {E_min}")
     results['figure'].show()
@@ -329,4 +329,4 @@ if __name__ == '__main__':
     # alphas = [0.05, 0.1, 0.3, 0.01, 0.2]
     # for alpha in alphas:
     #     test_minimisers_convergence(alpha)
-    test_SR()
+    test_QN()
