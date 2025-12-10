@@ -212,24 +212,24 @@ def test_minimisers_convergence(alpha=0.1):
     results = {}
 
     _, _, results['Stochastic Reconfiguration'] = minimisers.stochastic_reconfiguration(
-        q1, q2, x_0=thetas_0, alpha=alpha, stop_tol=stop_tol, N_s=N_s, detail=True, max_iter=50
+        q1, q2, x_0=thetas_0, alpha=alpha, stop_tol=stop_tol, N_s=N_s, detail=True, max_iter=100
     )
 
     _, _, results['Gradient Descent'] = minimisers.gradient_descent(
-        q1, q2, x_0=thetas_0, alpha=alpha, stop_tol=stop_tol, N_s=N_s, detail=True, max_iter=50
+        q1, q2, x_0=thetas_0, alpha=alpha, stop_tol=stop_tol, N_s=N_s, detail=True, max_iter=100
     )
 
     _, _, results['RMSProp_GD'] = minimisers.RMSProp_GD(
-        q1, q2, x_0=thetas_0, alpha=alpha, stop_tol=stop_tol, forgetting=0.9, N_s=N_s, detail=True, max_iter=50
+        q1, q2, x_0=thetas_0, alpha=alpha, stop_tol=stop_tol, forgetting=0.9, N_s=N_s, detail=True, max_iter=100
     )
 
     _, _, results['Quasi-Newton DFP'] = minimisers.quasi_newton(
-        q1, q2, x_0=thetas_0, alpha=alpha, stop_tol=stop_tol, N_s=N_s, detail=True, max_iter=50, method='DFP'
+        q1, q2, x_0=thetas_0, alpha=alpha, stop_tol=stop_tol, N_s=N_s, detail=True, max_iter=100, method='DFP'
     )
 
-    _, _, results['Quasi-Newton BFGS'] = minimisers.quasi_newton(
-        q1, q2, x_0=thetas_0, alpha=alpha, stop_tol=stop_tol, N_s=N_s, detail=True, max_iter=50, method='BFGS'
-    )
+    # _, _, results['Quasi-Newton BFGS'] = minimisers.quasi_newton(
+    #     q1, q2, x_0=thetas_0, alpha=alpha, stop_tol=stop_tol, N_s=N_s, detail=True, max_iter=100, method='BFGS'
+    # )
 
     _, _, results['Simulated Annealing'] = minimisers.simulated_annealing(
         q1, q2, x_0=thetas_0, initial_temp=0.5, cooling_rate=0.95, max_iter=200, Ns=10000, std=0.05, detail=True
@@ -276,10 +276,12 @@ def test_minimisers_convergence(alpha=0.1):
     for method_name, result_hash in results.items():
         final_theta = result_hash['final_state']['parameters']
         final_energy = result_hash['final_state']['energy']
+        energy_error = result_hash['final_state']['energy_error']
 
         print(f"{method_name}")
         print(f"Minimum Theta : {final_theta}")
         print(f"Minimum Energy: {final_energy:.6f}")
+        print(f"Energy Error  : {energy_error:.6f}")
         print("-" * 30)
 
 
