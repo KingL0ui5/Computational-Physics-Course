@@ -251,23 +251,23 @@ def test_minimisers_convergence(alpha=0.1):
     plt.tight_layout()
     plt.savefig(f"convergence_comparison_alpha_{alpha}.png")
 
-    def serialise(obj):
-        if isinstance(obj, np.ndarray):
-            return obj.tolist()
-        if isinstance(obj, (np.float64, np.int64)):
-            return obj.item()
-        if isinstance(obj, dict):
-            return {k: serialise(v) for k, v in obj.items()}
-        if isinstance(obj, list):
-            return [serialise(v) for v in obj]
-        return obj
+    # def serialise(obj):
+    #     if isinstance(obj, np.ndarray):
+    #         return obj.tolist()
+    #     if isinstance(obj, (np.float64, np.int64)):
+    #         return obj.item()
+    #     if isinstance(obj, dict):
+    #         return {k: serialise(v) for k, v in obj.items()}
+    #     if isinstance(obj, list):
+    #         return [serialise(v) for v in obj]
+    #     return obj
 
-    try:
-        import json
-        with open(f"convergence_results_alpha_{alpha}.json", 'w') as f:
-            json.dump(serialise(results), f, indent=4)
-    except:
-        print("Failed to save results as JSON. Skipping...")
+    # try:
+    #     import json
+    #     with open(f"convergence_results_alpha_{alpha}.json", 'w') as f:
+    #         json.dump(serialise(results), f, indent=4)
+    # except:
+    #     print("Failed to save results as JSON. Skipping...")
 
     print("\n" + "="*50)
     print("FINAL RESULTS SUMMARY")

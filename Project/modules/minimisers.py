@@ -27,7 +27,6 @@ class hydrogen_molecule_minimisers:
         wf_current = h2_wavefunction(thetas, q1, q2)
         E_l = wf_current.local_energy(r1, r2)
         E_mean = np.nanmean(E_l)
-        E_error = np.std(E_l, ddof=1) / np.sqrt(len(E_l))
 
         weights = 2.0 * (E_l - E_mean)
 
@@ -168,12 +167,13 @@ class hydrogen_molecule_minimisers:
                 x, E, r1, r2 = x_new, E_new, r1_new, r2_new
 
             T *= cooling_rate
+            E_window = Es[-10:]
+            if len(E_window) > 5:
+                std_dev_last_10 = np.std(E_window, ddof=1)
+            else:
+                std_dev_last_10 = np.inf
+
             if stop_tol:
-                E_window = Es[-10:]
-                if len(E_window) > 5:
-                    std_dev_last_10 = np.std(E_window, ddof=1)
-                else:
-                    std_dev_last_10 = np.inf
                 if trace:
                     print(
                         f"Standard Deviation of last 10 steps: {std_dev_last_10}")
@@ -199,9 +199,9 @@ class hydrogen_molecule_minimisers:
             iterations = range(len(xs))
 
             # Plot Thetas
-            ax[0].plot(len(xs[0]), xs[:, 0], label='theta 1')
-            ax[0].plot(len(xs[0]), xs[:, 1], label='theta 2')
-            ax[0].plot(len(xs[0]), xs[:, 2], label='theta 3')
+            ax[0].plot(iterations, xs[:, 0], label='theta 1')
+            ax[0].plot(iterations, xs[:, 1], label='theta 2')
+            ax[0].plot(iterations, xs[:, 2], label='theta 3')
             ax[0].set_xlabel("Iteration")
             ax[0].set_ylabel("Theta Values")
             ax[0].set_title("Theta Values over Simulated Annealing")
@@ -229,7 +229,8 @@ class hydrogen_molecule_minimisers:
                 },
                 "final_state": {
                     "energy": E,
-                    "parameters": x
+                    "parameters": x,
+                    "standard deviation energy": std_dev_last_10
                 },
                 "history": {
                     "thetas": xs,
@@ -328,13 +329,13 @@ class hydrogen_molecule_minimisers:
             alpha_i = alpha * scaling_factor
 
             #  stopping condition
-            if stop_tol:
-                E_window = Es[-10:]
-                if len(E_window) > 5:
-                    std_dev_last_10 = np.std(E_window, ddof=1)
-                else:
-                    std_dev_last_10 = np.inf
+            E_window = Es[-10:]
+            if len(E_window) > 5:
+                std_dev_last_10 = np.std(E_window, ddof=1)
+            else:
+                std_dev_last_10 = np.inf
 
+            if stop_tol:
                 if trace:
                     print(
                         f"Standard Deviation of last 10 steps: {std_dev_last_10}")
@@ -402,6 +403,7 @@ class hydrogen_molecule_minimisers:
                 "final_state": {
                     "derivative": df,
                     "energy": Es[-1] if len(Es) > 0 else None,
+                    "standard deviation energy": std_dev_last_10,
                     "parameters": x
                 },
                 "history": {
@@ -468,12 +470,13 @@ class hydrogen_molecule_minimisers:
             alpha_i = alpha * scaling_factor
 
             #   test stopping condition
+            E_window = Es[-10:]
+            if len(E_window) > 5:
+                std_dev_last_10 = np.std(E_window, ddof=1)
+            else:
+                std_dev_last_10 = np.inf
+
             if stop_tol:
-                E_window = Es[-10:]
-                if len(E_window) > 5:
-                    std_dev_last_10 = np.std(E_window, ddof=1)
-                else:
-                    std_dev_last_10 = np.inf
                 if trace:
                     print(
                         f"Standard Deviation of last 10 steps: {std_dev_last_10}")
@@ -541,6 +544,7 @@ class hydrogen_molecule_minimisers:
                 "final_state": {
                     "derivative": df,
                     "energy": Es[-1] if len(Es) > 0 else None,
+                    "standard deviation energy": std_dev_last_10,
                     "parameters": x
                 },
                 "history": {
@@ -604,12 +608,13 @@ class hydrogen_molecule_minimisers:
             scaling_factor = np.clip(grad_norm, 0.1, 1.0)
             alpha_i = alpha * scaling_factor
 
+            E_window = Es[-10:]
+            if len(E_window) > 5:
+                std_dev_last_10 = np.std(E_window, ddof=1)
+            else:
+                std_dev_last_10 = np.inf
+
             if stop_tol:
-                E_window = Es[-10:]
-                if len(E_window) > 5:
-                    std_dev_last_10 = np.std(E_window, ddof=1)
-                else:
-                    std_dev_last_10 = np.inf
                 if trace:
                     print(
                         f"Standard Deviation of last 10 steps: {std_dev_last_10}")
@@ -677,6 +682,7 @@ class hydrogen_molecule_minimisers:
                 "final_state": {
                     "derivative": df,
                     "energy": Es[-1] if len(Es) > 0 else None,
+                    "standard deviation energy": std_dev_last_10,
                     "parameters": x
                 },
                 "history": {
@@ -766,12 +772,13 @@ class hydrogen_molecule_minimisers:
 
             grad_norm = np.linalg.norm(grad)
 
+            E_window = Es[-10:]
+            if len(E_window) > 5:
+                std_dev_last_10 = np.std(E_window, ddof=1)
+            else:
+                std_dev_last_10 = np.inf
+
             if stop_tol:
-                E_window = Es[-10:]
-                if len(E_window) > 5:
-                    std_dev_last_10 = np.std(E_window, ddof=1)
-                else:
-                    std_dev_last_10 = np.inf
                 if trace:
                     print(
                         f"Standard Deviation of last 10 steps: {std_dev_last_10}")
@@ -839,6 +846,7 @@ class hydrogen_molecule_minimisers:
                 "final_state": {
                     "derivative": grad,
                     "energy": Es[-1] if len(Es) > 0 else None,
+                    "standard deviation energy": std_dev_last_10,
                     "parameters": x
                 },
                 "history": {
