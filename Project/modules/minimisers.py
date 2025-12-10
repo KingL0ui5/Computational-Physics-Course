@@ -346,7 +346,7 @@ class hydrogen_molecule_minimisers:
             if RMSProp[0]:
                 beta = RMSProp[1]
                 v = beta * v + (1 - beta)*(df**2)
-                x = x - (alpha / np.sqrt(v)) * df
+                alpha = alpha / np.sqrt(v)
 
             #  stopping condition
             E_window = Es[-10:]
@@ -490,7 +490,7 @@ class hydrogen_molecule_minimisers:
             if RMSProp[0]:
                 beta = RMSProp[1]
                 v = beta * v + (1 - beta)*(df**2)
-                alpha_i = alpha / np.sqrt(v)
+                alpha = alpha / np.sqrt(v)
 
             #   test stopping condition
             E_window = Es[-10:]
@@ -512,7 +512,7 @@ class hydrogen_molecule_minimisers:
             if np.isnan(x.any()) or np.isinf(x.any()):
                 raise ValueError("Optimal parameters diverged to nan or inf")
 
-            x = x - (alpha_i * df)
+            x = x - (alpha * df)
 
             #  restrict x to be positive
             # if (x <= 1e-7).any():
@@ -523,7 +523,7 @@ class hydrogen_molecule_minimisers:
 
             if trace:
                 print(
-                    f"iteration {i}, x={x}, d/dx={df}, N_s={Ns_i}, alpha={alpha_i}, ||dx|| = {grad_norm} \nEnergy: {E}")
+                    f"iteration {i}, x={x}, d/dx={df}, N_s={Ns_i}, alpha={alpha}, ||dx|| = {np.linalg.norm(df)} \nEnergy: {E}")
             if detail:
                 gradient_changes.append(df-df_last)
                 df_last = df
@@ -662,8 +662,8 @@ class hydrogen_molecule_minimisers:
 
             if RMSProp[0]:
                 beta = RMSProp[1]
-                v = beta * v + (1 - beta)*(df**2)
-                x = x - (alpha / np.sqrt(v)) * df
+                v = beta * v + (1 - beta)*(grad**2)
+                alpha = alpha / np.sqrt(v)
 
             grad_norm = np.linalg.norm(grad)
 
