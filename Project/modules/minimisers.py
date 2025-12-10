@@ -89,7 +89,7 @@ class hydrogen_molecule_minimisers:
         Returns:
             tuple: r1, r2, positions of electrons as np.ndarrays of shape (N, 3)
         """
-        from modules.function_sampling import metropolis_hastings, MALA
+        from modules.function_sampling import metropolis_hastings, MALA, stochasticMALA
 
         def wavefunction_wrapper(coords):
             coords = np.asarray(coords)
@@ -105,6 +105,9 @@ class hydrogen_molecule_minimisers:
             samples, acceptance = MALA(f=wavefunction_wrapper, x_0=r_0, xmin=[-10.]*6, xmax=[
                 10.]*6, timestep=0.1, N=Ns, order=8, stepsize=8.008e-03, return_acceptance=True)
 
+        elif method == "sMALA":
+            samples, acceptance = stochasticMALA(f=wavefunction_wrapper, x_0=r_0, xmin=[-10.]*6, xmax=[
+                10.]*6, timestep=0.1, N=Ns, order=8, stepsize=8.008e-03, p_kick=0.2, kick_sigma=0.2, return_acceptance=True)
             if detail:
                 print(f"MALA Acceptance Rate: {acceptance*100:.2f}%")
         r = samples[len(samples)//10:]

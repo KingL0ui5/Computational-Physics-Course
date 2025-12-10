@@ -205,22 +205,32 @@ def MALA(f: Callable, x_0: np.ndarray | list, xmin: np.ndarray | list, xmax: np.
     return np.asarray(samples)
 
 
-def stochasticMALA(f: Callable, f_prime, x_0: np.ndarray | list, xmin: np.ndarray | list, xmax: np.ndarray | list, timestep: float, N: int = 10000, p_kick: float = 0.1, kick_sigma: float = 1., detail: bool = False) -> np.ndarray:
+def stochasticMALA(f: Callable, x_0: np.ndarray | list, xmin: np.ndarray | list, xmax: np.ndarray | list, timestep: float, N: int = 10000, order: int = 8, stepsize: float = 8.008e-03, p_kick: float = 0.1, kick_sigma: float = 1., detail: bool = False, return_acceptance: bool = False) -> np.ndarray:
     """
     Metropolis-Adjusted Langevin Algorithm (MALA) to sample from a target distribution defined by nd wavefunction probability density function f.
     Also including stochastic random walk steps to improve exploration.
 
     Parameters:
         f : callable, the wavefunction probability density to sample from.
-        f_prime : callable, The derivative of the wavefunction.
         xmin : list or np.ndarray, The minimum bounds for each dimension.
         xmax : list or np.ndarray, The maximum bounds for each dimension.
         x_0 : list or np.ndarray, The initial position to start sampling from.
+        order : int, The order of the central difference method for numerical differentiation.
+        stepsize : float, The stepsize for the central difference calculation.
+        p_kick : float, The probability of performing a random walk step.
+        kick_sigma : float, The standard deviation of the Gaussian used for random walk steps.
         timestep : float, The timestep for the Langevin dynamics.
         N : int, The number of samples to generate.
+        return_acceptance : bool, Whether to return the acceptance rate along with samples.
 
     Returns: np.ndarray, An array of sampled positions.
     """
+
+    def f_prime(x):
+        from modules.differentiators import central_difference
+        n_dims = x.size
+        return central_difference(f, x, h=[stepsize]*n_dims, order=order)
+
     def pdf(x): return np.abs(f(x))**2
 
     current = np.array(x_0, dtype=float)
@@ -283,28 +293,29 @@ def stochasticMALA(f: Callable, f_prime, x_0: np.ndarray | list, xmin: np.ndarra
 
     if detail:
         import matplotlib.pyplot as plt
-        n = 6  # number of subplots
-        fig, axes = plt.subplots(n, 1, figsize=(10, 12), sharey=True)
-        chunk_size = N // n
+        samples = np.asarray(samples)
+        n_dims = samples.shape[1]
+        plot_dims = min(n_dims, 5)
 
-        for i in range(n):
-            start = i * chunk_size
-            end = (i + 1) * chunk_size if i < (n-1) else N
-            axes[i].plot(range(start, end), samples[start:end],
-                         color='black', linewidth=0.5, alpha=0.6)
+        fig, axes = plt.subplots(plot_dims, 1, figsize=(
+            10, 2 * plot_dims), sharex=True)
+        if plot_dims == 1:
+            axes = [axes]
 
-            axes[i].set_ylabel('x Value')
-            axes[i].text(0.02, 0.9, f'Segment {i+1}: Iterations {start}-{end}',
-                         transform=axes[i].transAxes, fontsize=10, fontweight='bold')
+        for d in range(plot_dims):
+            axes[d].plot(samples[:, d], color='black',
+                         linewidth=0.5, alpha=0.6)
+            axes[d].set_ylabel(f'Dim {d}')
 
-        axes[-1].set_xlabel('Sample Index')
+        axes[-1].set_xlabel('Iteration')
         plt.suptitle(
-            'Trace of stochastic MALA Sampling (Split View)', y=1.02, fontsize=14)
+            f'Trace \nacceptance: {accepted_count/N:.2f}, time: {end3-start3:.4f}s')
         plt.tight_layout()
         plt.show()
-
-        print(f"stochastic MALA acceptance Rate: {accepted_count / N:.2f}")
-        print(f"time elapsed: {end3 - start3}")
+        print(f"MALA acceptance Rate: {accepted_count/N:.2f}")
+        print(f"time elapsed: {end3 - start3} to iteration {N}")
+    if return_acceptance:
+        return np.asarray(samples), accepted_count / N
 
     # print(f"Acceptance Rate: {accepted_count / N:.2f}")
     return np.asarray(samples)
