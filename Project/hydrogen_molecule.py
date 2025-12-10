@@ -205,9 +205,9 @@ def test_QN():
 def test_minimisers_convergence(alpha=0.1):
     q1 = [0, 0, 2]
     q2 = [0, 0, 0]
-    N_s = 100000
+    N_s = 10000
     thetas_0 = [1.3] * 3
-    stop_tol = 0.005
+    stop_tol = None
 
     results = {}
 
@@ -219,7 +219,7 @@ def test_minimisers_convergence(alpha=0.1):
         q1, q2, x_0=thetas_0, alpha=alpha, stop_tol=stop_tol, N_s=N_s, detail=True, max_iter=50
     )
 
-    _, _, results['RMSprop'] = minimisers.RMSprop(
+    _, _, results['RMSProp_GD'] = minimisers.RMSProp_GD(
         q1, q2, x_0=thetas_0, alpha=alpha, stop_tol=stop_tol, forgetting=0.9, N_s=N_s, detail=True, max_iter=50
     )
 
@@ -249,7 +249,25 @@ def test_minimisers_convergence(alpha=0.1):
     plt.grid(True, linestyle='--', alpha=0.6)
     plt.legend()
     plt.tight_layout()
-    plt.show()
+    plt.savefig(f"convergence_comparison_alpha_{alpha}.png")
+
+    def serialise(obj):
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        if isinstance(obj, (np.float64, np.int64)):
+            return obj.item()
+        if isinstance(obj, dict):
+            return {k: serialise(v) for k, v in obj.items()}
+        if isinstance(obj, list):
+            return [serialise(v) for v in obj]
+        return obj
+
+    try:
+        import json
+        with open(f"convergence_results_alpha_{alpha}.json", 'w') as f:
+            json.dump(serialise(results), f, indent=4)
+    except:
+        print("Failed to save results as JSON. Skipping...")
 
     print("\n" + "="*50)
     print("FINAL RESULTS SUMMARY")
@@ -306,4 +324,7 @@ def ground_state_energies():
 
 
 if __name__ == '__main__':
-    test_QN()
+    # alphas = [0.05, 0.1, 0.3, 0.01, 0.2]
+    alphas = [0.1]
+    for alpha in alphas:
+        test_minimisers_convergence(alpha)
