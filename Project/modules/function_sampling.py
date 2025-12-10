@@ -225,17 +225,18 @@ def stochasticMALA(f: Callable, x_0: np.ndarray | list, xmin: np.ndarray | list,
 
     Returns: np.ndarray, An array of sampled positions.
     """
-
     def f_prime(x):
         from modules.differentiators import central_difference
         n_dims = x.size
         return central_difference(f, x, h=[stepsize]*n_dims, order=order)
 
-    def pdf(x): return np.abs(f(x))**2
+    def pdf(x):
+        return np.abs(f(x))**2
 
-    current = np.array(x_0, dtype=float)
+    current = np.array(x_0, dtype=float).reshape(1, -1)
     xmin = np.array(xmin, dtype=float)
     xmax = np.array(xmax, dtype=float)
+
     samples = []
     samples.append(current.copy())
 
@@ -243,8 +244,8 @@ def stochasticMALA(f: Callable, x_0: np.ndarray | list, xmin: np.ndarray | list,
     F_current = 2 * np.real(f_prime(current) / f(current))
 
     start3 = time.perf_counter()
-    for _ in range(N - 1):
-        #  random kick
+
+    for i in range(N):
         if np.random.rand() < p_kick:
             step = np.random.normal(0, kick_sigma, size=current.shape)
             proposal = current + step
@@ -253,21 +254,18 @@ def stochasticMALA(f: Callable, x_0: np.ndarray | list, xmin: np.ndarray | list,
                 samples.append(current.copy())
                 continue
 
-            # retain the log to minimmise numerical errors
-            log_A = 2 * np.log(pdf(proposal) / pdf(current))
+            log_A = np.log(pdf(proposal)) - np.log(pdf(current))
 
             if np.log(np.random.uniform(0, 1)) < log_A:
                 current = proposal
                 F_current = 2 * np.real(f_prime(current) / f(current))
                 accepted_count += 1
 
-        #  usual MALA
         else:
             xi = np.random.normal(size=current.shape)
             forward_mean = current + timestep * F_current
 
-            proposal = forward_mean + \
-                np.sqrt(2 * timestep) * xi
+            proposal = forward_mean + np.sqrt(2 * timestep) * xi
 
             if np.any(proposal < xmin) or np.any(proposal > xmax):
                 samples.append(current.copy())
@@ -279,8 +277,8 @@ def stochasticMALA(f: Callable, x_0: np.ndarray | list, xmin: np.ndarray | list,
             Rev_distance = np.sum((current - backward_mean)**2)
             Frd_distance = np.sum((proposal - forward_mean)**2)
 
-            log_A = (np.log(pdf(proposal+1e-30)) - np.log(pdf(current))) + \
-                (Frd_distance - Rev_distance) / (4 * timestep)
+            log_A = (np.log(pdf(proposal + 1e-30)) - np.log(pdf(current))) + \
+                    (Frd_distance - Rev_distance) / (4 * timestep)
 
             if np.log(np.random.uniform(0, 1)) < log_A:
                 current = proposal
@@ -291,10 +289,12 @@ def stochasticMALA(f: Callable, x_0: np.ndarray | list, xmin: np.ndarray | list,
 
     end3 = time.perf_counter()
 
+    samples_out = np.asarray(samples).squeeze()
+    acceptance_rate = accepted_count / N
+
     if detail:
         import matplotlib.pyplot as plt
-        samples = np.asarray(samples)
-        n_dims = samples.shape[1]
+        n_dims = samples_out.shape[1]
         plot_dims = min(n_dims, 5)
 
         fig, axes = plt.subplots(plot_dims, 1, figsize=(
@@ -303,7 +303,7 @@ def stochasticMALA(f: Callable, x_0: np.ndarray | list, xmin: np.ndarray | list,
             axes = [axes]
 
         for d in range(plot_dims):
-            axes[d].plot(samples[:, d], color='black',
+            axes[d].plot(samples_out[:, d], color='black',
                          linewidth=0.5, alpha=0.6)
             axes[d].set_ylabel(f'Dim {d}')
 
@@ -312,10 +312,10 @@ def stochasticMALA(f: Callable, x_0: np.ndarray | list, xmin: np.ndarray | list,
             f'Trace \nacceptance: {accepted_count/N:.2f}, time: {end3-start3:.4f}s')
         plt.tight_layout()
         plt.show()
-        print(f"MALA acceptance Rate: {accepted_count/N:.2f}")
-        print(f"time elapsed: {end3 - start3} to iteration {N}")
-    if return_acceptance:
-        return np.asarray(samples), accepted_count / N
+        print(f"MALA acceptance Rate: {acceptance_rate:.2f}")
+        print(f"time elapsed: {end3 - start3} to iteration {i}")
 
-    # print(f"Acceptance Rate: {accepted_count / N:.2f}")
-    return np.asarray(samples)
+    if return_acceptance:
+        return np.asarray(samples_out), acceptance_rate
+
+    return np.asarray(samples_out)
