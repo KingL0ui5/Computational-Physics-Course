@@ -46,8 +46,8 @@ if __name__ == "__main__":
     # x = metropolis_hastings(f=psi.probability_density, f_prop='gaussian', x_0=[1.], xmin=[-10.], xmax=[10.], N=N_s, kwrgs={
     #     'sigma': 2.})
 
-    x = MALA(f=psi.probability_density, f_prime=hlp.first_derivative(
-        n), timestep=0.15, x_0=[1.4], N=N_s, xmin=[-10.], xmax=[10.], detail=True)
+    x = MALA(f=psi.probability_density, timestep=0.15, x_0=[
+             1.4], N=N_s, xmin=[-10.], xmax=[10.], order=8, stepsize=8.008e-03, detail=True)
 
     #  discard burn in
     x = x[N_s//10:, :]

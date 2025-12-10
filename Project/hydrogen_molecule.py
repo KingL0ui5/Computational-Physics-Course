@@ -176,7 +176,7 @@ def test_SR():
     q1 = [0, 0, 2]
     q2 = [0, 0, 0]
 
-    N_s = 100000
+    N_s = 10000
     thetas_0 = [1.3] * 3  #  for minimiser
     alphas = [.1]  #  np.linspace(0.1, 1., 20)
     for alpha in alphas:
@@ -327,6 +327,6 @@ def ground_state_energies():
 
 if __name__ == '__main__':
     # alphas = [0.05, 0.1, 0.3, 0.01, 0.2]
-    alphas = [0.1]
-    for alpha in alphas:
-        test_minimisers_convergence(alpha)
+    # for alpha in alphas:
+    #     test_minimisers_convergence(alpha)
+    test_SR()

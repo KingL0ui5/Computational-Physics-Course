@@ -2,8 +2,6 @@
 A module containing the minimisers to find the ground state energy of wavefunctions.
 Louis Liu 22/11
 """
-
-from tracemalloc import start
 from typing import Callable
 import numpy as np
 import time
@@ -77,18 +75,21 @@ class hydrogen_molecule_minimisers:
         return np.array([dE_t1, dE_t2, dE_t3])
 
     @staticmethod
-    def sample_coords(wf, Ns, r_0, thinning: int = 20, detail=False, trace=False) -> tuple:
+    def sample_coords(wf, Ns, r_0, thinning: int = 20, method: str = "MH", detail=False, trace=False) -> tuple:
         """
         Sample wavefunction and process into r1, r2.
         Parameters:
             wf: h2_wavefunction, The hydrogen molecule wavefunction object.
             Ns: int, The number of samples to generate.
             r_0: np.ndarray, The initial position to start sampling from.
+            method: str, The sampling method to use ("MH" for Metropolis-Hastings, "MALA" for Metropolis-Adjusted Langevin Algorithm).
+            detail: bool, default = False, Whether to print detailed sampling information.
+            trace: bool, default = False, Whether to print trace information during sampling.
             thinning: int, The thinning factor to reduce autocorrelation in samples.
         Returns:
             tuple: r1, r2, positions of electrons as np.ndarrays of shape (N, 3)
         """
-        from modules.function_sampling import metropolis_hastings
+        from modules.function_sampling import metropolis_hastings, MALA
 
         def wavefunction_wrapper(coords):
             coords = np.asarray(coords)
@@ -96,8 +97,16 @@ class hydrogen_molecule_minimisers:
             return wf.probability_density(r1, r2)
 
         #  sample once for current state
-        samples = metropolis_hastings(f=wavefunction_wrapper, f_prop='gaussian', x_0=r_0, xmin=[
-                                      -10.]*6, xmax=[10.]*6, N=Ns, kwrgs={'sigma': 0.8}, thinning=thinning)
+        if method == "MH":
+            samples = metropolis_hastings(f=wavefunction_wrapper, f_prop='gaussian', x_0=r_0, xmin=[
+                -10.]*6, xmax=[10.]*6, N=Ns, kwrgs={'sigma': 0.8}, thinning=thinning)
+
+        elif method == "MALA":
+            samples, acceptance = MALA(f=wavefunction_wrapper, x_0=r_0, xmin=[-10.]*6, xmax=[
+                10.]*6, timestep=0.1, N=Ns, order=8, stepsize=8.008e-03, return_acceptance=True)
+
+            if detail:
+                print(f"MALA Acceptance Rate: {acceptance*100:.2f}%")
         r = samples[len(samples)//10:]
         r1, r2 = r[:, 0:3], r[:, 3:6]
 
@@ -282,14 +291,15 @@ class hydrogen_molecule_minimisers:
 
             #   sample coordinates for current thetas
             r1, r2 = hydrogen_molecule_minimisers.sample_coords(
-                wf, Ns_i, r_0, detail=detail, trace=trace)
+                wf, Ns_i, r_0, method="MALA", detail=detail, trace=trace)
             N_actual = len(r1)
             df = hydrogen_molecule_minimisers.log_grad(
                 x, q1, q2, r1, r2)
 
             n_params = len(x)
             h_diff = 1e-6
-            #  find S matrix
+
+            #  find log derivative covariance matrix matrix
             O_k = np.zeros((N_actual, n_params))
 
             for k in range(n_params):

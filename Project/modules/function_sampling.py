@@ -108,21 +108,28 @@ def metropolis_hastings(f: Callable, f_prop: str, x_0: np.ndarray, xmin: np.ndar
     return np.asarray(samples)
 
 
-def MALA(f: Callable, f_prime, x_0: np.ndarray | list, xmin: np.ndarray | list, xmax: np.ndarray | list, timestep: float, N: int = 10000, detail: bool = False, return_acceptance: bool = False) -> np.ndarray:
+def MALA(f: Callable, x_0: np.ndarray | list, xmin: np.ndarray | list, xmax: np.ndarray | list, timestep: float, N: int = 10000, order: int = 8, stepsize: float = 8.008e-03, detail: bool = False, return_acceptance: bool = False) -> np.ndarray:
     """
     Metropolis-Adjusted Langevin Algorithm (MALA) to sample from a target distribution defined by nd wavefunction probability density function f.
+    Calculates the gradient using central difference method.
     Parameters:
         f : callable, the wavefunction to sample from.
-        f_prime : callable, The derivative of the wavefunction.
         xmin : list or np.ndarray, The minimum bounds for each dimension.
         xmax : list or np.ndarray, The maximum bounds for each dimension.
         x_0 : list or np.ndarray, The initial position to start sampling from.
         timestep : float, The timestep for the Langevin dynamics.
+        order : int, The order of the central difference to use for gradient estimation.
+        stepsize : float, The stepsize for the central difference calculation.
         N : int, The number of samples to generate.
         return_acceptance : bool, Whether to return the acceptance rate along with samples.
 
     Returns: np.ndarray, An array of sampled positions.
     """
+
+    def f_prime(x):
+        from modules.differentiators import central_difference
+        n_dims = x.size
+        return central_difference(f, x, h=[stepsize]*n_dims, order=order)
 
     def pdf(x): return np.abs(f(x))**2
     current = np.array(x_0, dtype=float)
