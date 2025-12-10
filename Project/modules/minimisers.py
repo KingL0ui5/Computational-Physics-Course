@@ -3,7 +3,6 @@ A module containing the minimisers to find the ground state energy of wavefuncti
 Louis Liu 22/11
 """
 from typing import Callable
-from matplotlib.pylab import beta
 import numpy as np
 import time
 
@@ -260,7 +259,7 @@ class hydrogen_molecule_minimisers:
         return x, E
 
     @staticmethod
-    def stochastic_reconfiguration(q1: np.ndarray, q2: np.ndarray, x_0: np.ndarray, alpha: float, max_iter: int = 100, stop_tol: float = 1e-6, N_s: int = 10000, sampling: str = "MH", RMSProp: list = [False, None], epsilon: float = 1e-3, detail: bool = False, trace: bool = False) -> tuple:
+    def stochastic_reconfiguration(q1: np.ndarray, q2: np.ndarray, x_0: np.ndarray, alpha: float, max_iter: int = 100, stop_tol: float = 1e-6, N_s: int = 10000, sampling: str = "MH", epsilon: float = 1e-3, detail: bool = False, trace: bool = False) -> tuple:
         """
         Finds the minima using Stochastic Reconfiguration (Natural Gradient Descent).
 
@@ -275,7 +274,6 @@ class hydrogen_molecule_minimisers:
             N_s: number of samples to take per wavefunction iteration
             detail: bool, default = False
             sampling: str, the sampling method to use ("MH" for Metropolis-Hastings, "MALA" for Metropolis-Adjusted Langevin Algorithm).
-            RMSProp: list, [bool, float], whether to use RMSProp scaling and the beta parameter if so
             trace: bool, default = False
         Returns:
             tuple: the coordinates of minima, the minimum value of the function at this point
@@ -284,9 +282,6 @@ class hydrogen_molecule_minimisers:
 
         print("Starting Stochastic Reconfiguration minimiser...")
         x = np.asarray(x_0, dtype=float)
-
-        if RMSProp[0]:
-            v = np.ones_like(x)
         r_0 = np.ones(6, dtype=float)  # for samples
 
         gradient_changes = []
@@ -342,11 +337,10 @@ class hydrogen_molecule_minimisers:
                 print("Singular matrix, reverting to gradient descent.")
                 delta_p = -df
 
-            # RMSProp scaling
-            if RMSProp[0]:
-                beta = RMSProp[1]
-                v = beta * v + (1 - beta)*(df**2)
-                alpha = alpha / np.sqrt(v)
+            #  scale alpha based on the derivative
+            grad_norm = np.linalg.norm(delta_p)
+            scaling_factor = np.clip(grad_norm, 0.1, 1.0)
+            alpha_i = alpha * scaling_factor
 
             #  stopping condition
             E_window = Es[-10:]
@@ -368,7 +362,7 @@ class hydrogen_molecule_minimisers:
                 raise ValueError("Optimal parameters diverged to nan or inf")
 
             # Update
-            x = x + alpha * delta_p
+            x = x + alpha_i * delta_p
 
             #  restrict x to be positive
             if (x <= 1e-7).any():
@@ -379,7 +373,7 @@ class hydrogen_molecule_minimisers:
 
             if trace:
                 print(
-                    f"iteration {i}, x={x}, df = {df},||d/df|| = {np.linalg.norm(df)}, \nN_s={Ns_i}, Natural grad update: {delta_p}, alpha={alpha},\nLocal energy: {E}")
+                    f"iteration {i}, x={x}, df = {df},||d/df|| = {grad_norm}, \nN_s={Ns_i}, Natural grad update: {delta_p}, alpha={alpha_i},\nLocal energy: {E}")
             if detail:
                 gradient_changes.append(df-df_last)
                 df_last = df
@@ -416,7 +410,6 @@ class hydrogen_molecule_minimisers:
             results = {
                 "meta": {
                     "method": "Stochastic Reconfiguration",
-                    "RMSProp": RMSProp[0],
                     "final_iteration_count": i,
                     "time_elapsed": time_elapsed,
                     "time_per_iter_avg": time_elapsed / i if i > 0 else 0
@@ -443,7 +436,7 @@ class hydrogen_molecule_minimisers:
             return x, Es[-1], results
         return x, hydrogen_molecule_minimisers.E_fn(x, q1, q2, r1, r2)
 
-    def gradient_descent(q1: np.ndarray, q2: np.ndarray, x_0: np.ndarray, alpha: float, max_iter: int = 100, stop_tol: float = 1e-6, N_s: int = 10000, sampling: str = "MH", RMSProp: list = [False, None], detail: bool = False, trace: bool = False) -> tuple:
+    def gradient_descent(q1: np.ndarray, q2: np.ndarray, x_0: np.ndarray, alpha: float, max_iter: int = 100, stop_tol: float = 1e-6, N_s: int = 10000, sampling: str = "MH", detail: bool = False, trace: bool = False) -> tuple:
         """
         A method to find the minima of a function using the gradient descent method.
         Parameters:
@@ -455,7 +448,6 @@ class hydrogen_molecule_minimisers:
             stop_tol: float, default = 1e-6, the value of the gradient at which convergence is determined
             N_s: number of samples to take per wavefunction iteration
             sampling: str, the sampling method to use ("MH" for Metropolis-Hastings, "MALA" for Metropolis-Adjusted Langevin Algorithm).
-            RMSProp: list, default = [False, None], whether to use RMSProp and its decay rate
             detail: bool, default = False
             trace: bool, default = False
 
@@ -487,10 +479,10 @@ class hydrogen_molecule_minimisers:
             df = hydrogen_molecule_minimisers.log_grad(
                 x, q1, q2, r1, r2)
 
-            if RMSProp[0]:
-                beta = RMSProp[1]
-                v = beta * v + (1 - beta)*(df**2)
-                alpha = alpha / np.sqrt(v)
+            #  scale alpha based on the derivative
+            grad_norm = np.linalg.norm(df)
+            scaling_factor = np.clip(grad_norm, 0.1, 1.0)
+            alpha_i = alpha * scaling_factor
 
             #   test stopping condition
             E_window = Es[-10:]
@@ -512,7 +504,7 @@ class hydrogen_molecule_minimisers:
             if np.isnan(x.any()) or np.isinf(x.any()):
                 raise ValueError("Optimal parameters diverged to nan or inf")
 
-            x = x - (alpha * df)
+            x = x - (alpha_i * df)
 
             #  restrict x to be positive
             # if (x <= 1e-7).any():
@@ -523,7 +515,7 @@ class hydrogen_molecule_minimisers:
 
             if trace:
                 print(
-                    f"iteration {i}, x={x}, d/dx={df}, N_s={Ns_i}, alpha={alpha}, ||dx|| = {np.linalg.norm(df)} \nEnergy: {E}")
+                    f"iteration {i}, x={x}, d/dx={df}, N_s={Ns_i}, alpha={alpha_i}, ||dx|| = {grad_norm} \nEnergy: {E}")
             if detail:
                 gradient_changes.append(df-df_last)
                 df_last = df
@@ -560,7 +552,6 @@ class hydrogen_molecule_minimisers:
             results = {
                 "meta": {
                     "method": "Gradient Descent",
-                    "RMSProp": RMSProp[0],
                     "final_iteration_count": i,
                     "time_elapsed": time_elapsed,
                     "time_per_iter_avg": time_elapsed / i if i > 0 else 0
@@ -588,7 +579,145 @@ class hydrogen_molecule_minimisers:
 
         return x, hydrogen_molecule_minimisers.E_fn(x, q1, q2, r1, r2)
 
-    def quasi_newton(q1: np.ndarray, q2: np.ndarray, x_0: np.ndarray, alpha: float, method: str = "DFP", max_iter: int = 1000, stop_tol: float = None, N_s: int = 10000, sampling: str = "MH", RMSProp: list = [False, None], detail: bool = False, trace: bool = False) -> tuple:
+    def RMSProp_GD(q1: np.ndarray, q2: np.ndarray, x_0: np.ndarray, alpha: float, forgetting: float, max_iter: int = 1000, stop_tol: float = 1e-6, N_s: int = 10000, sampling: str = "MH", detail: bool = False, trace: bool = False) -> tuple:
+        """
+        A method to find the minima of a function using the RMSProp adjusted gradient descent method.
+        Parameters:
+            q1 (np.ndarray): Position of the first nucleus.
+            q2 (np.ndarray): Position of the second nucleus.
+            x_0: np.ndarray, the starting point of the minimiser
+            N_s: int, number of samples to take per wavefunction iteration
+            stepsize: float, the stepsize of the minimiser
+            forgetting: float, the forgetting factor of the minimiser
+            max_iter: int, the number of iterations to run
+            stop_tol: float, default = 1e-6, the value of the gradient at which convergence is determined
+            detail: bool, default = False
+            sampling: str, the sampling method to use ("MH" for Metropolis-Hastings, "MALA" for Metropolis-Adjusted Langevin Algorithm).
+            trace: bool, default = False
+
+        Returns:
+            tuple: the coordinates of minima, the minimum value of the function at this point
+        """
+        from hydrogen_molecule import h2_wavefunction
+        print("Starting RMSProp gradient descent minimiser...")
+
+        x = np.asarray(x_0, dtype=float)
+        r_0 = np.ones(6, dtype=float)  #  for samples
+        v = np.ones_like(x)
+
+        gradient_changes = []
+        df_last = np.zeros_like(x)
+        Es = []
+        start = time.perf_counter()
+        for i in range(max_iter):
+            Ns_i = N_s  # * int(np.exp((i+1)*0.05))
+
+            wf = h2_wavefunction(x, q1, q2)
+            r1, r2 = hydrogen_molecule_minimisers.sample_coords(
+                wf, Ns_i, r_0, detail=detail, trace=trace, method=sampling)
+
+            df = hydrogen_molecule_minimisers.log_grad(
+                x, q1, q2, r1, r2)
+
+            #  scale alpha based on the derivative
+            grad_norm = np.linalg.norm(df)
+            scaling_factor = np.clip(grad_norm, 0.1, 1.0)
+            alpha_i = alpha * scaling_factor
+
+            E_window = Es[-10:]
+            if len(E_window) > 5:
+                std_dev_last_10 = np.std(E_window, ddof=1)
+            else:
+                std_dev_last_10 = np.inf
+
+            if stop_tol:
+                if trace:
+                    print(
+                        f"Standard Deviation of last 10 steps: {std_dev_last_10}")
+                if std_dev_last_10 < stop_tol:
+                    if detail:
+                        print("Convergence reached based on energy stability.")
+                    break
+
+            if np.isnan(x.any()) or np.isinf(x.any()):
+                raise ValueError("Optimal parameters diverged to nan or inf")
+
+            v = forgetting * v + (1 - forgetting)*(df**2)
+            x = x - (alpha / np.sqrt(v)) * df
+
+            #  restrict x to be positive
+            if (x <= 1e-7).any():
+                x = np.maximum(x, 1e-7)
+
+            E = hydrogen_molecule_minimisers.E_fn(x, q1, q2, r1, r2)
+            Es.append(E)
+
+            if trace:
+                print(
+                    f"iteration {i}, x={x}, d/dx={df}, N_s={Ns_i}, alpha={alpha_i}, ||dx|| = {grad_norm}, \nEnergy: {E}")
+            if detail:
+                gradient_changes.append(df-df_last)
+                df_last = df
+
+        end = time.perf_counter()
+        time_elapsed = end - start
+
+        if detail:
+            import matplotlib.pyplot as plt
+            gradient_changes = np.array(gradient_changes)
+            fig, ax = plt.subplots(1, 2, figsize=(12, 5))
+            fig.suptitle("RMSProp Gradient Descent Minimisation")
+
+            # Plot Gradient Changes
+            iterations = range(len(gradient_changes))
+            ax[0].plot(iterations, gradient_changes[:, 0],
+                       color='r', label='dTheta1')
+            ax[0].plot(iterations, gradient_changes[:, 1],
+                       color='g', label='dTheta2')
+            ax[0].plot(iterations, gradient_changes[:, 2],
+                       color='b', label='dTheta3')
+            ax[0].set_xlabel("Iteration")
+            ax[0].set_ylabel("Change in Gradient")
+            ax[0].set_title("Gradient Changes Over Iterations")
+            ax[0].legend()
+
+            # Plot Energy History
+            ax[1].plot(range(len(Es)), Es)
+            ax[1].set_xlabel("Iteration")
+            ax[1].set_ylabel("Energy")
+            ax[1].set_title("Energy over Gradient Descent Iterations")
+
+            plt.tight_layout()
+            results = {
+                "meta": {
+                    "method": "RMSProp Gradient Descent",
+                    "final_iteration_count": i,
+                    "time_elapsed": time_elapsed,
+                    "time_per_iter_avg": time_elapsed / i if i > 0 else 0
+                },
+                "final_state": {
+                    "derivative": df,
+                    "energy": Es[-1] if len(Es) > 0 else None,
+                    "standard deviation energy": std_dev_last_10,
+                    "parameters": x
+                },
+                "history": {
+                    "gradient_changes": gradient_changes,
+                    "energies": np.array(Es)
+                },
+                "figure": fig
+            }
+
+            print(
+                f"Iteration number: {results['meta']['final_iteration_count']}")
+            print(f"Time elapsed: {results['meta']['time_elapsed']:.4f}s")
+            print(
+                f"Final derivative: {results['final_state']['derivative']}")
+
+            return x, Es[-1], results
+        return x, hydrogen_molecule_minimisers.E_fn(x, q1, q2, r1, r2)
+
+    def quasi_newton(q1: np.ndarray, q2: np.ndarray, x_0: np.ndarray, alpha: float, method: str = "DFP", max_iter: int = 1000, stop_tol: float = None, N_s: int = 10000, sampling: str = "MH", detail: bool = False, trace: bool = False) -> tuple:
         """
         A method to find the minima of a function using the quasi-newton method using a chosen method to approximate the hessian
         Parameters:
@@ -601,7 +730,6 @@ class hydrogen_molecule_minimisers:
             max_iter: int, default = 10000 the number of iterations to run
             N_s: int, default = 10000, number of samples to take per wavefunction iteration
             sampling: str, the sampling method to use ("MH" for Metropolis-Hastings, "MALA" for Metropolis-Adjusted Langevin Algorithm).
-            RMSProp: list, [bool, float], whether to use RMSProp scaling and the beta parameter if so
             detail: bool, default = False
             trace: bool, default = False
 
@@ -612,9 +740,6 @@ class hydrogen_molecule_minimisers:
 
         print("Starting quasi-newton minimiser...")
         x = np.array(x_0, dtype=float)
-        if RMSProp[0]:
-            v = np.ones_like(x)
-
         n_dim = len(x)
         G = np.eye(n_dim)
 
@@ -660,10 +785,7 @@ class hydrogen_molecule_minimisers:
             grad = hydrogen_molecule_minimisers.log_grad(
                 x, q1, q2, r1, r2)
 
-            if RMSProp[0]:
-                beta = RMSProp[1]
-                v = beta * v + (1 - beta)*(grad**2)
-                alpha = alpha / np.sqrt(v)
+            alpha_i = alpha * np.clip(np.linalg.norm(grad), 0.01, 1.0)
 
             grad_norm = np.linalg.norm(grad)
 
@@ -682,7 +804,7 @@ class hydrogen_molecule_minimisers:
                         print("Convergence reached based on energy stability.")
                     break
 
-            x_new = x - alpha * G @ grad
+            x_new = x - alpha_i * G @ grad
 
             wf_new = h2_wavefunction(x_new, q1, q2)
             r1_new, r2_new = hydrogen_molecule_minimisers.sample_coords(
@@ -698,7 +820,7 @@ class hydrogen_molecule_minimisers:
 
             if trace:
                 print(
-                    f"iteration {i}, x={x}, d/dx={grad}, N_s={Ns_i}, alpha={alpha}, ||dx|| = {grad_norm}, \nEnergy: {E}")
+                    f"iteration {i}, x={x}, d/dx={grad}, N_s={Ns_i}, alpha={alpha_i}, ||dx|| = {grad_norm}, \nEnergy: {E}")
             if detail:
                 gradient_changes.append(grad_new-grad)
 
@@ -733,8 +855,7 @@ class hydrogen_molecule_minimisers:
             plt.tight_layout()
             results = {
                 "meta": {
-                    "method": f"Quasi Newton {method}",
-                    "RMSProp": RMSProp[0],
+                    "method": "Stochastic Reconfiguration",
                     "final_iteration_count": i,
                     "time_elapsed": time_elapsed,
                     "time_per_iter_avg": time_elapsed / i if i > 0 else 0
@@ -954,7 +1075,7 @@ def gradient_desecent(f: Callable, df: Callable, x_0: np.ndarray, stepsize: floa
     return x, f(x, **kwargs)
 
 
-def RMSProp_GD(f: Callable, df: Callable, x_0: np.ndarray, stepsize: float, beta: float, max_iter: int = 1000, stop_tol: float = 1e-6, detail: bool = False, **kwargs) -> tuple:
+def RMSProp_GD(f: Callable, df: Callable, x_0: np.ndarray, stepsize: float, forgetting: float, max_iter: int = 1000, stop_tol: float = 1e-6, detail: bool = False, **kwargs) -> tuple:
     """
     A method to find the minima of a function using the RMSProp adjusted gradient descent method.
     Parameters:
@@ -962,7 +1083,7 @@ def RMSProp_GD(f: Callable, df: Callable, x_0: np.ndarray, stepsize: float, beta
         df: callable, the first derivative of the function, left for flexibility of method
         x_0: np.ndarray, the starting point of the minimiser
         stepsize: float, the stepsize of the minimiser
-        beta: float, the beta factor of the minimiser
+        forgetting: float, the forgetting factor of the minimiser
         max_iter: int, the number of iterations to run
         stop_tol: float, default = 1e-6, the value of the gradient at which convergence is determined
         detail: bool, default = False
@@ -979,7 +1100,7 @@ def RMSProp_GD(f: Callable, df: Callable, x_0: np.ndarray, stepsize: float, beta
         if np.linalg.norm(d) < stop_tol:
             break
 
-        v = beta * v + (1 - beta)*(d**2)
+        v = forgetting * v + (1 - forgetting)*(d**2)
         x = x - (stepsize / np.sqrt(v)) * d
     end = time.perf_counter()
     time_elapsed = end - start
