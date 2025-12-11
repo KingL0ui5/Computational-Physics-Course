@@ -966,7 +966,7 @@ class hydrogen_atom_minimisers:
             #  increase number of samples each iteration
             Ns_i = N_s * int(np.exp((i+1)*0.1))
 
-            samples = samples = metropolis_hastings(f=psi.probability_density, f_prop='gaussian', x_0=[
+            samples = metropolis_hastings(f=psi.probability_density, f_prop='gaussian', x_0=[
                 1., 1., 1.], xmin=[-20., -20., -20.], xmax=[20., 20., 20.], N=Ns_i, kwrgs={'sigma': 0.8})
             samples = samples[Ns_i//10:]
 
@@ -1005,59 +1005,155 @@ class hydrogen_atom_minimisers:
             print(f"time elapsed QN: {time_elapsed}")
         return x, np.nanmean(psi.local_energy(coords=samples))
 
-    def gradient_descent(wf: Callable, dH: Callable, x_0: np.ndarray, stepsize: float, max_iter: int = 100, stop_tol: float = 1e-6, N_s: int = 10000, detail: bool = False) -> tuple:
+    def gradient_descent(wf: Callable, dH: Callable, x_0: np.ndarray, alpha: float, max_iter: int = 100, stop_tol: float = 1e-6, N_s: int = 10000, sampling: str = "MH", detail: bool = False, trace: bool = False, return_error: bool = False) -> tuple:
         """
         A method to find the minima of a function using the gradient descent method.
         Parameters:
-            E: callable, the function to minimise
-            dH: callable, the first derivative of the function, left for flexibility of method
+            q1 (np.ndarray): Position of the first nucleus.
+            q2 (np.ndarray): Position of the second nucleus.
             x_0: np.ndarray, the starting point of the minimiser
-            stepsize: float, the stepsize of the minimizer
+            alpha: float, the stepsize of the minimizer
             max_iter: int, the number of iterations to run
             stop_tol: float, default = 1e-6, the value of the gradient at which convergence is determined
             N_s: number of samples to take per wavefunction iteration
+            sampling: str, the sampling method to use ("MH" for Metropolis-Hastings, "MALA" for Metropolis-Adjusted Langevin Algorithm).
             detail: bool, default = False
+            trace: bool, default = False
+            return_error: bool, default = False, whether to return the error estimate along with the minima
 
         Returns:
             tuple: the coordinates of minima, the minimum value of the function at this point
         """
-        from modules.function_sampling import metropolis_hastings
-        x = x_0
-        d = 1
+        print("Starting gradient descent minimiser...")
+        x = np.asarray(x_0, dtype=float)
+        gradient_changes = []
+        df_last = np.zeros_like(x)
+
+        #  minimisation loop
+        Es = []
         start = time.perf_counter()
-
         for i in range(max_iter):
-            psi = wf(theta=x)  # hydrogen wavefunction given theta
-            Ns_i = N_s * int(np.exp((i+1)*0.05))
-            alpha = stepsize / np.sqrt(i+1)
+            Ns_i = N_s  # * int(np.exp((i+1)*0.05))
+            f = wf(theta=x)  # hydrogen wavefunction given theta
 
-            samples = metropolis_hastings(f=psi.probability_density, f_prop='gaussian', x_0=[
-                0., 0., 0.], xmin=[-4., -4., -4.], xmax=[4., 4., 4.], N=Ns_i, kwrgs={'sigma': 0.8})
-            samples = samples[Ns_i//10:]
+            #   sample coordinates for current thetas
+            from modules.function_sampling import metropolis_hastings, MALA
 
-            d = dH(x, samples)
+            if sampling == "MALA":
+                samples, acceptance = MALA(f=f.psi, x_0=[1.]*3, xmin=[-20.]*3, xmax=[
+                    20.]*3, timestep=0.1, N=Ns_i, order=8, stepsize=8.008e-03, return_acceptance=True)
+                if trace:
+                    print(f"MALA acceptance rate: {acceptance}")
 
-            #  test stopping condition
+            elif sampling == "MH":
+                samples, acceptance = metropolis_hastings(f=f.probability_density, f_prop='gaussian', x_0=[
+                    1., 1., 1.], xmin=[-20., -20., -20.], xmax=[20., 20., 20.], N=Ns_i, kwrgs={'sigma': 0.8}, return_acceptance=True)
+                if trace:
+                    print(f"MH acceptance rate: {acceptance}")
+
+            df = dH(x, samples)
+
+            #  scale alpha based on the derivative
+            grad_norm = np.linalg.norm(df)
+            scaling_factor = np.clip(grad_norm, 0.1, 1.0)
+            alpha_i = alpha * scaling_factor
+
+            #   test stopping condition
+            E_window = Es[-10:]
+            if len(E_window) > 5:
+                std_dev_last_10 = np.std(E_window, ddof=1)
+            else:
+                std_dev_last_10 = np.inf
+
             if stop_tol:
-                if np.linalg.norm(d) < stop_tol:
+                if trace:
+                    print(
+                        f"Standard Deviation of last 10 steps: {std_dev_last_10}")
+                if std_dev_last_10 < stop_tol:
+                    if detail:
+                        print("Convergence reached based on energy stability.")
                     break
 
-            x = x - alpha * d
-            #  restrict x to be positive - theta should not be negative
-            if x <= 1e-7:
-                x = 1e-7
+            #   halt at nan values
+            if np.isnan(x.any()) or np.isinf(x.any()):
+                raise ValueError("Optimal parameters diverged to nan or inf")
 
-            if detail:
+            x = x - (alpha_i * df)
+
+            #  restrict x to be positive
+            # if (x <= 1e-7).any():
+            #     x = np.maximum(x, 1e-7)
+
+            E = np.nanmean(f.local_energy(coords=samples))
+            Es.append(E)
+
+            if trace:
                 print(
-                    f"iteration {i}, x={x}, d/dx={d}, N_s={Ns_i}, alpha={alpha}")
+                    f"iteration {i}, x={x}, d/dx={df}, N_s={Ns_i}, alpha={alpha_i}, ||dx|| = {grad_norm} \nEnergy: {E}")
+            if detail:
+                gradient_changes.append(df-df_last)
+                df_last = df
 
         end = time.perf_counter()
         time_elapsed = end - start
 
         if detail:
-            print(f"iteration number GD: {i}")
-            print(f"time elapsed GD: {time_elapsed}")
-            print(f"final derivative: {d}")
+            import matplotlib.pyplot as plt
+            gradient_changes = np.array(gradient_changes)
+            fig, ax = plt.subplots(1, 2, figsize=(12, 5))
+            fig.suptitle("Gradient Descent Minimisation")
+
+            # Plot Gradient Changes
+            iterations = range(len(gradient_changes))
+            ax[0].plot(iterations, gradient_changes[:, 0],
+                       color='r', label='dTheta1')
+            ax[0].plot(iterations, gradient_changes[:, 1],
+                       color='g', label='dTheta2')
+            ax[0].plot(iterations, gradient_changes[:, 2],
+                       color='b', label='dTheta3')
+            ax[0].set_xlabel("Iteration")
+            ax[0].set_ylabel("Change in Gradient")
+            ax[0].set_title("Gradient Changes Over Iterations")
+            ax[0].legend()
+
+            # Plot Energy History
+            ax[1].plot(range(len(Es)), Es)
+            ax[1].set_xlabel("Iteration")
+            ax[1].set_ylabel("Energy")
+            ax[1].set_title("Energy over Gradient Descent Iterations")
+
+            plt.tight_layout()
+            results = {
+                "meta": {
+                    "method": "Gradient Descent",
+                    "final_iteration_count": i,
+                    "time_elapsed": time_elapsed,
+                    "time_per_iter_avg": time_elapsed / i if i > 0 else 0
+                },
+                "final_state": {
+                    "derivative": df,
+                    "energy": Es[-1] if len(Es) > 0 else None,
+                    "standard deviation energy": std_dev_last_10,
+                    "parameters": x
+                },
+                "history": {
+                    "gradient_changes": gradient_changes,
+                    "energies": np.array(Es)
+                },
+                "figure": fig
+            }
+
+            print(
+                f"Iteration number: {results['meta']['final_iteration_count']}")
+            print(f"Time elapsed: {results['meta']['time_elapsed']:.4f}s")
+            print(
+                f"Final derivative: {results['final_state']['derivative']}")
+
+            return x, Es[-1], results
+
+        if return_error:
+            return x, np.nanmean(psi.local_energy(coords=samples)), std_dev_last_10/np.sqrt(10)
+
         return x, np.nanmean(psi.local_energy(coords=samples))
 
 

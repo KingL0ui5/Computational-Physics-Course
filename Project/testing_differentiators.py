@@ -352,54 +352,70 @@ def test_hydrogen_laplacian():
         r = np.linalg.norm(coords, axis=1)
         return np.exp(-theta * r)
 
-    r_vals = np.logspace(-4, 0.5, 200)
+    def analytic_laplacian(coords):
+        r = np.linalg.norm(coords, axis=1)
+        laplacian = (theta**2 - 2*theta/r) * np.exp(-theta * r)
+        return laplacian
+
+    def psi_hydrogen(coords):
+        r = np.linalg.norm(coords, axis=1)
+        return np.exp(-theta * r)
+
+    def analytic_laplacian(coords):
+        r = np.linalg.norm(coords, axis=1)
+        laplacian = (theta**2 - 2 * theta / r) * np.exp(-theta * r)
+        return laplacian
+
+    r_vals = np.logspace(-3, 1, 200)
     coords = np.zeros((len(r_vals), 3))
     coords[:, 0] = r_vals
 
-    stepsize = 1.805e-5
-    #  the theoretical error of the method scales with the stepsize! That allows you to set a smaller threshold
-    eps = 1e-15
+    lap_analytic = analytic_laplacian(coords)
 
-    d2psi_num = differentiators.double_central_difference(
-        psi_hydrogen, coords, h=[stepsize, stepsize, stepsize], order=8)
-    laplacian_num = np.sum(d2psi_num, axis=1)
+    h_vals = np.logspace(-7, -1.5, 500)
 
-    psi_vals = psi_hydrogen(coords)
-    kinetic_num = -0.5 * (laplacian_num / psi_vals)
-    potential = -1.0 / (r_vals + eps)
+    orders = [2, 4, 6, 8, 10]
+    errors = {order: [] for order in orders}
 
-    from hydrogen import hydrogen_wavefunction
-    filtered_psi = hydrogen_wavefunction(theta)
-    elocal_filtered = filtered_psi.local_energy(coords)
+    for h in h_vals:
+        h_vec = [h, h, h]
 
-    elocal_num = kinetic_num + potential
+        for order in orders:
+            d2psi_num = differentiators.double_central_difference(
+                psi_hydrogen, coords, h=h_vec, order=order
+            )
+            lap_num = np.sum(d2psi_num, axis=1)
 
-    elocal_analytic = np.full_like(r_vals, -0.5)
+            error_val = rms(np.abs(lap_num - lap_analytic))
+            errors[order].append(error_val)
 
-    plt.figure(figsize=(10, 6))
+    plt.figure(figsize=(10, 7))
 
-    plt.plot(r_vals, elocal_num,
-             label=f"Numerical $E_L$ (Finite Diff, h={stepsize})", color='red')
-    plt.plot(r_vals, elocal_filtered,
-             label=f"Numerical $E_L$ filtered (Finite Diff, h={stepsize})", color='blue')
-    plt.plot(r_vals, elocal_analytic, label="Analytic $E_L$ (Exact = -0.5)",
-             color='green', linestyle='--', linewidth=2)
+    for order in orders:
+        plt.plot(h_vals, errors[order],
+                 label=f"Central Difference O($h^{{{order}}}$)")
 
-    plt.xscale('log')
-    plt.xlabel('$r$')
-    plt.ylabel('Local Energy $E_L$')
-
-    plt.ylim(-2, 2)
+    plt.xscale("log")
+    plt.yscale("log")
+    plt.xlabel("Step size $h$")
+    plt.ylabel("RMS Absolute Error in Laplacian")
+    plt.title("Hydrogen Laplacian Error vs Step Size")
     plt.grid(True, which="both", ls="--", alpha=0.5)
     plt.legend()
-
-    print(
-        f"Max numerical energy error near r=0: {np.max(np.abs(elocal_num - (-0.5))):.2f}")
+    plt.tight_layout()
     plt.show()
+
+    print("Optimal step sizes and minimum errors:")
+    for order in orders:
+        errs = np.array(errors[order])
+        min_idx = np.argmin(errs)
+        min_h = h_vals[min_idx]
+        min_err = errs[min_idx]
+        print(f"  Order {order}: Min Error = {min_err:.3e} at h = {min_h:.3e}")
 
 
 if __name__ == "__main__":
     # test_first_order_diffrentiators()
     # test_second_order_diffrentiators()
-    test_diffrentiators_3d()
-    # test_hydrogen_laplacian()
+    # test_diffrentiators_3d()
+    test_hydrogen_laplacian()
