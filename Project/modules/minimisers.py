@@ -107,7 +107,7 @@ class hydrogen_molecule_minimisers:
 
         elif method == "MALA":
             samples, acceptance = MALA(f=wavefunction_wrapper, x_0=r_0, xmin=[-10.]*6, xmax=[
-                10.]*6, timestep=0.1, N=Ns, order=8, stepsize=8.008e-03, return_acceptance=True)
+                10.]*6, timestep=0.25, N=Ns, order=8, stepsize=8.008e-03, return_acceptance=True)
 
         elif method == "sMALA":
             samples, acceptance = stochasticMALA(f=wavefunction_wrapper, x_0=r_0, xmin=[-10.]*6, xmax=[
