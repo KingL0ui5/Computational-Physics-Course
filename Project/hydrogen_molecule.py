@@ -176,12 +176,12 @@ def test_SR():
     q1 = [0, 0, 2]
     q2 = [0, 0, 0]
 
-    N_s = 10000
+    N_s = 100000
     thetas_0 = [1.3] * 3  #  for minimiser
     alphas = [.1]  #  np.linspace(0.1, 1., 20)
     for alpha in alphas:
         theta_min, E_min, results = minimisers.stochastic_reconfiguration(q1, q2, x_0=thetas_0,
-                                                                          alpha=alpha, stop_tol=0.001, N_s=N_s, sampling="sMALA", detail=True, trace=True, max_iter=30)
+                                                                          alpha=alpha, stop_tol=0.005, N_s=N_s, sampling="MH", detail=True, trace=True, max_iter=30)
 
         print(f"minimum theta: {theta_min}, minimum energy: {E_min}")
         results['figure'].show()
@@ -227,9 +227,9 @@ def test_minimisers_convergence(alpha=0.1):
         q1, q2, x_0=thetas_0, alpha=alpha, stop_tol=stop_tol, N_s=N_s, detail=True, max_iter=100, method='DFP'
     )
 
-    # _, _, results['Quasi-Newton BFGS'] = minimisers.quasi_newton(
-    #     q1, q2, x_0=thetas_0, alpha=alpha, stop_tol=stop_tol, N_s=N_s, detail=True, max_iter=100, method='BFGS'
-    # )
+    _, _, results['Quasi-Newton BFGS'] = minimisers.quasi_newton(
+        q1, q2, x_0=thetas_0, alpha=alpha, stop_tol=stop_tol, N_s=N_s, detail=True, max_iter=100, method='BFGS'
+    )
 
     _, _, results['Simulated Annealing'] = minimisers.simulated_annealing(
         q1, q2, x_0=thetas_0, initial_temp=0.5, cooling_rate=0.95, max_iter=200, Ns=10000, std=0.05, detail=True
@@ -251,23 +251,23 @@ def test_minimisers_convergence(alpha=0.1):
     plt.tight_layout()
     plt.savefig(f"convergence_comparison_alpha_{alpha}.png")
 
-    # def serialise(obj):
-    #     if isinstance(obj, np.ndarray):
-    #         return obj.tolist()
-    #     if isinstance(obj, (np.float64, np.int64)):
-    #         return obj.item()
-    #     if isinstance(obj, dict):
-    #         return {k: serialise(v) for k, v in obj.items()}
-    #     if isinstance(obj, list):
-    #         return [serialise(v) for v in obj]
-    #     return obj
+    def serialise(obj):
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        if isinstance(obj, (np.float64, np.int64)):
+            return obj.item()
+        if isinstance(obj, dict):
+            return {k: serialise(v) for k, v in obj.items()}
+        if isinstance(obj, list):
+            return [serialise(v) for v in obj]
+        return obj
 
-    # try:
-    #     import json
-    #     with open(f"convergence_results_alpha_{alpha}.json", 'w') as f:
-    #         json.dump(serialise(results), f, indent=4)
-    # except:
-    #     print("Failed to save results as JSON. Skipping...")
+    try:
+        import json
+        with open(f"convergence_results_alpha_{alpha}.json", 'w') as f:
+            json.dump(serialise(results), f, indent=4)
+    except:
+        print("Failed to save results as JSON. Skipping...")
 
     print("\n" + "="*50)
     print("FINAL RESULTS SUMMARY")
@@ -276,7 +276,7 @@ def test_minimisers_convergence(alpha=0.1):
     for method_name, result_hash in results.items():
         final_theta = result_hash['final_state']['parameters']
         final_energy = result_hash['final_state']['energy']
-        energy_error = result_hash['final_state']['energy_error']
+        energy_error = result_hash['final_state']['standard deviation energy']
 
         print(f"{method_name}")
         print(f"Minimum Theta : {final_theta}")
@@ -287,28 +287,48 @@ def test_minimisers_convergence(alpha=0.1):
 
 def ground_state_energies():
     Ns = 100000
-    r_0 = np.linspace(0.5, 3., 100)
+    r_0 = np.linspace(0.5, 3., 60)
     q1 = [0.] * 3
     q2 = [[0., 0., i] for i in r_0]
 
     energies = []
+    thetas = []
     count = 0
     for q2_i in q2:
         count += 1
         thetas_0 = [1.]*3  #  for minimiser
-        theta_min, E_min = minimisers.simulated_annealing(
-            q1, q2_i, x_0=thetas_0, initial_temp=0.5, cooling_rate=0.95, max_iter=200, Ns=Ns, std=0.05, detail=False)
+        # theta_min, E_min = minimisers.simulated_annealing(
+        #     q1, q2_i, x_0=thetas_0, initial_temp=0.5, cooling_rate=0.95, max_iter=200, Ns=Ns, std=0.05, detail=False)
 
-        # theta_min, E_min = minimisers.stochastic_reconfiguration(
-        #     q1, q2_i, x_0=thetas_0, alpha=0.02, stop_tol=1e-3, N_s=Ns, detail=False, max_iter=50)
+        # theta_min, E_min = minimisers.quasi_newton(
+        #     q1, q2_i, x_0=thetas_0, alpha=0.1, stop_tol=0.005, N_s=Ns, detail=False, max_iter=100)
+
+        theta_min, E_min = minimisers.stochastic_reconfiguration(
+            q1, q2_i, x_0=thetas_0, alpha=0.2, stop_tol=0.005, N_s=Ns, detail=False, sampling="MH", max_iter=100)
+        thetas.append(theta_min)
         energies.append(E_min)
         if count % 10 == 0:  #  checkpoint at every 10 steps
-            np.savetxt(f"SA_output_{Ns}.txt", [energies, r_0[:len(energies)]])
+            try:
+                np.savetxt(f"SR_output_{Ns}.txt", [
+                           energies, r_0[:len(energies)]])
+                np.savetxt(f"SR_Thetas_{Ns}.txt",
+                           thetas[:, 0], thetas[:, 1], thetas[:, 2])
+
+            except:
+                print("Failed to save final results.")
+                print(energies, r_0, thetas)
 
         print(
             f"iteration: {count}, q2: {q2_i}, minimum theta: {theta_min}, minimum energy: {E_min}")
+    try:
+        np.savetxt(f"SR_output_{Ns}.txt", [energies, r_0[:len(energies)]])
+        np.savetxt(f"SR_Thetas_{Ns}.txt",
+                   thetas[:, 0], thetas[:, 1], thetas[:, 2])
 
-    np.savetxt(f"SA_output_{Ns}.txt", [energies, r_0[:len(energies)]])
+    except:
+        print("Failed to save final results.")
+        print(energies, r_0, thetas)
+
     energies = np.array(energies)
     from scipy.optimize import curve_fit
     f = hlp.V_morse
@@ -326,7 +346,9 @@ def ground_state_energies():
 
 
 if __name__ == '__main__':
-    # alphas = [0.05, 0.1, 0.3, 0.01, 0.2]
+    alphas = [0.05, 0.1, 0.3, 0.01, 0.2]
     # for alpha in alphas:
     #     test_minimisers_convergence(alpha)
-    test_QN()
+    # # test_SR()
+
+    ground_state_energies()
