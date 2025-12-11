@@ -309,24 +309,29 @@ def ground_state_energies():
         energies.append(E_min)
         if count % 10 == 0:  #  checkpoint at every 10 steps
             try:
+                thetas = np.array(thetas)
+                energies = np.array(energies)
                 np.savetxt(f"SR_output_{Ns}.txt", [
                            energies, r_0[:len(energies)]])
                 np.savetxt(f"SR_Thetas_{Ns}.txt",
                            thetas[:, 0], thetas[:, 1], thetas[:, 2])
 
-            except:
-                print("Failed to save final results.")
+            except Exception as e:
+                print(
+                    f"Failed to save final results at checkpoint, exception: {e}")
                 print(energies, r_0, thetas)
 
         print(
             f"iteration: {count}, q2: {q2_i}, minimum theta: {theta_min}, minimum energy: {E_min}")
     try:
+        thetas = np.array(thetas)
+        energies = np.array(energies)
         np.savetxt(f"SR_output_{Ns}.txt", [energies, r_0[:len(energies)]])
         np.savetxt(f"SR_Thetas_{Ns}.txt",
                    thetas[:, 0], thetas[:, 1], thetas[:, 2])
 
-    except:
-        print("Failed to save final results.")
+    except Exception as e:
+        print(f"Failed to save final results, exception: {e}")
         print(energies, r_0, thetas)
 
     energies = np.array(energies)
