@@ -662,7 +662,7 @@ class hydrogen_molecule_minimisers:
                 raise ValueError("Optimal parameters diverged to nan or inf")
 
             v = forgetting * v + (1 - forgetting)*(df**2)
-            x = x - (alpha / np.sqrt(v)) * df
+            x = x - (alpha / (np.sqrt(v) + 1e-8)) * df
 
             #  restrict x to be positive
             if (x <= 1e-7).any():

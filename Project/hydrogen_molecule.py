@@ -207,7 +207,7 @@ def test_QN():
 def test_minimisers_convergence(alpha=0.1):
     q1 = [0, 0, 2]
     q2 = [0, 0, 0]
-    N_s = 100000
+    N_s = 10000
     thetas_0 = [1.3] * 3
     stop_tol = None
 
@@ -265,7 +265,8 @@ def test_minimisers_convergence(alpha=0.1):
         summary_data[method_name] = {
             "iteration_number": data['meta']['final_iteration_count'],
             "E_min": serialise(data['final_state']['energy']),
-            "thetas": serialise(data['final_state']['parameters'])
+            "thetas": serialise(data['final_state']['parameters']),
+            "Es_history": serialise(data['history']['energies'])
         }
 
     try:
@@ -447,6 +448,6 @@ if __name__ == '__main__':
     # for alpha in alphas:
     #     test_minimisers_convergence(alpha)
     # # test_SR()
-    
-    test_minimisers_convergence(alpha=0.2)
+
+    test_minimisers_convergence(alpha=0.1)
     # parallel_ground_state_energies(n_procs=12)
