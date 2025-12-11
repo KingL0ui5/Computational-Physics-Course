@@ -300,7 +300,7 @@ sorting=ynt
 
 \section{Introduction}
     \IEEEPARstart{I}{\MakeLowercase{n}} many physical systems, the Schrödinger equation does not have analytical solutions, requiring the use of numerical approximation. Furthermore, in many multi-particle systems, the dimensionality of the Hilbert space scales exponentially with the number of particles. Variational Quantum Monte Carlo (VMC) is a useful technique for extracting energy predictions from the Schrödinger Equation in these cases by stochastic means. In many cases, it is most useful to determine the ground state and its associated energy. The variational principle [REF variational principle] states that for any trial wavefunction, the expectation value of the Hamiltonian provides an upper bound to the true ground-state energy. This is therefore approximated by minimising the expectation value of the Hamiltonian operator, 
-    \begin{equation} \label{hamiltonian}
+    \begin{equation} \label{hamiltonian expecation value}
         \langle H \rangle =
         \frac{
         \int d^{3}r_{1} \ldots d^{3}r_{N}\,\psi^{*}(r_{1},\ldots,r_{N})\,H\psi(r_{1},\ldots,r_{N})
@@ -319,9 +319,9 @@ sorting=ynt
     Most of the work involved lies in evaluating the integrals in Eq.~\ref{hamiltonian}. Owing to their high dimensionality, standard numerical integration techniques such as Newton–Cotes quadrature are impractical, having a computational cost that grows exponentially with dimension. For the case of the H$_2$ molecule, the effective dimensionality, $n_d = 6$. This makes stochastic sampling techniques far more suitable for solving the integral.
 
     To derive the method used to evaluate the Hamiltonian expectation value, we first consider a quantity defined as the local energy,
-    \begin{equation*}
+    \begin{equation} \label{local energy}
         E_l = \frac{\hat{H} \psi(\boldsymbol{R})}{\psi(\boldsymbol{R})},
-    \end{equation*} 
+    \end{equation} 
     \noindent where we have abbreviated $\{r_1, ..., r_n\}$ as $\boldsymbol{R}$. We can then substitute this result back into Eq.~\ref{hamiltonian}, resulting in, 
     \begin{equation} \label{H_exp}
         \langle H \rangle =
@@ -340,14 +340,14 @@ sorting=ynt
         \langle H \rangle = \int d\mathbf{R} \, \rho(\mathbf{R}) E_L(\mathbf{R}).
     \end{equation*}
     \noindent Then, following the treatment of [REF], we can use the Monte Carlo approximation of a probability distribution to produce,
-    \begin{equation}
+    \begin{equation} \label{MC hamiltonian expectation}
         \langle H \rangle \approx \frac{1}{N_s} \sum_{i=1}^{N_s} E_l(\boldsymbol{R}^{(i)}) \pm \frac{1}{\sqrt{N_s}}\sigma_{(E_l)},
     \end{equation}
 
     \noindent where $\boldsymbol{R}^{(i)}$ are random samples distributed by the PDF, $\rho$, $N_s$ is the number of samples and $\sigma_{(E_l)}$ is the standard deviation of the local energies.
     \subsection{The Quantum Harmonic Oscillator}
     
-        \noindent The first system which we consider in this paper is the 1D quantum harmonic oscillator, with the Schrödinger Equation, 
+        \noindent In these works, the quantum harmonic oscillator is used as a benchmark system to validate sampling procedures and local energy approximations. It has the Schrödinger equation,
         \begin{equation} \label{QHO Schrodinger}
             -\frac{\hbar^{2}}{2 m_{e}} \frac{d^{2}}{d x^{2}} \psi(x)
             + \frac{1}{2} m_{e} \omega^{2} x^{2} \psi(x)
@@ -374,8 +374,8 @@ sorting=ynt
 
     \subsection{The Hydrogen Atom}
         \noindent In this section we consider the Hydrogen atom under the Born-Oppenheimer approximation. In Hartree atomic units, the Hamiltonian is
-        \begin{equation}
-            \hat{H}_{\text{elec}} = -\frac{1}{2} \nabla^2 - \frac{1}{r},
+        \begin{equation} \label{hydrogen atom hamiltonian}
+            \hat{H} = -\frac{1}{2} \nabla^2 - \frac{1}{r},
         \end{equation}
         \noindent where energies are measured in Hartrees [REF hartrees], where $E_h = m_e e^4 / [(4\pi\epsilon_0)^2 \hbar^2]$, and $r=\sqrt{x^2 +y^2 + z^2}$. We proceed by expressing the parametrised wavefunction in terms of the variable $\theta$ in the ansatz,
         \begin{equation*}
@@ -415,11 +415,11 @@ sorting=ynt
     \subsection{Metropolis-Hastings Sampling}
         One of the principal methods used in this simulation was the Metropolis-Hastings (MH) sampling algorithm, which proved particularly effective in the H$_2$ scenario, where the Jastrow-Slater ansatz is challenging to sample by other means. Importantly, the wavefunction can be sampled without the need to calculate the non-trivial normalisation constant. % check this
 
-        To ensure effective sampling of the wavefunction, the proposal function was tuned to maintain the canonical acceptance rate of 0.234 [ref] [FIG? - include a small justification on proposal function] whilst maintaining low autocorrelation. This was also confirmed visually and using STATISTICAL TESTS OF TARGET? initially for the quantum harmonic oscillator. 
+        To ensure effective sampling of the wavefunction, the proposal function was tuned to maintain the canonical acceptance rate of 0.234 [ref] [FIG? - include a small justification on proposal function] whilst maintaining low autocorrelation. This was also confirmed visually and using STATISTICAL TESTS OF TARGET? initially for the quantum harmonic oscillator. We were motivated to reduce autocorrelation as far as possible. This quantity determines the degree of statistical independence between samples. If samples are highly autocorrelated, they have a reduced effective sample size, $N_{eff} = N_s / 2\tau$ where $\tau$ is the autocorrelation time. Because the standard error scales as  $\sigma_{(E_l)} \propto 1/\sqrt{N_{eff}}$, it is important to keep this low.
 
         The number of steps in the sampler, $N_s$, is the main factor affecting both the numerical error and runtime of the simulation. Therefore, its tuning is an important consideration. From visual analysis, sample sizes below 10,000 produced distributions with slight deviation from the true function, whilst sample sizes in excess of 100,000 represented it well. However, the difference in numerical error with the different sample numbers was evident. When computing the ground state energy for the Hydrogen atom, $N_s = 10,000$ produced an error of [ERROR], whilst $N_s = 100,000$ produced only [ERROR]. Therefore, $N_s = 100,000$ was used in the optimisation of the hydrogen molecule due to the necessity of accurate numerical calculations. Due to its significance, further rigorous optimisation of this parameter is warranted. 
 
-        The use of thinning substantially reduced autocorrelation, at the expense of fewer samples for a given runtime. [FIGURE] The other benefit of acceptance based sampling in quantum systems is that there is no requirement to specify the limits on the sample coordinates, as the wavefunction PDFs are required to approach zero as $x\rightarrow\pm\infty$.
+        The use of thinning substantially reduced autocorrelation, at the expense of fewer samples for a given runtime. [FIGURE] The other benefit of acceptance-based sampling in quantum systems is that there is no requirement to specify the limits on the sample coordinates, as the wavefunction PDFs are required to approach zero as $x\rightarrow\pm\infty$.
 
         A burn in period was also removed from the start of the sampled points, thereby preventing the starting configuration from introducing bias into the final sampled distribution. This burn in period was chosen to exceed the correlation time, $\tau$, to ensure that the memory of the initial configuration had been lost before the samples were recorded. The correlation time was determined for each system before deciding on the burn in period.
 
@@ -446,10 +446,10 @@ sorting=ynt
 
         Additionally, whilst the Gibbs sampling method facilitates a 100\% acceptance rate, it is not viable for this case. It requires a conditional probability distribution that is precluded by the non-linear Jastrow factor in the ansatz used for the hydrogen molecule. % potentially exclude?
         
-\section{Minimiser Functions}
-    The most complex part of the simulation presented here was the choice of minimiser function used to obtain the ground state energy. For a well-behaved parameter space such as that in the ansatz for the hydrogen atom situation, convergence on the minima was easily achieved using standard methods. However, for the H$_2$ system, achieving convergence proved substantially more challenging due to the increased dimensionality of the parameter space.
+\section{Minimiser Functions} \label{minimisers}
+    The most complex part of the simulation presented here was the choice of minimiser function used to obtain the ground state energy. For a well-behaved parameter space such as that in the ansatz for the hydrogen atom situation, convergence on the minima was easily achieved using standard methods. However, for the H$_2$ system, achieving convergence proved substantially more challenging due to the increased dimensionality of the parameter space. In addition to those listed below, the method of simulated annealing was used as a minimiser, however the selection of the annealing schedule and parameters relied heavily on heuristics, making it difficult to generalise and rigorously justify.
 
-    \subsection{Gradient Descent}
+    \subsection{Gradient Descent} \label{gradient descent}
         The simplest version of gradient descent (GR) operates by iteratively moving in the direction of steepest descent, as determined by the negative gradient of the objective function, which can be determined using the finite difference methods defined before. The main parameter to tune in this algorithm is the 'learning rate', which determines the magnitude of the motion towards the minima. This property is shared by all variants of this method, and in the present implementation, is adjusted according to the magnitude of the last calculated gradient. 
         \begin{equation} \label{learning_rate}
             \alpha_i = \alpha \, \min\!\left( 1,\; \max\!\left( 0.1,\; \lVert \nabla f \rVert \right) \right).
@@ -471,7 +471,7 @@ sorting=ynt
             \end{cases}
         \end{equation*}
 
-        \noindent where $y_k = \nabla f(x_{k+1}) - \nabla f(x_k)$, the difference in gradients and $s_k = x_{k+1} - x_k$, the difference in parameters. The parameters are then updated by the Hessian applied to the evaluated gradient. The use of Hessian approximation here produces rapid convergence of the method, while eliminating the need for noisy second derivative calculations derived from monte carlo samples. 
+        \noindent where $y_k = \nabla f(x_{k+1}) - \nabla f(x_k)$, the difference in gradients and $s_k = x_{k+1} - x_k$, the difference in parameters. The parameters are then updated by the Hessian applied to the evaluated gradient. The use of Hessian approximation here produces rapid convergence of the method, while eliminating the need for noisy second derivative calculations derived from Monte Carlo samples. 
         
     \subsection{Stochastic Reconfiguration}
         The stochastic reconfiguration (SR) method can be subsumed as a form of gradient descent. Due to the inclusion of the Jastrow factor in the wavefunction ansatz, the parameters $\theta_{2,3}$ have a more complex relationship than standard Euclidean gradients can account for, necessitating the use of the Stochastic Reconfiguration (SR) metric. The derivation of this follows the treatment of [REF VMC cambridge] considers a perturbation of the wavefunction $\psi(\boldsymbol{R^{(i)};\theta}) \rightarrow \psi(\boldsymbol{R^{(i)};\theta + \delta\theta})$, and the distance introduced by the perturbation, $\delta s^2$. The perturbation is then expanded, eventually producing a quadratic form, 
@@ -504,17 +504,13 @@ sorting=ynt
     % now is an opportunity to justify the specific parameters and methods for each system
     % include autocorrelation plots for each? 
     
-    \subsection{The Quantum Harmonic Oscillator}
-        In these works, the quantum harmonic oscillator is used as a benchmark system to validate sampling procedures and local energy approximations corresponding to the energy eigenstates of Eq.~\ref{QHO Schrodinger}. 
-        
-        To determine the local energies of the eigenstates $\braket{H}$, MALA sampling was used. Though the low probability regions are undersampled compared to standard MH, MALA samples the areas that contribute most to the energy evaluation are well sampled. [FIG show both MALA and MH ] shows examples of such sampling for eigenstate $n=3$. 
+    \subsection{The Quantum Harmonic Oscillator}      
+        To determine the local energies of the eigenstates $\braket{H}$, MALA sampling was used. Though low-probability regions were undersampled compared to standard MH, MALA sampled the areas contributing most to the energy evaluation well. [FIG show both MALA and MH ] shows examples of such sampling for eigenstate $n=3$. 
         
          % consider having this figure in the sampling section.
-        MALA struggles in some cases for the quantum harmonic oscillator, if the initial guess is at a node of the function (where $\psi(x) \approx 0$), the drift force, $F(x) \rightarrow \infty$. This pushes the proposal out of the range of the function; thus, it and all subsequent proposals are rejected immediately. This is resolved by intelligently choosing an initial guess away from nodes of the functions. $x=1.5$ was sufficient for the cases considered here. Nonetheless, the correlation time was calculated to be $\tau \approx val$, motivating the choice of a burn in period of, $burn in$
+        MALA struggled in some cases with the quantum harmonic oscillator. If the initial guess is at a node of the function (where $\psi(x) \approx 0$), the drift force, $F(x) \rightarrow \infty$. This pushes the proposal out of the range of the function; thus, it and all subsequent proposals are rejected immediately. This was resolved by guessing intelligently away from nodes of the functions. $x=1.5$ was sufficient for the cases considered here. The correlation time was calculated to be $\tau \approx val$, motivating the choice of a burn in period of, $burn in$.
         
-        Furthermore, the timestep is set to optimise the acceptance rate as mentioned in section~\ref{sampling}. This was optimised similarly as in the H$_2$ case, producing an optimal timestep of $\Delta=0.15$.
-       
-        Both methods produce similar errors from the known energies given by Eq.~\ref{QHO eigenstates}, as shown in [TABLE?].
+        Furthermore, the timestep was set to optimise the acceptance rate as discussed in section~\ref{sampling}, producing an optimal timestep of $\Delta=0.15$. [OPTIMISING ACCEPTANCE FIGURE?]
         
     \subsection{The Hydrogen Atom}
         % for both proceeding sections, choose whether to use MALA or MH. If MH you must justify the thinning based on the autocorrelation
@@ -526,14 +522,20 @@ sorting=ynt
             \left[ 
             \big( E_l(\mathbf{R}^{(i)}) - \langle H \rangle \big)
             \frac{\partial_{\theta}\psi(\mathbf{R}^{(i)};\theta)}{\psi(\mathbf{R}^{(i)};\theta)}
-            \right].
+            \right],
         \end{equation}  
-        though, this derivation will not be shown here. For this system, the derivative above used in the standard variant of the gradient descent method, tuned as previously discussed, will be shown to produce sufficient convergence resulting in minimal error on the value of $E_{min}$. In this case, the algorithm is stopped after a number of iterations, rather than based on the magnitude of the derivative. This allows us to reach the maximal precision permitted by the noise in the derivative.
+        though this derivation will not be shown here. The local energy, $E_l$ is straightforward to calculate using Eqs.~\ref{hydrogen atom hamiltonian} and ~\ref{local energy}, using second derivative central difference order 8, with a stepsize of [stepsize] to evaluate the Laplacian at the wavefunction parametrised by the current $\theta$. $\partial_{\theta}\psi(\mathbf{R}^{(i)};\theta)$ is calculated using a first derivative central difference method. 
+        
+        For this system, the derivative above used in the standard variant of the gradient descent method, tuned as discussed in ~\ref{gradient descent}, will be shown to produce sufficient convergence resulting in minimal error on the value of $E_{min}$. In this case, the algorithm is stopped after a number of iterations, rather than based on the stability of the last few energy values. This allows us to reach the maximal precision permitted by the noise in the derivative. The error on $E_{min}$ is calculated using the standard deviation of the last 10 points, summed with the standard error of the Monte Carlo samples on the local energy. Furthermore, to account for the autocorrelation of the samplers, $N_s$ in ~\ref{MC hamiltonian expectation} is replaced with the effective sample size, $N_{eff}$ of the samples. 
 
-        For the random samplers, the starting point was initialised to $x=[1,1,1]$, with a burn-in time $burnin$, resulting from the correlation time, $\tau=$
+        For the random samplers, the starting point was initialised to $x=[1,1,1]$, with a burn-in time $burnin$, resulting from the correlation time, $\tau=$. Here, sMALA was used once again
 
     \subsection{The Hydrogen Molecule}
-        For the hydrogen molecule, the presence of two electrons increases the effective dimensionality of the sampling space to 6. Regardless, by partitioning each sampled configuration into the electron coordinates, $r_1$ and $r_2$, the remaining components of the calculation maintain their three-dimensional structure. Some examples of electron spatial probability distributions are included in [FIGURE]. 
+        For the hydrogen molecule, the presence of two electrons increases the effective dimensionality of the sampling space to 6. Regardless, by partitioning each sampled configuration into the electron coordinates, $r_1$ and $r_2$, the remaining components of the calculation maintain their three-dimensional structure. Some examples of electron spatial probability distributions are included in [FIGURE]. It was found that sMALA sampling was far too slow for this case, producing far fewer samples for the same runtime. This was due to the significantly increased computational complexity of the wavefunction in question, resulting in much slower derivative calculations for the force term. sMALA also consistently resulted in estimates of $E_l$ that were far below what was expected for the minimum energy. This was attributed to the preferential sampling of points close to the nucleus, where the local energy diverges. This caused a skew in the expectation value $\langle E \rangle$ that made MALA and its variants unsuitable for the H$_2$ model.
+
+        Therefore, MH sampling was used in the calculation. A thinning value of 20 was used, which would retain enough samples for an accurate approximation of $E_l$ whilst significantly reducing the autocorrelation.
+        
+        Once more, MH was initialised at $x=1$ for each coordinate. The samples produced a correlation time of $\tau = $ resulting in the choice of burn-in period, $burnin$.
 
         Furthermore, due to the expanded parameter space in $\theta_{1,2,3}$, the use of Eq.~\ref{H_partial_theta} requires 3 separate evaluations of the local energy to obtain the derivative with respect to each parameter, $\nabla_{\theta_i}$. The use of Eq.~\ref{H_partial_theta} resulted in significant noise in the derivative calculations, thereby preventing gradient-based minimisation algorithms from converging. [FIG? non convergence due to bad derivative]. Instead, a slight rearrangement of Eq.~\ref{H_partial_theta} produces, 
         \begin{equation} \label{H_log_gradient}
@@ -541,12 +543,14 @@ sorting=ynt
         \end{equation}
         which indeed, only requires one evaluation of the local energy at the coordinates $\boldsymbol{R^{(i)}}$. This results in much less noise in the calculation of the gradient, and thus convergence of the minimisers. 
 
-        Once more, the random samplers were initialised at $x=1$ for each coordinate. This system produced a correlation time of $\tau = $ resulting in the choice of burn-in period, $burnin$.
+        In this system, the choice of minimiser is somewhat more complicated; [FIG] shows the convergence properties of the methods under consideration. Though simulated annealing converges slowly, its final energy is highly stable and within the expected range. However, the tuning of this method is purely heuristic, raising concerns over the validity of the parameters for other interatomic distances. The much slower convergence rate also resulted in much longer runtimes due to the requirement for one sample per iteration of the minimiser.   
+        
+        Otherwise, it can be seen from [FIG] that both SR and RMSProp GR have the best convergence properties, settling to a lower minimum with much less noise than other methods. SR converges remarkably rapidly, typically reaching a stable energy within less than 5 iterations, and whilst RMSProp does not converge as quickly, it settles to a reasonably stable energy.
+        
+        Both QN methods performed poorly. Despite converging quickly, they produced unstable $E_l$ values, with runtimes more than twice that of other methods. For the above reasons, we proceeded with the stochastic reconfiguration and simulated annealing methods to determine the morse potential. 
 
-        In this system, the choice of minimiser is somewhat more complicated, [FIG] shows the convergence properties of the methods in consideration..... % proceed to justify stochastic regression over simulated annealing
-
-        % justify derivative choices for MALA, E_l, minimiser gradient 
-        % justify minimiser
+        
+        %caption? 
 
         
 
@@ -555,10 +559,37 @@ sorting=ynt
         
     
 \section{Evaluation of Results}
+    \subsection{The Quantum Harmonic Oscillator}
+        Both methods produce similar errors from the known energies given by Eq.~\ref{QHO eigenstates}, as shown in~\ref{QHO energies}, with errors given by Eq.~\ref{MC hamiltonian expectation}. 
     
+            \begin{table}[h!]
+                \centering
+                \setlength{\tabcolsep}{3pt}
+                \caption{Quantum harmonic oscillator simulated and theoretical energy states with statistical error. Absolute error between true and calculated for comparison.}
+                \label{QHO energies}
+                \begin{tabular}{c c l c}
+                    \hline
+                    \hline
+                    $n$ & Theoretical Energy ($E_h$) & \multicolumn{1}{c}{Calculated Energy ($E_h$)} & Absolute Error ($E_h$) \\
+                    \hline
+                    0 & 0.5 & $0.499999997 \pm 3.8 \times 10^{-9}$ & $2.52 \times 10^{-9}$ \\
+                    1 & 1.5 & $1.500000022 \pm 6.4 \times 10^{-9}$ & $2.18 \times 10^{-8}$ \\
+                    2 & 2.5 & $2.500000014 \pm 6.5 \times 10^{-9}$ & $1.39 \times 10^{-8}$ \\
+                    3 & 3.5 & $3.500000096 \pm 8.8 \times 10^{-9}$ & $9.55 \times 10^{-9}$ \\
+                    4 & 4.5 & $4.500000001 \pm 1.2 \times 10^{-8}$ & $1.40 \times 10^{-9}$ \\
+                    \hline
+                    \hline
+                \end{tabular}
+            \end{table}
+            
+    \subsection{The Hydrogen Atom}
+        [FIG] shows the trend of $\braket{H}$ over iterations for the Hydrogen Atom. Values of ... were obtained for the ground state energy of the hydrogen atom, with associated errors estimated from the standard error of the convergence instability and the error on $E_l$ introduced from~\ref{MC hamiltonian expectation}, accounting for statistical deviance and autocorrelation.
+
+    
+    \subsection{The Hydrogen Molecule}
+        [FIG] depicts the morse potential produced by the stochastic reconfiguration. Despite yeilding a similar potential, Simulated Annealing produces nonsensical variations in theta under variation of interatomic distance that manifest as discontinuous jumps in the parameter space [FIG]. This indicates that SA fails to converge consistently on the global minima. Conversely, despite some noise, the evolution of the parameters produced by SR shows an evident trend [FIG]. The fit parameters produced by SR were [FIT PARAMS], with associated errors estimated in the same way as for the hydrogen atom for each $E_{min}$ that was computed.
+
 \section{Conclusion}
-
-
 
 % that's all folks
 \end{document}
