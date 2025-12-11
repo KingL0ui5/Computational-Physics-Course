@@ -9,16 +9,18 @@ def plot_energies():
     thetas_filename = "/Users/louis/Library/CloudStorage/OneDrive-ImperialCollegeLondon/Computer Science/Computational Physics/Project/morse_data/SR_Parameters_100000.txt"
 
     data = pd.read_csv(energy_filename, sep='\s+', comment='#', names=[
-                       'Distance(a.u.)', 'Energy(Hartree)'])
+                       'Distance(a.u.)', 'Energy(Hartree)', 'Energy_Error(Hartree)'])
 
     r_0 = data['Distance(a.u.)'].to_numpy()
     energies = data['Energy(Hartree)'].to_numpy()
+    energy_err = data['Energy_Error(Hartree)'].to_numpy()
+
     filt = energies < 0.
     r_0_filt = r_0[filt]
     energies_filt = energies[filt]
 
-    plt.plot(r_0, energies, label="Simulated Annealing Energies",
-             marker='o', linestyle='None', markersize=4)
+    plt.errorbar(r_0, energies, yerr=energy_err, label="Simulated Annealing Energies",
+                 marker='o', linestyle='None', markersize=4)
     plt.xlabel("$r_0$ (a.u.)")
     plt.ylabel("Energy")
     plt.title("Hydrogen Molecule Energy vs Interatomic Distance")
