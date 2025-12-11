@@ -78,7 +78,7 @@ def ground_state():
         hydrogen_wavefunction, hydrogen_energy_grad, x_0=theta0, alpha=0.5, trace=True, N_s=100000, max_iter=50, stop_tol=1e-3, return_error=True, sampling="MH")
 
     print(
-        f"minimum value of theta: {theta_min} \nminimum energy: {E_min} \nerror estimate: {E_err}")
+        f"minimum value of theta: {theta_min} \nminimum energy: {E_min} ± {E_err}")
 
 
 if __name__ == "__main__":

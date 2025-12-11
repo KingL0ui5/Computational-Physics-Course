@@ -111,9 +111,7 @@ class hydrogen_molecule_minimisers:
 
         elif method == "sMALA":
             samples, acceptance = stochasticMALA(f=wavefunction_wrapper, x_0=r_0, xmin=[-10.]*6, xmax=[
-                10.]*6, timestep=0.25, N=Ns, order=8, stepsize=8.008e-03, p_kick=0.4, kick_sigma=0.2, return_acceptance=True)
-            if detail:
-                print(f"MALA Acceptance Rate: {acceptance*100:.2f}%")
+                10.]*6, timestep=0.2, N=Ns, order=8, stepsize=8.008e-03, p_kick=0.4, kick_sigma=0.2, return_acceptance=True)
         r = samples[len(samples)//10:]
         r1, r2 = r[:, 0:3], r[:, 3:6]
 
@@ -123,6 +121,7 @@ class hydrogen_molecule_minimisers:
             ess = len(samples) / (1 + 2 * np.sum(acf[1:]))
             if trace:
                 print(f"Effective Sample Size (ESS): {ess:.1f}")
+                print(f"Acceptance Rate: {acceptance*100:.2f}%")
 
         if return_ESS:
             return r1, r2, ess
@@ -1044,7 +1043,7 @@ class hydrogen_atom_minimisers:
             f = wf(theta=x)  # hydrogen wavefunction given theta
 
             #   sample coordinates for current thetas
-            from modules.function_sampling import metropolis_hastings, MALA
+            from modules.function_sampling import metropolis_hastings, MALA, stochasticMALA
 
             if sampling == "MALA":
                 samples, acceptance = MALA(f=f.psi, x_0=[1.]*3, xmin=[-20.]*3, xmax=[
@@ -1057,6 +1056,16 @@ class hydrogen_atom_minimisers:
                     1., 1., 1.], xmin=[-20., -20., -20.], xmax=[20., 20., 20.], N=Ns_i, kwrgs={'sigma': 0.8}, return_acceptance=True)
                 if trace:
                     print(f"MH acceptance rate: {acceptance}")
+
+            elif sampling == "sMALA":
+                samples, acceptance = stochasticMALA(f=f.probability_density, x_0=[1., 1., 1.], xmin=[-20.]*3, xmax=[
+                    20.]*3, timestep=0.2, N=Ns_i, order=8, stepsize=8.008e-03, p_kick=0.4, kick_sigma=0.2, return_acceptance=True)
+                if trace:
+                    print(f"sMALA Acceptance Rate: {acceptance}")
+
+            else:
+                raise ValueError(
+                    "Invalid sampling method. Choose 'MH', 'MALA', or 'sMALA'.")
 
             df = dH(x, samples)
 
@@ -1159,156 +1168,13 @@ class hydrogen_atom_minimisers:
             return x, Es[-1], results
 
         if return_error:
-            return x, np.nanmean(psi.local_energy(coords=samples)), std_dev_last_10/np.sqrt(10)
+            from modules.helpers import get_acf
+            acf = get_acf(samples, max_lag=500)
+            ess = len(samples) / (1 + 2 * np.sum(acf[1:]))
 
-        return x, np.nanmean(psi.local_energy(coords=samples))
+            E_l = f.local_energy(coords=samples)
+            err = np.std(E_l, ddof=1) / np.sqrt(ess)
 
+            return x, np.nanmean(E_l), std_dev_last_10/np.sqrt(10) + err
 
-def gradient_desecent(f: Callable, df: Callable, x_0: np.ndarray, stepsize: float, max_iter: int = 1000, stop_tol: float = 1e-6, detail: bool = False, **kwargs) -> tuple:
-    """
-    A method to find the minima of a function using the gradient descent method.
-    Parameters:
-        f: callable, the function to minimise
-        df: callable, the first derivative of the function, left for flexibility of method
-        x_0: np.ndarray, the starting point of the minimiser
-        stepsize: float, the stepsize of the minimizer
-        max_iter: int, the number of iterations to run
-        stop_tol: float, default = 1e-6, the value of the gradient at which convergence is determined
-        detail: bool, default = False
-
-    Returns:
-        tuple: the coordinates of minima, the minimum value of the function at this point
-    """
-    x = x_0
-    start = time.perf_counter()
-    for i in range(max_iter):
-        d = df(x, **kwargs)
-
-        if stop_tol:
-            if np.linalg.norm(d) < stop_tol:
-                break
-        x = x - stepsize * d
-
-        if detail:
-            print(f'iteration number: {i}, x: {x}, dx: {d}')
-
-    end = time.perf_counter()
-    time_elapsed = end - start
-
-    if detail:
-        print(f"iteration number GD: {i}")
-        print(f"time elapsed GD: {time_elapsed}")
-    return x, f(x, **kwargs)
-
-
-def RMSProp_GD(f: Callable, df: Callable, x_0: np.ndarray, stepsize: float, forgetting: float, max_iter: int = 1000, stop_tol: float = 1e-6, detail: bool = False, **kwargs) -> tuple:
-    """
-    A method to find the minima of a function using the RMSProp adjusted gradient descent method.
-    Parameters:
-        f: callable, the function to minimise
-        df: callable, the first derivative of the function, left for flexibility of method
-        x_0: np.ndarray, the starting point of the minimiser
-        stepsize: float, the stepsize of the minimiser
-        forgetting: float, the forgetting factor of the minimiser
-        max_iter: int, the number of iterations to run
-        stop_tol: float, default = 1e-6, the value of the gradient at which convergence is determined
-        detail: bool, default = False
-
-    Returns:
-        tuple: the coordinates of minima, the minimum value of the function at this point
-    """
-    x = x_0
-    v = np.zeros_like(x)
-    start = time.perf_counter()
-    for i in range(max_iter):
-        d = df(x, **kwargs)
-
-        if np.linalg.norm(d) < stop_tol:
-            break
-
-        v = forgetting * v + (1 - forgetting)*(d**2)
-        x = x - (stepsize / np.sqrt(v)) * d
-    end = time.perf_counter()
-    time_elapsed = end - start
-
-    if detail:
-        print(f"iteration number RMS GD: {i}")
-        print(f"time elapsed RMS GD: {time_elapsed}")
-    return x, f(x, **kwargs)
-
-
-def quasi_newton(f: Callable, df: Callable, x_0: np.ndarray, stepsize: float, method: str = "DFP", max_iter: int = 1000, stop_tol: float = None, detail: bool = False) -> tuple:
-    """
-    A method to find the minima of a function using the quasi-newton method using a chosen method to approximate the hessian
-    Parameters:
-        f: callable, the function to minimise
-        df: callable, the first derivative of the function, left for flexibility of method
-        x_0: np.ndarray, the starting point of the minimiser
-        stepsize: float, the stepsize of the minimiser
-        method: str, default = "DFP" the method to use for the hessian approximation - allowed values "DFP", "BFGS"
-        stop_tol: float, default = None, the value of the gradient at which convergence is determined. defaults to none to give a chance to get off local minima
-        max_iter: int, default = 10000 the number of iterations to run
-        detail: bool, default = False
-
-    Returns:
-        tuple: the coordinates of minima, the minimum value of the function at this point
-    """
-    x = np.array(x_0, dtype=float)
-    n_dim = len(x)
-    G = np.eye(n_dim)
-
-    def DFP(x_new, grad_new, x, grad, G):
-        delta = x_new - x
-        gamma = grad_new - grad
-
-        if np.dot(gamma, delta) == 0:
-            return G
-
-        G = G + np.outer(delta, delta) / np.dot(gamma, delta) - \
-            (G @ np.outer(gamma, gamma) @ G) / np.dot(gamma, G @ gamma)
-        return G
-
-    def BFGS(x_new, grad_new, x, grad, G):
-        delta = x_new - x
-        gamma = grad_new - grad
-        dim = len(delta)
-
-        temp = 1.0 / np.dot(gamma, delta)
-        I = np.eye(dim)
-        G = (
-            (I - temp * np.outer(delta, gamma)
-             ) @ G @ (I - temp * np.outer(gamma, delta))
-            + temp * np.outer(delta, delta)
-        )
-        return G
-
-    if method == "DFP":
-        grad_update = DFP
-
-    elif method == "BFGS":
-        grad_update = BFGS
-
-    start = time.perf_counter()
-    for i in range(max_iter):
-        grad = df(x)
-        if stop_tol:
-            if np.linalg.norm(grad) < stop_tol:
-                print("halting QN")
-                break
-
-        x_new = x - stepsize * G @ grad
-        grad_new = df(x_new)
-
-        G = grad_update(x_new, grad_new, x, grad, G)
-        x = x_new
-
-        if detail:
-            print(f'iteration number: {i}, x: {x}, dx: {grad}')
-
-    end = time.perf_counter()
-    time_elapsed = end - start
-
-    if detail:
-        print(f"iteration number QN: {i}")
-        print(f"time elapsed QN: {time_elapsed}")
-    return x, f(x)
+        return x, np.nanmean(f.local_energy(coords=samples))
