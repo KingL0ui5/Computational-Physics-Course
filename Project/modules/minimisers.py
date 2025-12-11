@@ -121,7 +121,7 @@ class hydrogen_molecule_minimisers:
                 print(f"Effective Sample Size (ESS): {ess:.1f}")
         return r1, r2
 
-    def simulated_annealing(q1: np.ndarray, q2: np.ndarray, x_0: np.ndarray, initial_temp: float, cooling_rate: float, std: float = 0.05, stop_tol: float = None, max_iter: int = 100, xmin: float = 0.7, xmax: float = 5., Ns: int = 10000, detail: bool = False, trace: bool = False) -> tuple:
+    def simulated_annealing(q1: np.ndarray, q2: np.ndarray, x_0: np.ndarray, initial_temp: float, cooling_rate: float, std: float = 0.05, stop_tol: float = None, max_iter: int = 100, xmin: float = 0.7, xmax: float = 5., Ns: int = 10000, detail: bool = False, trace: bool = False, return_error: bool = False) -> tuple:
         """
         Find the minima of a function using the simulated annealing method.
         Parameters:
@@ -138,6 +138,7 @@ class hydrogen_molecule_minimisers:
             max_iter: int, the number of iterations to run
             detail: bool, default = False
             trace: bool, default = False
+            return_error: bool, default = False, whether to return the error estimate along with the minima
 
         Returns:
             tuple: the coordinates of minima, the minimum value of the function at this point
@@ -256,10 +257,13 @@ class hydrogen_molecule_minimisers:
             print(f"Final Energy: {results['final_state']['energy']}")
 
             return x, E, results
+
+        if return_error:
+            return x, E, std_dev_last_10/np.sqrt(10)
         return x, E
 
     @staticmethod
-    def stochastic_reconfiguration(q1: np.ndarray, q2: np.ndarray, x_0: np.ndarray, alpha: float, max_iter: int = 100, stop_tol: float = 1e-6, N_s: int = 10000, sampling: str = "MH", epsilon: float = 1e-3, detail: bool = False, trace: bool = False) -> tuple:
+    def stochastic_reconfiguration(q1: np.ndarray, q2: np.ndarray, x_0: np.ndarray, alpha: float, max_iter: int = 100, stop_tol: float = 1e-6, N_s: int = 10000, sampling: str = "MH", epsilon: float = 1e-3, detail: bool = False, trace: bool = False, return_error: bool = False) -> tuple:
         """
         Finds the minima using Stochastic Reconfiguration (Natural Gradient Descent).
 
@@ -275,6 +279,7 @@ class hydrogen_molecule_minimisers:
             detail: bool, default = False
             sampling: str, the sampling method to use ("MH" for Metropolis-Hastings, "MALA" for Metropolis-Adjusted Langevin Algorithm).
             trace: bool, default = False
+            return_error: bool, default = False, whether to return the error estimate along with the minima
         Returns:
             tuple: the coordinates of minima, the minimum value of the function at this point
         """
@@ -434,9 +439,12 @@ class hydrogen_molecule_minimisers:
                 f"Final derivative: {results['final_state']['derivative']}")
 
             return x, Es[-1], results
+
+        if return_error:
+            return x, hydrogen_molecule_minimisers.E_fn(x, q1, q2, r1, r2), std_dev_last_10/np.sqrt(10)
         return x, hydrogen_molecule_minimisers.E_fn(x, q1, q2, r1, r2)
 
-    def gradient_descent(q1: np.ndarray, q2: np.ndarray, x_0: np.ndarray, alpha: float, max_iter: int = 100, stop_tol: float = 1e-6, N_s: int = 10000, sampling: str = "MH", detail: bool = False, trace: bool = False) -> tuple:
+    def gradient_descent(q1: np.ndarray, q2: np.ndarray, x_0: np.ndarray, alpha: float, max_iter: int = 100, stop_tol: float = 1e-6, N_s: int = 10000, sampling: str = "MH", detail: bool = False, trace: bool = False, return_error: bool = False) -> tuple:
         """
         A method to find the minima of a function using the gradient descent method.
         Parameters:
@@ -450,6 +458,7 @@ class hydrogen_molecule_minimisers:
             sampling: str, the sampling method to use ("MH" for Metropolis-Hastings, "MALA" for Metropolis-Adjusted Langevin Algorithm).
             detail: bool, default = False
             trace: bool, default = False
+            return_error: bool, default = False, whether to return the error estimate along with the minima
 
         Returns:
             tuple: the coordinates of minima, the minimum value of the function at this point
@@ -577,9 +586,12 @@ class hydrogen_molecule_minimisers:
 
             return x, Es[-1], results
 
+        if return_error:
+            return x, hydrogen_molecule_minimisers.E_fn(x, q1, q2, r1, r2), std_dev_last_10/np.sqrt(10)
+
         return x, hydrogen_molecule_minimisers.E_fn(x, q1, q2, r1, r2)
 
-    def RMSProp_GD(q1: np.ndarray, q2: np.ndarray, x_0: np.ndarray, alpha: float, forgetting: float, max_iter: int = 1000, stop_tol: float = 1e-6, N_s: int = 10000, sampling: str = "MH", detail: bool = False, trace: bool = False) -> tuple:
+    def RMSProp_GD(q1: np.ndarray, q2: np.ndarray, x_0: np.ndarray, alpha: float, forgetting: float, max_iter: int = 1000, stop_tol: float = 1e-6, N_s: int = 10000, sampling: str = "MH", detail: bool = False, trace: bool = False, return_error: bool = False) -> tuple:
         """
         A method to find the minima of a function using the RMSProp adjusted gradient descent method.
         Parameters:
@@ -594,6 +606,7 @@ class hydrogen_molecule_minimisers:
             detail: bool, default = False
             sampling: str, the sampling method to use ("MH" for Metropolis-Hastings, "MALA" for Metropolis-Adjusted Langevin Algorithm).
             trace: bool, default = False
+            return_error: bool, default = False, whether to return the error estimate along with the minima
 
         Returns:
             tuple: the coordinates of minima, the minimum value of the function at this point
@@ -715,9 +728,12 @@ class hydrogen_molecule_minimisers:
                 f"Final derivative: {results['final_state']['derivative']}")
 
             return x, Es[-1], results
+
+        if return_error:
+            return x, hydrogen_molecule_minimisers.E_fn(x, q1, q2, r1, r2), std_dev_last_10/np.sqrt(10)
         return x, hydrogen_molecule_minimisers.E_fn(x, q1, q2, r1, r2)
 
-    def quasi_newton(q1: np.ndarray, q2: np.ndarray, x_0: np.ndarray, alpha: float, method: str = "DFP", max_iter: int = 1000, stop_tol: float = None, N_s: int = 10000, sampling: str = "MH", detail: bool = False, trace: bool = False) -> tuple:
+    def quasi_newton(q1: np.ndarray, q2: np.ndarray, x_0: np.ndarray, alpha: float, method: str = "DFP", max_iter: int = 1000, stop_tol: float = None, N_s: int = 10000, sampling: str = "MH", detail: bool = False, trace: bool = False, return_error: bool = False) -> tuple:
         """
         A method to find the minima of a function using the quasi-newton method using a chosen method to approximate the hessian
         Parameters:
@@ -732,6 +748,7 @@ class hydrogen_molecule_minimisers:
             sampling: str, the sampling method to use ("MH" for Metropolis-Hastings, "MALA" for Metropolis-Adjusted Langevin Algorithm).
             detail: bool, default = False
             trace: bool, default = False
+            return_error: bool, default = False, whether to return the error estimate along with the minima
 
         Returns:
             tuple: the coordinates of minima, the minimum value of the function at this point
@@ -882,6 +899,9 @@ class hydrogen_molecule_minimisers:
                 f"Final derivative: {results['final_state']['derivative']}")
 
             return x, Es[-1], results
+
+        if return_error:
+            return x, hydrogen_molecule_minimisers.E_fn(x, q1, q2, r1, r2), std_dev_last_10/np.sqrt(10)
         return x, hydrogen_molecule_minimisers.E_fn(x, q1, q2, r1, r2)
 
 

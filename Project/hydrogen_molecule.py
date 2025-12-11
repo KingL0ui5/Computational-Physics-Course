@@ -355,16 +355,18 @@ def process_bond_length(args):
     Worker function to calculate ground state for a single bond length.
     """
     q1, q2_i, thetas_0, Ns, r_val = args
+    print(f"Processing bond length: {r_val} a.u.")
 
     # theta_min, E_min = minimisers.stochastic_reconfiguration(
     #     q1, q2_i, x_0=thetas_0, alpha=0.2, stop_tol=0.005, N_s=Ns,
     #     detail=False, sampling="MH", max_iter=100
     # )
 
-    theta_min, E_min = minimisers.simulated_annealing(
-        q1, q2_i, x_0=thetas_0, initial_temp=0.5, cooling_rate=0.95, max_iter=200, Ns=Ns, std=0.05, detail=False)
+    theta_min, E_min, E_err = minimisers.simulated_annealing(
+        q1, q2_i, x_0=thetas_0, initial_temp=0.5, cooling_rate=0.95, max_iter=200, Ns=Ns, std=0.05, detail=False, return_error=True
+    )
 
-    return r_val, E_min, theta_min
+    return r_val, E_min, theta_min, E_err
 
 
 def parallel_ground_state_energies(n_procs=4):
@@ -396,11 +398,12 @@ def parallel_ground_state_energies(n_procs=4):
     r_sorted = np.array(results_array[:, 0], dtype=float)
     energies = np.array(results_array[:, 1], dtype=float)
     thetas = np.array(results_array[:, 2].tolist(), dtype=float)
+    energy_errors = np.array(results_array[:, 3], dtype=float)
 
     try:
-        data_to_save = np.column_stack((r_sorted, energies))
+        data_to_save = np.column_stack((r_sorted, energies, energy_errors))
         np.savetxt(f"SA_Energy_Curve_{Ns}.txt", data_to_save,
-                   header="Distance(a.u.)   Energy(Hartree)")
+                   header="Distance(a.u.)   Energy(Hartree)   Energy_Error(Hartree)")
 
         param_data = np.column_stack((r_sorted, thetas))
         np.savetxt(f"SA_Parameters_{Ns}.txt", param_data,

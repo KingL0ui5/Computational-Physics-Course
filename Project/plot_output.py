@@ -1,6 +1,7 @@
 def plot_energies():
     import matplotlib.pyplot as plt
     import pandas as pd
+    import numpy as np
     from scipy.optimize import curve_fit
     from modules.helpers import hydrogen_molecule_helpers as hlp
 
@@ -41,7 +42,9 @@ def plot_energies():
     plt.legend()
     plt.grid()
     plt.show()
-    print(f"Fitted parameters: D: {fit[0]}, a: {fit[1]}, r0: {fit[2]}")
+    print(
+        f"Fitted Parameters:\n De (Depth) = {fit[0]:.4f}\n a  (Width) = {fit[1]:.4f}\n re (Eq. Pos)= {fit[2]:.4f}")
+    print(f"Parameter Errors: {np.sqrt(np.diag(cov))}")
 
     thetas = pd.read_csv(thetas_filename, sep='\s+', comment='#', names=[
                          'Distance', 'Theta1', 'Theta2', 'Theta3'])
