@@ -345,10 +345,94 @@ def ground_state_energies():
         f"Fitted Parameters: De= {fit[0]}, a= {fit[1]}, re= {fit[2]} \n errors: {np.sqrt(np.diag(cov))}")
 
 
+def process_bond_length(args):
+    """
+    Worker function to calculate ground state for a single bond length.
+    """
+    q1, q2_i, thetas_0, Ns, r_val = args
+
+    theta_min, E_min = minimisers.stochastic_reconfiguration(
+        q1, q2_i, x_0=thetas_0, alpha=0.2, stop_tol=0.005, N_s=Ns,
+        detail=False, sampling="MH", max_iter=100
+    )
+
+    return r_val, E_min, theta_min
+
+
+def parallel_ground_state_energies(n_procs=4):
+    import multiprocessing as mp
+    from scipy.optimize import curve_fit
+    Ns = 100000
+    r_0 = np.linspace(0.5, 3., 60)
+
+    q1 = [0., 0., 0.]
+    tasks = []
+    for r in r_0:
+        q2_i = [0., 0., r]
+        thetas_0 = [1., 1., 1.]
+        tasks.append((q1, q2_i, thetas_0, Ns, r))
+
+    print(
+        f"Starting parallel processing on {n_procs} cores...")
+
+    n_procs = int(n_procs)
+    n_procs = max(1, min(n_procs, mp.cpu_count()))
+
+    with mp.Pool(processes=n_procs) as pool:
+        results = pool.map(process_bond_length, tasks)
+
+    results.sort(key=lambda x: x[0])
+
+    results_array = np.array(results, dtype=object)
+
+    r_sorted = np.array(results_array[:, 0], dtype=float)
+    energies = np.array(results_array[:, 1], dtype=float)
+    thetas = np.array(results_array[:, 2].tolist(), dtype=float)
+
+    try:
+        data_to_save = np.column_stack((r_sorted, energies))
+        np.savetxt(f"SR_Energy_Curve_{Ns}.txt", data_to_save,
+                   header="Distance(a.u.)   Energy(Hartree)")
+
+        param_data = np.column_stack((r_sorted, thetas))
+        np.savetxt(f"SR_Parameters_{Ns}.txt", param_data,
+                   header="Distance    Theta1    Theta2    Theta3")
+        print("Results saved successfully.")
+    except Exception as e:
+        print(f"Failed to save results: {e}")
+        print("Energies and Thetas:")
+        print(energies)
+        print(thetas)
+
+    f = hlp.V_morse
+    p_0 = [0.25, 1.3, 1.4]
+
+    try:
+        fit, cov = curve_fit(f, r_sorted, energies, p0=p_0)
+
+        plt.figure(figsize=(8, 6))
+        plt.plot(r_sorted, f(r_sorted, *fit),
+                 label='Morse Potential Fit', color='orange', linewidth=2)
+        plt.plot(r_sorted, energies, 'o', label='VMC Data', alpha=0.7)
+        plt.xlabel("Distance between nuclei (a.u.)")
+        plt.ylabel("Minimum Energy (Hartree)")
+        plt.title(f"H2 Binding Curve (SR Optimization, Ns={Ns})")
+        plt.legend()
+        plt.grid(True, alpha=0.3)
+        plt.show()
+
+        print(
+            f"Fitted Parameters:\n De (Depth) = {fit[0]:.4f}\n a  (Width) = {fit[1]:.4f}\n re (Eq. Pos)= {fit[2]:.4f}")
+        print(f"Parameter Errors: {np.sqrt(np.diag(cov))}")
+
+    except Exception as e:
+        print(f"Curve fitting failed: {e}")
+
+
 if __name__ == '__main__':
     alphas = [0.05, 0.1, 0.3, 0.01, 0.2]
     # for alpha in alphas:
     #     test_minimisers_convergence(alpha)
     # # test_SR()
 
-    ground_state_energies()
+    parallel_ground_state_energies(n_procs=4)
