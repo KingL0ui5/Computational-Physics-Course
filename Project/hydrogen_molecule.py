@@ -207,14 +207,14 @@ def test_QN():
 def test_minimisers_convergence(alpha=0.1):
     q1 = [0, 0, 2]
     q2 = [0, 0, 0]
-    N_s = 10000
+    N_s = 100000
     thetas_0 = [1.3] * 3
     stop_tol = None
 
     results = {}
 
     _, _, results['Stochastic Reconfiguration'] = minimisers.stochastic_reconfiguration(
-        q1, q2, x_0=thetas_0, alpha=alpha, stop_tol=stop_tol, N_s=N_s, detail=True, max_iter=100
+        q1, q2, x_0=thetas_0, alpha=alpha, stop_tol=stop_tol, N_s=N_s, detail=True, max_iter=100, trace=True
     )
 
     _, _, results['Gradient Descent'] = minimisers.gradient_descent(
@@ -305,7 +305,7 @@ def ground_state_energies():
         # theta_min, E_min = minimisers.quasi_newton(
         #     q1, q2_i, x_0=thetas_0, alpha=0.1, stop_tol=0.005, N_s=Ns, detail=False, max_iter=100)
 
-        theta_min, E_min = minimisers.stochastic_reconfiguration(
+        theta_min, E_min = minimisers.gradient_descent(
             q1, q2_i, x_0=thetas_0, alpha=0.2, stop_tol=0.005, N_s=Ns, detail=False, sampling="MH", max_iter=100)
         thetas.append(theta_min)
         energies.append(E_min)
@@ -359,9 +359,9 @@ def process_bond_length(args):
     q1, q2_i, thetas_0, Ns, r_val = args
     print(f"Processing bond length: {r_val} a.u.")
 
-    # theta_min, E_min = minimisers.stochastic_reconfiguration(
+    # theta_min, E_min, E_err = minimisers.stochastic_reconfiguration(
     #     q1, q2_i, x_0=thetas_0, alpha=0.2, stop_tol=0.005, N_s=Ns,
-    #     detail=False, sampling="MH", max_iter=100
+    #     detail=False, sampling="sMALA", max_iter=70, return_error=True, trace=False
     # )
 
     theta_min, E_min, E_err = minimisers.simulated_annealing(
@@ -374,7 +374,7 @@ def process_bond_length(args):
 def parallel_ground_state_energies(n_procs=4):
     import multiprocessing as mp
     from scipy.optimize import curve_fit
-    Ns = 100000
+    Ns = 10000
     r_0 = np.linspace(0.5, 3., 60)
 
     q1 = [0., 0., 0.]
@@ -447,5 +447,6 @@ if __name__ == '__main__':
     # for alpha in alphas:
     #     test_minimisers_convergence(alpha)
     # # test_SR()
-
-    parallel_ground_state_energies(n_procs=5)
+    
+    test_minimisers_convergence(alpha=0.2)
+    # parallel_ground_state_energies(n_procs=12)
