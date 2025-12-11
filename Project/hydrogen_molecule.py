@@ -2,6 +2,8 @@
 Simulation of the hydrogen molecule using variational Monte Carlo methods.
 Louis Liu 28/11
 """
+from modules import minimisers
+import json
 import numpy as np
 from modules.helpers import hydrogen_molecule_helpers as hlp
 from modules.differentiators import double_central_difference
@@ -209,36 +211,38 @@ def test_minimisers_convergence(alpha=0.1):
     thetas_0 = [1.3] * 3
     stop_tol = None
 
-    theta_min_SR, E_min_SR = minimisers.stochastic_reconfiguration(
-        q1, q2, x_0=thetas_0, alpha=alpha, stop_tol=stop_tol, N_s=N_s, detail=False, max_iter=100
+    results = {}
+
+    _, _, results['Stochastic Reconfiguration'] = minimisers.stochastic_reconfiguration(
+        q1, q2, x_0=thetas_0, alpha=alpha, stop_tol=stop_tol, N_s=N_s, detail=True, max_iter=100
     )
 
-    theta_min_GD, E_min_GD = minimisers.gradient_descent(
-        q1, q2, x_0=thetas_0, alpha=alpha, stop_tol=stop_tol, N_s=N_s, detail=False, max_iter=100
+    _, _, results['Gradient Descent'] = minimisers.gradient_descent(
+        q1, q2, x_0=thetas_0, alpha=alpha, stop_tol=stop_tol, N_s=N_s, detail=True, max_iter=100
     )
 
-    theta_min_RMSProp, E_min_RMSProp = minimisers.RMSProp_GD(
-        q1, q2, x_0=thetas_0, alpha=alpha, stop_tol=stop_tol, forgetting=0.9, N_s=N_s, detail=False, max_iter=100
+    _, _, results['RMSProp_GD'] = minimisers.RMSProp_GD(
+        q1, q2, x_0=thetas_0, alpha=alpha, stop_tol=stop_tol, forgetting=0.9, N_s=N_s, detail=True, max_iter=100
     )
 
-    theta_min_DFP, E_min_DFP = minimisers.quasi_newton(
-        q1, q2, x_0=thetas_0, alpha=alpha, stop_tol=stop_tol, N_s=N_s, detail=False, max_iter=100, method='DFP'
+    _, _, results['Quasi-Newton DFP'] = minimisers.quasi_newton(
+        q1, q2, x_0=thetas_0, alpha=alpha, stop_tol=stop_tol, N_s=N_s, detail=True, max_iter=100, method='DFP'
     )
 
-    theta_min_BFGS, E_min_BFGS = minimisers.quasi_newton(
-        q1, q2, x_0=thetas_0, alpha=alpha, stop_tol=stop_tol, N_s=N_s, detail=False, max_iter=100, method='BFGS'
+    _, _, results['Quasi-Newton BFGS'] = minimisers.quasi_newton(
+        q1, q2, x_0=thetas_0, alpha=alpha, stop_tol=stop_tol, N_s=N_s, detail=True, max_iter=100, method='BFGS'
     )
 
-    theta_min_SA, E_min_SA = minimisers.simulated_annealing(
-        q1, q2, x_0=thetas_0, initial_temp=0.5, cooling_rate=0.95, max_iter=200, Ns=10000, std=0.05, detail=False
+    _, _, results['Simulated Annealing'] = minimisers.simulated_annealing(
+        q1, q2, x_0=thetas_0, initial_temp=0.5, cooling_rate=0.95, max_iter=200, Ns=10000, std=0.05, detail=True
     )
 
-    plt.plot(E_min_SA, label='Simulated Annealing', marker='o')
-    plt.plot(E_min_SR, label='Stochastic Reconfiguration', marker='o')
-    plt.plot(E_min_GD, label='Gradient Descent', marker='o')
-    plt.plot(E_min_RMSProp, label='RMSProp GD', marker='o')
-    plt.plot(E_min_DFP, label='Quasi-Newton DFP', marker='o')
-    plt.plot(E_min_BFGS, label='Quasi-Newton BFGS', marker='o')
+    plt.figure(figsize=(10, 6))
+    for method_name, result_hash in results.items():
+        energies = result_hash['history']['energies']
+        iterations = range(len(energies))
+        plt.plot(iterations, energies, label=method_name,
+                 linewidth=2, alpha=0.8)
 
     plt.xlabel("Iteration")
     plt.ylabel("Energy (Hartree)")
@@ -247,10 +251,40 @@ def test_minimisers_convergence(alpha=0.1):
     plt.legend()
     plt.tight_layout()
     plt.savefig(f"convergence_comparison_alpha_{alpha}.png")
+    plt.close()
 
-    np.savetxt(f"convergence_data_alpha_{alpha}.txt", np.column_stack((
-        E_min_SA, E_min_SR, E_min_GD, E_min_RMSProp, E_min_DFP, E_min_BFGS
-    )), header="SA SR GD RMSProp DFP BFGS")
+    def serialise(obj):
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        if isinstance(obj, (np.float64, np.int64, np.float32, np.int32)):
+            return obj.item()
+        return obj
+
+    summary_data = {}
+    for method_name, data in results.items():
+        summary_data[method_name] = {
+            "iteration_number": data['meta']['final_iteration_count'],
+            "E_min": serialise(data['final_state']['energy']),
+            "thetas": serialise(data['final_state']['parameters'])
+        }
+
+    try:
+        with open(f"convergence_summary_alpha_{alpha}.json", 'w') as f:
+            json.dump(summary_data, f, indent=4)
+        print("Results saved successfully.")
+    except Exception as e:
+        print(f"Failed to save results. Exception: {e}")
+
+    print("\n" + "="*50)
+    print("FINAL RESULTS SUMMARY")
+    print("="*50)
+
+    for method_name, data in summary_data.items():
+        print(f"{method_name}")
+        print(f"Iterations    : {data['iteration_number']}")
+        print(f"Minimum Theta : {data['thetas']}")
+        print(f"Minimum Energy: {data['E_min']:.6f}")
+        print("-" * 30)
 
 
 def ground_state_energies():
