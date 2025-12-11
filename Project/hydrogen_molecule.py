@@ -356,10 +356,13 @@ def process_bond_length(args):
     """
     q1, q2_i, thetas_0, Ns, r_val = args
 
-    theta_min, E_min = minimisers.stochastic_reconfiguration(
-        q1, q2_i, x_0=thetas_0, alpha=0.2, stop_tol=0.005, N_s=Ns,
-        detail=False, sampling="MH", max_iter=100
-    )
+    # theta_min, E_min = minimisers.stochastic_reconfiguration(
+    #     q1, q2_i, x_0=thetas_0, alpha=0.2, stop_tol=0.005, N_s=Ns,
+    #     detail=False, sampling="MH", max_iter=100
+    # )
+
+    theta_min, E_min = minimisers.simulated_annealing(
+        q1, q2_i, x_0=thetas_0, initial_temp=0.5, cooling_rate=0.95, max_iter=200, Ns=Ns, std=0.05, detail=False)
 
     return r_val, E_min, theta_min
 
@@ -396,11 +399,11 @@ def parallel_ground_state_energies(n_procs=4):
 
     try:
         data_to_save = np.column_stack((r_sorted, energies))
-        np.savetxt(f"SR_Energy_Curve_{Ns}.txt", data_to_save,
+        np.savetxt(f"SA_Energy_Curve_{Ns}.txt", data_to_save,
                    header="Distance(a.u.)   Energy(Hartree)")
 
         param_data = np.column_stack((r_sorted, thetas))
-        np.savetxt(f"SR_Parameters_{Ns}.txt", param_data,
+        np.savetxt(f"SA_Parameters_{Ns}.txt", param_data,
                    header="Distance    Theta1    Theta2    Theta3")
         print("Results saved successfully.")
     except Exception as e:
@@ -421,7 +424,7 @@ def parallel_ground_state_energies(n_procs=4):
         plt.plot(r_sorted, energies, 'o', label='VMC Data', alpha=0.7)
         plt.xlabel("Distance between nuclei (a.u.)")
         plt.ylabel("Minimum Energy (Hartree)")
-        plt.title(f"H2 Binding Curve (SR Optimization, Ns={Ns})")
+        plt.title(f"H2 Binding Curve (SA Optimization, Ns={Ns})")
         plt.legend()
         plt.grid(True, alpha=0.3)
         plt.show()
@@ -440,4 +443,4 @@ if __name__ == '__main__':
     #     test_minimisers_convergence(alpha)
     # # test_SR()
 
-    parallel_ground_state_energies(n_procs=4)
+    parallel_ground_state_energies(n_procs=5)

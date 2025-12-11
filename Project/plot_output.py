@@ -1,14 +1,20 @@
-def plot_energies(filename="/Users/louis/Library/CloudStorage/OneDrive-ImperialCollegeLondon/Computer Science/Computational Physics/SA_output_100000.txt"):
+def plot_energies():
     import matplotlib.pyplot as plt
-    import numpy as np
+    import pandas as pd
     from scipy.optimize import curve_fit
     from modules.helpers import hydrogen_molecule_helpers as hlp
 
-    data = np.loadtxt(filename)
-    energies, r_0 = data[0], data[1]
-    mask = energies < -1.
-    energies_filt = energies[mask]
-    r_0_filt = r_0[mask]
+    energy_filename = "/Users/louis/Library/CloudStorage/OneDrive-ImperialCollegeLondon/Computer Science/Computational Physics/Project/morse_data/SR_Energy_Curve_100000.txt"
+    thetas_filename = "/Users/louis/Library/CloudStorage/OneDrive-ImperialCollegeLondon/Computer Science/Computational Physics/Project/morse_data/SR_Parameters_100000.txt"
+
+    data = pd.read_csv(energy_filename, sep='\s+', comment='#', names=[
+                       'Distance(a.u.)', 'Energy(Hartree)'])
+
+    r_0 = data['Distance(a.u.)'].to_numpy()
+    energies = data['Energy(Hartree)'].to_numpy()
+    filt = energies < 0.
+    r_0_filt = r_0[filt]
+    energies_filt = energies[filt]
 
     plt.plot(r_0, energies, label="Simulated Annealing Energies",
              marker='o', linestyle='None', markersize=4)
@@ -36,6 +42,35 @@ def plot_energies(filename="/Users/louis/Library/CloudStorage/OneDrive-ImperialC
     plt.grid()
     plt.show()
     print(f"Fitted parameters: D: {fit[0]}, a: {fit[1]}, r0: {fit[2]}")
+
+    thetas = pd.read_csv(thetas_filename, sep='\s+', comment='#', names=[
+                         'Distance', 'Theta1', 'Theta2', 'Theta3'])
+    r_0_thetas = thetas['Distance'].to_numpy()
+    theta1 = thetas['Theta1'].to_numpy()
+    theta2 = thetas['Theta2'].to_numpy()
+    theta3 = thetas['Theta3'].to_numpy()
+
+    fig, axs = plt.subplots(2, 2, figsize=(8, 6))
+    axs[0, 0].plot(r_0_thetas, theta1, label="Theta 1", marker='o',
+                   linestyle='None', markersize=4)
+    axs[0, 0].set_xlabel("$r_0$ (a.u.)")
+    axs[0, 0].set_ylabel("Theta 1")
+    axs[0, 0].set_title("Theta 1 vs Interatomic Distance")
+    axs[0, 0].grid()
+    axs[0, 1].plot(r_0_thetas, theta2, label="Theta 2", marker='o',
+                   linestyle='None', markersize=4)
+    axs[0, 1].set_xlabel("$r_0$ (a.u.)")
+    axs[0, 1].set_ylabel("Theta 2")
+    axs[0, 1].set_title("Theta 2 vs Interatomic Distance")
+    axs[0, 1].grid()
+    axs[1, 0].plot(r_0_thetas, theta3, label="Theta 3", marker='o',
+                   linestyle='None', markersize=4)
+    axs[1, 0].set_xlabel("$r_0$ (a.u.)")
+    axs[1, 0].set_ylabel("Theta 3")
+    axs[1, 0].set_title("Theta 3 vs Interatomic Distance")
+    axs[1, 0].grid()
+    plt.tight_layout()
+    plt.show()
 
 
 if __name__ == '__main__':
