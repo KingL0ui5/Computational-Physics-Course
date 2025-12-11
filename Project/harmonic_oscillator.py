@@ -41,30 +41,32 @@ def localenergy(wf: wavefunction, x: np.ndarray) -> np.ndarray:
 
 if __name__ == "__main__":
     N_s = 100000
-    n = 2
-    psi = wavefunction(n=n)
-    # x = metropolis_hastings(f=psi.probability_density, f_prop='gaussian', x_0=[1.], xmin=[-10.], xmax=[10.], N=N_s, kwrgs={
-    #     'sigma': 2.})
+    for n in range(5):
+        psi = wavefunction(n=n)
+        x = metropolis_hastings(f=psi.probability_density, f_prop='gaussian', x_0=[1.], xmin=[-10.], xmax=[10.], N=N_s, kwrgs={
+            'sigma': 1.2})
 
-    x = MALA(f=psi.probability_density, timestep=0.15, x_0=[
-             1.4], N=N_s, xmin=[-10.], xmax=[10.], order=8, stepsize=8.008e-03, detail=True)
+        # x = MALA(f=psi.probability_density, timestep=0.15, x_0=[
+        #     1.4], N=N_s, xmin=[-10.], xmax=[10.], order=8, stepsize=8.008e-03, detail=True)
 
-    #  discard burn in
-    x = x[N_s//10:, :]
+        #  discard burn in
+        x = x[N_s//10:, :]
 
-    localenergy_arr = localenergy(psi, x)
-    exp_energy = np.mean(localenergy_arr)
-    print(
-        f"Expected Energy: {exp_energy}, Theoretical Energy: {psi.energy()}, error = {np.abs(exp_energy - psi.energy())}")
+        localenergy_arr = localenergy(psi, x)
+        exp_energy = np.mean(localenergy_arr)
+        energy_err = np.std(localenergy_arr) / np.sqrt(len(localenergy_arr))
 
-    import matplotlib.pyplot as plt
-    plt.hist(x, bins=50, density=True, alpha=0.6,
-             label='Sampled Probability Density')
-    x_vals = np.linspace(-10, 10, 200)
-    plt.plot(x_vals, psi.probability_density(
-        x_vals), 'r-', label='Theoretical Probability Density')
-    plt.title(f'Harmonic Oscillator n={n} Wavefunction Sampling')
-    plt.xlabel('x')
-    plt.ylabel('Probability Density')
-    plt.legend()
-    plt.show()
+        print(
+            f"Expected Energy: {exp_energy} ± {energy_err}, Theoretical Energy: {psi.energy()}, error = {np.abs(exp_energy - psi.energy())}")
+
+    # import matplotlib.pyplot as plt
+    # plt.hist(x, bins=50, density=True, alpha=0.6,
+    #          label='Sampled Probability Density')
+    # x_vals = np.linspace(-10, 10, 200)
+    # plt.plot(x_vals, psi.probability_density(
+    #     x_vals), 'r-', label='Theoretical Probability Density')
+    # plt.title(f'Harmonic Oscillator n={n} Wavefunction Sampling')
+    # plt.xlabel('x')
+    # plt.ylabel('Probability Density')
+    # plt.legend()
+    # plt.show()
