@@ -1053,7 +1053,7 @@ class hydrogen_atom_minimisers:
 
             elif sampling == "MH":
                 samples, acceptance = metropolis_hastings(f=f.probability_density, f_prop='gaussian', x_0=[
-                    1., 1., 1.], xmin=[-20., -20., -20.], xmax=[20., 20., 20.], N=Ns_i, kwrgs={'sigma': 0.8}, return_acceptance=True)
+                    1., 1., 1.], xmin=[-20., -20., -20.], xmax=[20., 20., 20.], N=Ns_i, kwrgs={'sigma': 1.2}, return_acceptance=True)
                 if trace:
                     print(f"MH acceptance rate: {acceptance}")
 
@@ -1067,6 +1067,7 @@ class hydrogen_atom_minimisers:
                 raise ValueError(
                     "Invalid sampling method. Choose 'MH', 'MALA', or 'sMALA'.")
 
+            samples = samples[Ns_i//10:]
             df = dH(x, samples)
 
             #  scale alpha based on the derivative
