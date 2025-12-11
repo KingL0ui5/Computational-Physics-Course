@@ -9,10 +9,14 @@ import time
 
 class hydrogen_molecule_minimisers:
     @staticmethod
-    def E_fn(thetas, q1, q2, r1, r2):
+    def E_fn(thetas, q1, q2, r1, r2, return_std: bool = False) -> tuple:
         from hydrogen_molecule import h2_wavefunction
         wf_temp = h2_wavefunction(thetas, q1, q2)
-        return np.nanmean(wf_temp.local_energy(r1, r2))
+        E_l = wf_temp.local_energy(r1, r2)
+
+        if return_std:
+            return np.nanmean(E_l), np.std(E_l, ddof=1)
+        return np.nanmean(E_l)
 
     @staticmethod
     def log_grad(thetas, q1, q2, r1, r2, stepsize=8.008e-03) -> np.ndarray:
@@ -75,7 +79,7 @@ class hydrogen_molecule_minimisers:
         return np.array([dE_t1, dE_t2, dE_t3])
 
     @staticmethod
-    def sample_coords(wf, Ns, r_0, thinning: int = 20, method: str = "MH", detail=False, trace=False) -> tuple:
+    def sample_coords(wf, Ns, r_0, thinning: int = 20, method: str = "MH", detail=False, trace=False, return_ESS: bool = False) -> tuple:
         """
         Sample wavefunction and process into r1, r2.
         Parameters:
@@ -119,6 +123,9 @@ class hydrogen_molecule_minimisers:
             ess = len(samples) / (1 + 2 * np.sum(acf[1:]))
             if trace:
                 print(f"Effective Sample Size (ESS): {ess:.1f}")
+
+        if return_ESS:
+            return r1, r2, ess
         return r1, r2
 
     def simulated_annealing(q1: np.ndarray, q2: np.ndarray, x_0: np.ndarray, initial_temp: float, cooling_rate: float, std: float = 0.05, stop_tol: float = None, max_iter: int = 100, xmin: float = 0.7, xmax: float = 5., Ns: int = 10000, detail: bool = False, trace: bool = False, return_error: bool = False) -> tuple:
