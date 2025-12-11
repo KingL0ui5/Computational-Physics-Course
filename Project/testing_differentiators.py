@@ -7,6 +7,16 @@ sns.set_style('darkgrid')
 sns.set_context('paper')
 sns.set_palette("colorblind")
 
+size = 13
+
+plt.rc('font', size=size)
+plt.rc('axes', titlesize=size)
+plt.rc('axes', labelsize=size)
+plt.rc('xtick', labelsize=size)
+plt.rc('ytick', labelsize=size)
+plt.rc('legend', fontsize=size-2)
+plt.rc('figure', titlesize=size)
+
 
 def test_diffrentiators_3d():
     def f(coords):
@@ -52,7 +62,7 @@ def test_diffrentiators_3d():
     ax.set_ylabel('Y')
     ax.set_zlabel('Z')
     ax.set_title('Calculated vs Analytic Second Derivatives')
-    ax.legend()
+    ax.legend(loc='upper left')(loc='upper left')()
     return fig
 
 
@@ -118,7 +128,7 @@ def test_second_order_diffrentiators(ax):
         ax.set_xlabel("Step size h")
         ax.set_ylabel("RMS Absolute Error")
         ax.set_title(f"Figure 1.2: Second Derivative Error (QHO n={n})")
-        ax.legend()
+        ax.legend(loc='upper left')
 
         min_h_index_h2 = np.argmin(mean_error_d2c_h2)
         min_h_index_h4 = np.argmin(mean_error_d2c_h4)
@@ -180,7 +190,7 @@ def test_hydrogen_laplacian(ax):
     ax.set_ylabel("RMS Absolute Error")
     ax.set_title("Figure 1.3: Hydrogen Laplacian Error vs Stepsize")
     ax.grid(True, which="both", ls="--", alpha=0.5)
-    ax.legend()
+    ax.legend(loc='upper left')
 
     print("\nHydrogen Laplacian Optimal step sizes:")
     for order in orders:
@@ -248,7 +258,7 @@ def test_h2_parameter_gradient_error_analysis(ax):
     ax.set_ylabel("RMS Absolute Error")
     ax.set_title("Figure 1.1: H$_2$ First Derivative Error vs Stepsize")
     ax.grid(True, which="both", ls="--", alpha=0.5)
-    ax.legend()
+    ax.legend(loc='upper left')
 
     print("\nH$_2$ Parameter First Derivative Test")
     for order in orders:
@@ -267,6 +277,7 @@ if __name__ == "__main__":
     test_hydrogen_laplacian(axes[2])
 
     plt.tight_layout()
+    plt.savefig("derivatives_tested.png", dpi=300, bbox_inches='tight')
     plt.show()
 
     # test_diffrentiators_3d().show()
