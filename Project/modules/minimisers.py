@@ -115,9 +115,11 @@ class hydrogen_molecule_minimisers:
         r = samples[len(samples)//10:]
         r1, r2 = r[:, 0:3], r[:, 3:6]
 
-        from modules.helpers import get_acf
-        acf = get_acf(samples, max_lag=500)
-        ess = len(samples) / (1 + 2 * np.sum(acf[1:]))
+        if trace or return_ESS:
+            from modules.helpers import get_acf
+            acf = get_acf(samples, max_lag=500)
+            ess = len(samples) / (1 + 2 * np.sum(acf[1:]))
+
         if trace:
             print(f"Effective Sample Size (ESS): {ess:.1f}")
             print(f"Acceptance Rate: {acceptance*100:.2f}%")
@@ -299,6 +301,8 @@ class hydrogen_molecule_minimisers:
         Es = []
         start = time.perf_counter()
         for i in range(max_iter):
+            if trace:
+                print(f"--- Iteration {i} ---")
             #  adjust learning rate per iteration
             Ns_i = N_s  # * int(np.exp((i+1)*0.05))
             wf = h2_wavefunction(x, q1, q2)
@@ -364,7 +368,7 @@ class hydrogen_molecule_minimisers:
                     print(
                         f"Standard Deviation of last 10 steps: {std_dev_last_10}")
                 if std_dev_last_10 < stop_tol:
-                    if detail:
+                    if trace:
                         print("Convergence reached based on energy stability.")
                     break
 

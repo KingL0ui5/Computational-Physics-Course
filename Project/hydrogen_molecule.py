@@ -195,13 +195,13 @@ def test_SR():
     q1 = [0, 0, 2]
     q2 = [0, 0, 0]
 
-    N_s = 10000
+    N_s = 100000
     thetas_0 = [1.3] * 3  #  for minimiser
     alphas = [.1]  #  np.linspace(0.1, 1., 20)
     for alpha in alphas:
         theta_min, E_min, E_err = minimisers.stochastic_reconfiguration(
             q1, q2, x_0=thetas_0, alpha=0.2, stop_tol=0.005, N_s=N_s,
-            detail=False, sampling="MH", max_iter=70, return_error=True, trace=False
+            detail=False, sampling="MH", max_iter=70, return_error=True, trace=True
         )
 
         print(f"minimum theta: {theta_min}, minimum energy: {E_min} ± {E_err}")
@@ -381,7 +381,7 @@ def process_bond_length(args):
 
     theta_min, E_min, E_err = minimisers.stochastic_reconfiguration(
         q1, q2_i, x_0=thetas_0, alpha=0.2, stop_tol=0.005, N_s=Ns,
-        detail=False, sampling="MH", max_iter=100, return_error=True, trace=False
+        detail=False, sampling="MH", max_iter=50, return_error=True, trace=True
     )
 
     # theta_min, E_min, E_err = minimisers.simulated_annealing(
@@ -465,5 +465,5 @@ def parallel_ground_state_energies(n_procs=4):
 if __name__ == '__main__':
     # test_SR()
     # test_minimisers_convergence(alpha=0.1)
-    parallel_ground_state_energies(n_procs=12)
+    parallel_ground_state_energies(n_procs=4)
     # test_samples()
