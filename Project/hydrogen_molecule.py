@@ -201,7 +201,7 @@ def test_SR():
     for alpha in alphas:
         theta_min, E_min, E_err = minimisers.stochastic_reconfiguration(
             q1, q2, x_0=thetas_0, alpha=0.2, stop_tol=0.005, N_s=N_s,
-            detail=False, sampling="MH", max_iter=70, return_error=True, trace=True
+            detail=False, sampling="MH", max_iter=70, return_error=True, trace=False
         )
 
         print(f"minimum theta: {theta_min}, minimum energy: {E_min} ± {E_err}")
