@@ -6,7 +6,7 @@ from modules.helpers import hydrogen_molecule_helpers as hlp
 
 
 def plot_energies():
-    energy_filename = "/Users/louis/Library/CloudStorage/OneDrive-ImperialCollegeLondon/Computer Science/Computational Physics/Project/morse_data/SR_Energy_Curve_100000.txt"
+    energy_filename = "/Users/louis/Library/CloudStorage/OneDrive-ImperialCollegeLondon/Computer Science/Computational Physics/Project/morse_data/SR_Energy_Curve_10000.txt"
     thetas_filename = "/Users/louis/Library/CloudStorage/OneDrive-ImperialCollegeLondon/Computer Science/Computational Physics/Project/morse_data/SR_Parameters_100000.txt"
 
     data = pd.read_csv(energy_filename, sep='\s+', comment='#', names=[
@@ -74,7 +74,7 @@ def plot_energies():
     ax[1].set_xlabel("$r_0$ (a.u.)")
     ax[1].set_ylabel("Parameter Value")
     ax[1].set_title("Evolution of Variational Parameters vs Distance")
-    ax[1].legend()
+    ax[1].legend(loc='upper left')
     ax[1].grid(True, which='both', linestyle='--', alpha=0.7)
 
     plt.tight_layout()

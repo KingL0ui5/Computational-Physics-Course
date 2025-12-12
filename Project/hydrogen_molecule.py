@@ -380,7 +380,7 @@ def process_bond_length(args):
     print(f"Processing bond length: {r_val} a.u.")
 
     theta_min, E_min, E_err = minimisers.stochastic_reconfiguration(
-        q1, q2_i, x_0=thetas_0, alpha=0.2, stop_tol=0.005, N_s=Ns,
+        q1, q2_i, x_0=thetas_0, alpha=0.2, stop_tol=None, N_s=Ns,
         detail=False, sampling="MH", max_iter=50, return_error=True, trace=True
     )
 
@@ -394,7 +394,7 @@ def process_bond_length(args):
 def parallel_ground_state_energies(n_procs=4):
     import multiprocessing as mp
     from scipy.optimize import curve_fit
-    Ns = 100000
+    Ns = 10000
     r_0 = np.linspace(0.5, 3., 60)
 
     q1 = [0., 0., 0.]
@@ -424,11 +424,11 @@ def parallel_ground_state_energies(n_procs=4):
 
     try:
         data_to_save = np.column_stack((r_sorted, energies, energy_errors))
-        np.savetxt(f"SA_Energy_Curve_{Ns}.txt", data_to_save,
+        np.savetxt(f"SR_Energy_Curve_{Ns}.txt", data_to_save,
                    header="Distance(a.u.)   Energy(Hartree)   Energy_Error(Hartree)")
 
         param_data = np.column_stack((r_sorted, thetas))
-        np.savetxt(f"SA_Parameters_{Ns}.txt", param_data,
+        np.savetxt(f"SR_Parameters_{Ns}.txt", param_data,
                    header="Distance    Theta1    Theta2    Theta3")
         print("Results saved successfully.")
     except Exception as e:
@@ -465,5 +465,5 @@ def parallel_ground_state_energies(n_procs=4):
 if __name__ == '__main__':
     # test_SR()
     # test_minimisers_convergence(alpha=0.1)
-    parallel_ground_state_energies(n_procs=4)
+    parallel_ground_state_energies(n_procs=6)
     # test_samples()
