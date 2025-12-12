@@ -2,7 +2,19 @@ import json
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
-import os
+import seaborn as sns
+sns.set_style('dark')
+sns.set_context('paper')
+sns.set_palette("colorblind")
+size = 13
+
+plt.rc('font', size=size)
+plt.rc('axes', titlesize=size)
+plt.rc('axes', labelsize=size)
+plt.rc('xtick', labelsize=size)
+plt.rc('ytick', labelsize=size)
+plt.rc('legend', fontsize=size-2)
+plt.rc('figure', titlesize=size)
 
 FILE_PATH = "Project/convergence data/convergence_summary_alpha_0.1.json"
 WINDOW_SIZE = 5
