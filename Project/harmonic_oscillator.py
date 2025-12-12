@@ -39,7 +39,7 @@ def localenergy(wf: wavefunction, x: np.ndarray) -> np.ndarray:
     return E
 
 
-if __name__ == "__main__":
+def test_localenergy():
     N_s = 100000
     for n in range(5):
         psi = wavefunction(n=n)
@@ -59,14 +59,6 @@ if __name__ == "__main__":
         print(
             f"Expected Energy: {exp_energy} ± {energy_err}, Theoretical Energy: {psi.energy()}, error = {np.abs(exp_energy - psi.energy())}")
 
-    # import matplotlib.pyplot as plt
-    # plt.hist(x, bins=50, density=True, alpha=0.6,
-    #          label='Sampled Probability Density')
-    # x_vals = np.linspace(-10, 10, 200)
-    # plt.plot(x_vals, psi.probability_density(
-    #     x_vals), 'r-', label='Theoretical Probability Density')
-    # plt.title(f'Harmonic Oscillator n={n} Wavefunction Sampling')
-    # plt.xlabel('x')
-    # plt.ylabel('Probability Density')
-    # plt.legend()
-    # plt.show()
+
+if __name__ == "__main__":
+    test_localenergy()
