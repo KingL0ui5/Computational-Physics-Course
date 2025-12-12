@@ -268,14 +268,7 @@
 % to submit to, of course. )
 
 \usepackage{mathtools}
-
-\usepackage[
-backend=biber,
-style=alphabetic,
-sorting=ynt
-]{biblatex}
-
-\addbibresource{references.bib}
+\usepackage{natbib}
 
 
 % correct bad hyphenation here
@@ -293,12 +286,12 @@ sorting=ynt
 \maketitle
 
 \begin{abstract}
-    This paper presents a discussion of the Variational Quantum Monte Carlo (VMC) method for generating numerical solutions to the time-independent Schrödinger equation for the quantum harmonic oscillator, the hydrogen atom, and the hydrogen molecule. A range of minimisation algorithms and Monte Carlo sampling methods are examined to find the variational minimum of the Hamiltonian expectation values. Using these methods, numerical approximations for the ground state energies of the hydrogen atom and the hydrogen molecule are computed for a range of interatomic distances. The resulting energy profile is fitted to a Morse potential, yielding estimates for the dissociation energy, and equilibrium bond length, $\boldsymbol{D = 0.1499 \pm 0.0022}$, and $\boldsymbol{r_0 = 1.3724 \pm 0.0101}$.
+    This paper presents a discussion of the Variational Quantum Monte Carlo (VMC) method for generating numerical solutions to the time-independent Schrödinger equation for the quantum harmonic oscillator, the hydrogen atom, and the hydrogen molecule. A range of minimisation algorithms and Monte Carlo sampling methods are examined to find the variational minimum of the Hamiltonian expectation values. Using these methods, numerical approximations for the ground state energies of the hydrogen atom and the hydrogen molecule are computed for a range of interatomic distances. The resulting energy profile is fitted to a Morse potential, yielding estimates for the dissociation energy, and equilibrium bond length, $D = 0.1465 \pm 0.0040$, and $r_0 = 1.4170 \pm 0.0175$.
 \end{abstract}
 
 
 \section{Introduction}
-    \IEEEPARstart{I}{\MakeLowercase{n}} many physical systems, the Schrödinger equation does not have analytical solutions, requiring the use of numerical approximation. Furthermore, in many multi-particle systems, the dimensionality of the Hilbert space scales exponentially with the number of particles. Variational Quantum Monte Carlo (VMC) is a useful technique for extracting energy predictions from the Schrödinger Equation in these cases by stochastic means. In many cases, it is most useful to determine the ground state and its associated energy. The variational principle [REF variational principle] states that for any trial wavefunction, the expectation value of the Hamiltonian provides an upper bound to the true ground-state energy. This is therefore approximated by minimising the expectation value of the Hamiltonian operator, 
+    \IEEEPARstart{I}{\MakeLowercase{n}} many physical systems, the Schrödinger equation does not have analytical solutions, requiring the use of numerical approximation. Furthermore, in many multi-particle systems, the dimensionality of the Hilbert space scales exponentially with the number of particles. Variational Quantum Monte Carlo (VMC) is a useful technique for extracting energy predictions from the Schrödinger Equation in these cases by stochastic means. In many cases, it is most useful to determine the ground state and its associated energy. The variational principle states that for any trial wavefunction, the expectation value of the Hamiltonian provides an upper bound to the true ground-state energy. This is therefore approximated by minimising the expectation value of the Hamiltonian operator, 
     \begin{equation} \label{hamiltonian expectation value}
         \langle \hat{H} \rangle =
         \frac{
@@ -307,10 +300,6 @@ sorting=ynt
         \int d^{3}r_{1} \ldots d^{3}r_{N}\,\psi^{*}(r_{1},\ldots,r_{N})\,\psi(r_{1},\ldots,r_{N})
         }.
     \end{equation}  
-
-    This paper will first consider the cases of the quantum harmonic oscillator, followed by the hydrogen atom, both of which have analytic solutions suitable for validation of the method. Finally, the case of the Hydrogen Molecule is considered, whose treatment demands further computational analysis.
-
-
     %This is then used to find the expected energy, $\langle \hat{H} \rangle$, of the coordinates, which leads to a determination of the ground state energy of the system
 \section{Theory} \label{Theory}
 
@@ -320,9 +309,9 @@ sorting=ynt
         \caption{(1.1) Differentiator functions tested on the H$_2$ ansatz ($\theta_{1,2,3}=1$). $O(h^8)$ is optimal with min error $\approx 2.6\times 10^{-15}$ at $h\approx 1.6\times10^{-02}$. (1.2) second derivative on QHO ($n=5$) with optimal $O(h^8)$, min error $\approx 7.2\times 10^{-13}$ at $h\approx1.8\times10^{-02}$. (1.3) hydrogen atom lapalacian, with optimal $O(h^8)$, min error $\approx 2.4\times10^{-07}$ at $h \approx 4.6\times10^{-05}$.} \label{derivatives}
     \end{figure*}
     
-    The ground state can be approximated by proposing a general, parametrised ansatz for the wavefunction and minimising its associated energy with respect to the parameters. The wavefunctions associated energy at its minimum will be the ground state energy.
+    The ground state can be approximated by proposing a general, parametrised ansatz for the wavefunction and minimising its energy with respect to the parameters.
 
-    Most of the work involved lies in evaluating the integrals in Eq.~\ref{hamiltonian expectation value}. Due to their high dimensionality, standard numerical integration methods such as Newton-Cotes are insufficient, having computational expense that scales exponentially with dimension. For the case of the H$_2$ molecule, the effective dimensionality is 6. This makes stochastic sampling techniques far more suited to solving this particular integral.
+    Most of the work lies in evaluating the integrals in Eq.~\ref{hamiltonian expectation value}. Due to their high dimensionality, standard numerical integration methods such as Newton-Cotes are insufficient, with computational expense that scales exponentially with dimension. For the case of the H$_2$ molecule, the effective dimensionality is 6. This makes stochastic sampling techniques more suited to solving this particular integral.
 
     To derive the method used to evaluate the Hamiltonian expectation value, we first consider a quantity defined as the local energy,
     \begin{equation} \label{local energy}
@@ -352,20 +341,11 @@ sorting=ynt
 
     \noindent where $\boldsymbol{R}^{(i)}$ are random samples distributed by the PDF, $\rho$, $N_s$ is the number of samples and $\sigma_{(E_l)}$ is the standard deviation of the local energies.
     \subsection{The Quantum Harmonic Oscillator}
-    
-        \noindent In these works, the quantum harmonic oscillator is used as a benchmark system to validate sampling procedures and local energy approximations. It has the Schrödinger equation,
-        \begin{equation} \label{QHO Schrodinger}
-            -\frac{\hbar^{2}}{2 m_{e}} \frac{d^{2}}{d x^{2}} \psi(x)
-            + \frac{1}{2} m_{e} \omega^{2} x^{2} \psi(x)
-            = \mathcal{E}\,\psi(x),
-        \end{equation}
-        \noindent with a Hamiltonian that can be written in the dimensionless form,
+        In these works, the quantum harmonic oscillator is used as a benchmark system to validate sampling procedures and local energy approximations. It has the Schrödinger equation with a Hamiltonian that can be written in the dimensionless form,
         \begin{equation*}
             \hat{H} = -\frac{1}{2}\frac{d^{2}}{d\hat{x}^{2}} + \frac{1}{2}\hat{x}^{2},
         \end{equation*}
-        \noindent following the substitution $\hat{x} = \sqrt{({\hbar}/{m_e \omega})} \,x$, with the natural length of the system, $x_0 = \sqrt{(\hbar / m_e \omega})$.
-
-        This Hamiltonian has eigenstates and eigenvalues given by,
+        \noindent following the substitution $\hat{x} = \sqrt{({\hbar}/{m_e \omega})} \,x$, with the natural length of the system, $x_0 = \sqrt{(\hbar / m_e \omega})$.       This Hamiltonian has eigenstates and eigenvalues given by,
         \begin{equation} \label{QHO eigenstates}
             \psi_n(x) = H_n(x)e^{-x^{2}/2}, 
             \qquad
@@ -383,7 +363,7 @@ sorting=ynt
         \begin{equation} \label{hydrogen atom hamiltonian}
             \hat{H} = -\frac{1}{2} \nabla^2 - \frac{1}{r},
         \end{equation}
-        \noindent where energies are measured in Hartrees [REF hartrees], where $E_h=m_e e^4 / [(4\pi\epsilon_0)^2 \hbar^2]$, and $r=\sqrt{x^2 +y^2 + z^2}$. We proceed by expressing the parametrised wavefunction in terms of the variable $\theta$ in the ansatz,
+        \noindent where energies are measured in Hartrees (Ha), where $E_h=m_e e^4 / [(4\pi\epsilon_0)^2 \hbar^2]$, and $r=\sqrt{x^2 +y^2 + z^2}$. We proceed by expressing the parametrised wavefunction in terms of the variable $\theta$ in the ansatz,
         \begin{equation*}
             \psi(x,y,z; \theta) = e^{-\theta r},
         \end{equation*}
@@ -402,12 +382,11 @@ sorting=ynt
                 & + e^{-\theta_1 (|\mathbf{r}_1 - \mathbf{q}_2| + |\mathbf{r}_2 - \mathbf{q}_1|)} \bigg] e^{-\frac{\theta_2}{1+\theta_3 r_{12}}}
             \end{split}
         \end{equation}
-        \noindent Similarly to before, calculating the ground state energy is a matter of minimising $\langle \hat{H} \rangle$ with respect to $\theta_{1,2,3}$. It is expected that performing this minimisation over a variety of distances should produce a Morse potential, 
+        \noindent Similarly to before, calculating the ground state energy is a matter of minimising $\langle \hat{H} \rangle$ with respect to $\theta_{1,2,3}$. We expect that performing this minimisation over a variety of distances should produce a Morse potential, 
         \begin{equation} \label{Morse Pot}
             V_{\text{Morse}}(r) = D \left( 1 - e^{-a(r-r_0)} \right)^2 - D + 2E_{\text{single}}
         \end{equation}
-        \noindent where $D$ is the dissociation energy, $r_0$ is the bond length, $a$ is a fitting constant related to the width of the potential, and $E_{single}$ is the calculated ground state energy for the hydrogen atom.
-    
+        \noindent where $D\approx0.17$ is the dissociation energy, $r_0\approx1.4$ is the bond length, $a$ is a fitting constant related to the width of the potential, and $E_{single}$ is the calculated ground state energy for the hydrogen atom. 
 
 \section{Numerical Derivatives} 
     Finite difference methods were tested to obtain numerical estimates of the derivatives of the functions above. The second-order methods for computing the local energy were tested first in one dimension using the simple harmonic oscillator, see Fig.~\ref{derivatives}. The central difference method outperformed the backward and forward difference methods, with errors approximately 3x smaller, whilst sharing the same optimal stepsize. Thus, the central difference method was adopted as the primary differentiator.
@@ -416,9 +395,7 @@ sorting=ynt
 
 
 \section{Stochastic Function Sampling} \label{sampling}
-    The methodology used to solve the systems discussed in Part.~\ref{Theory} relies on the use of function sampling to calculate the value of the wavefunction at a given coordinate in space. Given their high dimensionality and nonlinearity, the wavefunctions we consider cannot be directly sampled; thus, they are well-suited to rejection-based Markov Chain Monte Carlo (MCMC) type sampling methods.
-    
-    Here, we discuss the methods considered and tested for this implementation. 
+    Given their high dimensionality and nonlinearity, the wavefunctions we consider cannot be directly sampled; thus, they are well-suited to rejection-based Markov Chain Monte Carlo (MCMC) type sampling methods.
     
     \begin{figure}[t] 
         \includegraphics[width=0.4\textwidth, keepaspectratio]{Report/Figures/QHO_sampler_distributions.png} 
@@ -426,7 +403,7 @@ sorting=ynt
     \end{figure}
     
     \subsection{Metropolis-Hastings Sampling}
-        One of the principal methods used in this simulation was the Metropolis-Hastings (MH) sampling algorithm, which proved particularly effective in the H$_2$ scenario, where the Jastrow-Slater ansatz is challenging to sample by other means. Importantly, as the acceptance is determined based on a ratio, the wavefunction can be sampled without the need to calculate the non-trivial normalisation constant. % check this
+        The Metropolis-Hastings (MH) sampling algorithm proved particularly effective in the H$_2$ scenario, where the Jastrow-Slater ansatz is challenging to sample by other means. Importantly, as the acceptance is determined based on a ratio, the wavefunction can be sampled without the need to calculate the non-trivial normalisation constant. 
 
         A Gaussian proposal function was used for its symmetry and ease of implementation, with a standard deviation that could be tuned to maintain the canonical acceptance rate of 0.234[REF] [Acceptance tuning]. This ensured effective sampling of the wavefunction, whilst maintaining low autocorrelation. This was also confirmed visually for all systems under consideration, see Fig.~\ref{sampling QHO}. 
         
@@ -458,7 +435,7 @@ sorting=ynt
         There are also some non-trivial examples of unsuitable methods. An example of a conceptually viable algorithm choice would be rejection sampling and its associated variants. However, the need to propose an efficient overlaying proposal distribution makes it hard to implement a general algorithm whilst maintaining computational efficiency. For a 6-dimensional, two-electron system, finding a bounding function that hugs the electron density tightly is tricky. Furthermore, as the dimensionality grows, the acceptance probability falls as the volume of the proposal distribution grows exponentially; hence, the usefulness of this method is limited to low dimensions.
         
 \section{Minimiser Functions} \label{minimisers}
-    The most complex part of the simulation presented here was the choice of minimiser function used to obtain the ground state energy. For a well-behaved parameter space such as that in the ansatz for the hydrogen atom situation, convergence on the minima was easily achieved using standard methods. However, for the H$_2$ system, achieving convergence proved substantially more challenging due to the increased dimensionality of the parameter space. In addition to those listed below, the method of simulated annealing was used as a minimiser; however, the selection of the annealing schedule and parameters relied heavily on heuristics, making it difficult to generalise and rigorously justify.
+    The most complex part of the simulation presented here was the choice of minimiser function used to obtain the ground state energy. For a well-behaved parameter space such as that in the ansatz for the hydrogen atom situation, convergence on the minima was easily achieved using standard methods. However, for the H$_2$ system, achieving convergence proved substantially more challenging due to the increased dimensionality of the parameter space. In addition to those listed below, the method of simulated annealing was used as a minimiser; however, the selection of the annealing schedule and parameters relied heavily on heuristics, making it difficult to generalise and rigorously justify. Furthermore, due to the noisy convergence of each minimiser, the stopping condition was based on the standard deviation of the last ten energies, which proved to be the most reliable way to tell if the minimiser had converged.
 
     \subsection{Gradient Descent} \label{gradient descent}
         The simplest version of gradient descent (GR) operates by iteratively moving in the direction of steepest descent, as determined by the negative gradient of the objective function, which can be determined using the finite difference methods defined before. The main parameter to tune in this algorithm is the 'learning rate', $\alpha$, which determines the magnitude of the motion towards the minima. This property is shared by all variants of this method, and in the present implementation, is adjusted according to the magnitude of the last calculated gradient. 
@@ -552,7 +529,7 @@ sorting=ynt
         \begin{equation} \label{H_log_gradient}
             \frac{\partial \langle \hat{H} \rangle}{\partial \theta_k} \approx \frac{2}{N_s} \sum_{i=1}^{N_s} \left[ \left( E_L(\mathbf{R}^{(i)}) - \langle \hat{H} \rangle \right) \frac{\partial \ln \Psi(\mathbf{R}^{(i)}}{\partial \theta_k} \right],
         \end{equation}
-        which indeed, only requires one evaluation of the local energy at the coordinates $\boldsymbol{R^{(i)}}$. This results in much less noise in the calculation of the gradient, and thus convergence of the minimisers. 
+        which indeed, only requires one evaluation of the local energy at the coordinates $\boldsymbol{R^{(i)}}$. This results in much less noise in the calculation of the gradient, and thus convergence of the minimisers. The stopping tolerance was set to 0.005.
 
         In this system, the choice of minimiser is somewhat more complicated; [FIG] shows the convergence properties of the methods under consideration. Though simulated annealing converges slowly, its final energy is highly stable and within the expected range. However, the tuning of this method is purely heuristic, raising concerns over the validity of the parameters for other interatomic distances. More iterations were required for convergence, resulting in much longer runtimes.
         
@@ -608,10 +585,14 @@ sorting=ynt
             \caption{(.1) Fitted morse potential. (.2) Theta values over the interatomic distances.}
         \end{figure}
         
-        [FIG] depicts the Morse potential produced by the stochastic reconfiguration. Despite yielding a similar curve, Simulated Annealing produces nonsensical variations in theta under variation of interatomic distance that manifest as discontinuous jumps in the parameter space [FIG]. This indicates that SA fails to converge consistently on the global minima. Conversely, despite some noise, the evolution of the parameters produced by SR shows an evident trend [FIG]. To fit the potential, Eq~\ref{Morse Pot}, scipy curvefit was used to fit and propagate the errors, producing fit parameters $D = 0.1499 \pm 0.0022$, $a = 1.2574 \pm 0.0161$, and $r_0 = 1.3724 \pm 0.0101$, with associated errors for each $\langle \hat{H} \rangle_{min}$ estimated similarly to in the case of the hydrogen atom.
+        [FIG] depicts the Morse potential produced by the stochastic reconfiguration. Despite yielding a similar curve, Simulated Annealing produces nonsensical variations in theta under variation of interatomic distance that manifest as discontinuous jumps in the parameter space [FIG]. This indicates that SA fails to converge consistently on the global minima. Conversely, despite some noise, the evolution of the parameters produced by SR shows an evident trend [FIG]. To fit the potential, Eq~\ref{Morse Pot}, scipy curvefit was used to fit and propagate the errors, producing fit parameters $D = 0.1465 \pm 0.0040$, $a = 1.2075 \pm 0.0209$, and $r_0 = 1.4170 \pm 0.0175$, with associated errors for each $\langle \hat{H} \rangle_{min}$ estimated similarly to in the case of the hydrogen atom. Compared to the known values of $D=0.17$, $r_0=1.4$, whilst most of the error can be attributed to the statistical fluctuations of the MC integration and that generated by oscillations around the minimum, 
 
 \section{Conclusion}
-    This paper has presented an analysis of methods used to sample from 
+    Using the quantum harmonic oscillator as a benchmark, this paper has presented an analysis of methods used to sample from and minimise the parametrised wavefunctions of the hydrogen atom to determine its ground state energy. This was extended to the hydrogen molecule, where the determination of ground-state energies using the stochastic recombination minimiser for different interatomic distances successfully produced a Morse potential. For future scope, 
+
+\bibliographystyle{ieeetran} 
+\bibliography{Report/references.bib}
+
 % that's all folks
 \end{document}
 
