@@ -169,7 +169,7 @@
 % in the LaTeX2e kernel, the most notable of which is that in current
 % LaTeX2e releases, the ordering of single and double column floats is not
 % guaranteed to be preserved. Thus, an unpatched LaTeX2e can allow a
-% single column figure to be placed prior to an earlier double column
+% single column  figure to be placed prior to an earlier double column
 % figure.
 % Be aware that LaTeX2e kernels dated 2015 and later have fixltx2e.sty's
 % corrections already built into the system in which case a warning will
@@ -420,10 +420,10 @@ sorting=ynt
     
     Here, we discuss the methods considered and tested for this implementation. 
     
-    \begin{figure*}[t] 
+    \begin{figure}[t] 
         \includegraphics[width=0.4\textwidth, keepaspectratio]{Report/Figures/QHO_sampler_distributions.png} 
-        \caption{Figure 2: QHO ($n=3$) samples (2.1) MH, (2.2) MALA vs sMALA. Note how sMALA captures the low probability regions well with a random walk $p=0.3$, all $N_s = 10^{5}$} \label{sampling QHO}
-    \end{figure*}
+        \caption{QHO ($n=3$) samples (2.1) MH, (2.2) MALA vs sMALA. Note how sMALA captures the low probability regions well with a random walk $p=0.3$, all $N_s = 10^{5}$} \label{sampling QHO}
+    \end{figure}
     
     \subsection{Metropolis-Hastings Sampling}
         One of the principal methods used in this simulation was the Metropolis-Hastings (MH) sampling algorithm, which proved particularly effective in the H$_2$ scenario, where the Jastrow-Slater ansatz is challenging to sample by other means. Importantly, as the acceptance is determined based on a ratio, the wavefunction can be sampled without the need to calculate the non-trivial normalisation constant. % check this
@@ -536,11 +536,11 @@ sorting=ynt
         For the random samplers, the starting point was initialised to $x=[1,1,1]$, with a burn-in time $burnin$, resulting from the correlation time, $\tau=$.
 
     \subsection{The Hydrogen Molecule}
-        \begin{figure*}[t] 
+        \begin{figure}[t] 
             \centering 
-            \includegraphics[width=\textwidth, keepaspectratio]{Report/Figures/Project/h2_sample_plots.png.png} 
-            \caption{Fig: Samples of the H$_2$ wavefunction for $r_0=2,3$a.u. and $N_s = 10^{6}$} \label{H2 sampling}
-        \end{figure*}
+            \includegraphics[width=0.55\textwidth, keepaspectratio]{Report/Figures/h2_sample_plots.png} 
+            \caption{Samples of the H$_2$ wavefunction for $r_0=2,3$a.u. and $N_s = 10^{6}$} \label{H2 sampling}
+        \end{figure}
     
         For the hydrogen molecule, the presence of two electrons increases the effective dimensionality of the sampling space to 6. Regardless, by partitioning each sampled configuration into the electron coordinates, $r_1$ and $r_2$, the remaining components of the calculation maintain their three-dimensional structure. Some examples of electron spatial probability distributions are included in [FIGURE]. It was found that sMALA sampling was far too slow for this case, producing far fewer samples for the same runtime. This was due to the significantly increased computational complexity of the wavefunction in question, resulting in much slower derivative calculations for the force term. sMALA also consistently resulted in estimates of $E_l$ that were far below what was expected for the minimum energy. This was attributed to the preferential sampling of points close to the nucleus, where the local energy diverges. This caused a skew in the expectation value $\langle E \rangle$ that made MALA and its variants unsuitable for the H$_2$ model.
 
@@ -554,19 +554,16 @@ sorting=ynt
         \end{equation}
         which indeed, only requires one evaluation of the local energy at the coordinates $\boldsymbol{R^{(i)}}$. This results in much less noise in the calculation of the gradient, and thus convergence of the minimisers. 
 
-        In this system, the choice of minimiser is somewhat more complicated; [FIG] shows the convergence properties of the methods under consideration. Though simulated annealing converges slowly, its final energy is highly stable and within the expected range. However, the tuning of this method is purely heuristic, raising concerns over the validity of the parameters for other interatomic distances. The much slower convergence rate also resulted in much longer runtimes due to the requirement for one sample per iteration of the minimiser.   
+        In this system, the choice of minimiser is somewhat more complicated; [FIG] shows the convergence properties of the methods under consideration. Though simulated annealing converges slowly, its final energy is highly stable and within the expected range. However, the tuning of this method is purely heuristic, raising concerns over the validity of the parameters for other interatomic distances. More iterations were required for convergence, resulting in much longer runtimes.
         
-        Otherwise, it can be seen from [FIG] that both SR and RMSProp GR have the best convergence properties, settling to a lower minimum with much less noise than other methods. SR converges remarkably rapidly, typically reaching a stable energy within less than 5 iterations, and whilst RMSProp does not converge as quickly, it settles to a reasonably stable energy.
+        Otherwise, it can be seen from [FIG] that both SR and RMSProp GR have the best convergence properties, settling to a lower minimum with much less noise than other methods. SR converges remarkably rapidly, typically reaching a stable energy within less than 5 iterations, and whilst RMSProp does not converge as quickly, it settles to a reasonably stable energy. However, RMSProp exhibited high sensitivity to learning rate, and at several points produced anomalously low energy estimates.
         
-        Both QN methods performed poorly. Despite converging quickly, DFP in particular they produced unstable $E_l$ values, with runtimes more than twice that of other methods. For the above reasons, we proceeded with the stochastic reconfiguration and simulated annealing methods to determine the morse potential. 
+        BFGS converged quickly on a high and unstable $E_l$, while DFP produced an even higher and more unstable value, both with very long runtimes. For the above reasons, we proceeded with the stochastic reconfiguration and simulated annealing methods to determine the morse potential. 
 
-        
-        %caption? 
-
-        
-
-        
-        % include in caption: These distributions were sampled using Metropolis–Hastings, as the propensity of MALA to undersample low-probability regions would render these figures misleading.
+        \begin{figure}[t] \label{Convergence H2}
+            \includegraphics[width=0.4\textwidth, keepaspectratio]{Report/Figures/H2_convergence.png} 
+            \caption{$E_l$ against iteration number for different minimsers. A moving average (window size = 5) is used to improve visual clarity. Raw values are transparent in the background. RMSProp occasionally yields anomalously low energy values, highlighted by red crosses.}
+        \end{figure}
         
     
 \section{Evaluation of Results}
@@ -597,15 +594,21 @@ sorting=ynt
         For this system, all methods of sampling were trialled to find the ground state energy; however, very little difference was observed in the final value. %[FIG] shows the trend of $\langle \hat{H} \rangle$ over iterations for the Hydrogen Atom. <----- include if space
         For efficiency, MH was used and $\langle \hat{H} \rangle_{min} = -0.499991 \pm 0.000061$Ha with a corresponding $\theta_{min} =0.998094$ (6s.f) was obtained for the ground state energy of the hydrogen atom, with associated errors estimated from the standard error of the convergence instability and the error on $E_l$ introduced from~\ref{MC hamiltonian expectation}, accounting for statistical deviance and autocorrelation. Fig~\ref{Ground state hydrogen samples} shows the sampled ground state using MH.
 
-        \begin{figure*}[t] \label{Ground state hydrogen samples}
-            \includegraphics[width=0.4\textwidth, keepaspectratio]{Report/Figures/hydrogen_samples.png} 
-            \caption{Figure 3: Hydrogen atom ground state samples}
-        \end{figure*}
+        \begin{figure}[t] \label{Ground state hydrogen samples}
+            \includegraphics[width=0.5\textwidth, keepaspectratio]{Report/Figures/hydrogen_samples.png} 
+            \caption{Hydrogen atom ground state samples}
+        \end{figure}
     
         
     
     \subsection{The Hydrogen Molecule}
-        [FIG] depicts the Morse potential produced by the stochastic reconfiguration. Despite yielding a similar curve, Simulated Annealing produces nonsensical variations in theta under variation of interatomic distance that manifest as discontinuous jumps in the parameter space [FIG]. This indicates that SA fails to converge consistently on the global minima. Conversely, despite some noise, the evolution of the parameters produced by SR shows an evident trend [FIG]. To fit the potential, Eq~\ref{Morse Pot}, scipy curvefit was used, producing fit parameters $D = 0.1499 \pm 0.0022$, $a = 1.2574 \pm 0.0161$, and $r_0 = 1.3724 \pm 0.0101$, with associated errors for each $\langle \hat{H} \rangle_{min}$ estimated similarly to in the case of the hydrogen atom.
+
+        \begin{figure}[t] \label{Morse Potential}
+            \includegraphics[width=0.5\textwidth, keepaspectratio]{Report/Figures/Morse.png} 
+            \caption{(.1) Fitted morse potential. (.2) Theta values over the interatomic distances.}
+        \end{figure}
+        
+        [FIG] depicts the Morse potential produced by the stochastic reconfiguration. Despite yielding a similar curve, Simulated Annealing produces nonsensical variations in theta under variation of interatomic distance that manifest as discontinuous jumps in the parameter space [FIG]. This indicates that SA fails to converge consistently on the global minima. Conversely, despite some noise, the evolution of the parameters produced by SR shows an evident trend [FIG]. To fit the potential, Eq~\ref{Morse Pot}, scipy curvefit was used to fit and propagate the errors, producing fit parameters $D = 0.1499 \pm 0.0022$, $a = 1.2574 \pm 0.0161$, and $r_0 = 1.3724 \pm 0.0101$, with associated errors for each $\langle \hat{H} \rangle_{min}$ estimated similarly to in the case of the hydrogen atom.
 
 \section{Conclusion}
     This paper has presented an analysis of methods used to sample from 
