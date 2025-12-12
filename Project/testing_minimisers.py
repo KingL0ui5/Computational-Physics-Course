@@ -15,7 +15,6 @@ sns.set_palette("colorblind")
 
 
 def test_minimiser():
-    # basic test to see if my code works
     x_start = np.array([5.0])
     stepsize = 0.1
     max_iterations = 100
