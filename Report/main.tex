@@ -405,7 +405,7 @@
     \subsection{Metropolis-Hastings Sampling}
         The Metropolis-Hastings (MH) sampling algorithm proved particularly effective in the H$_2$ scenario, where the Jastrow-Slater ansatz is challenging to sample by other means. Importantly, as the acceptance is determined based on a ratio, the wavefunction can be sampled without the need to calculate the non-trivial normalisation constant. 
 
-        A Gaussian proposal function was used for its symmetry and ease of implementation, with a standard deviation that could be tuned to maintain the canonical acceptance rate of 0.234[REF]. This ensured effective sampling of the wavefunction, whilst maintaining low autocorrelation. This was also confirmed visually for all systems under consideration, see Fig.~\ref{sampling QHO}. 
+        A Gaussian proposal function was used for its symmetry and ease of implementation, with a standard deviation that could be tuned to maintain the canonical acceptance rate of 0.234~\ref{gelman_1997_weak}. This ensured effective sampling of the wavefunction, whilst maintaining low autocorrelation. This was also confirmed visually for all systems under consideration, see Fig.~\ref{sampling QHO}. 
         
         The autocorrelation determines the degree of statistical independence between samples. If samples are highly autocorrelated, they have a reduced effective sample size, $N_{eff} = N_s / 2\tau$ where $\tau$ is the autocorrelation time. As the standard error scales as  $\sigma_{(E_l)} \propto 1/\sqrt{N_{eff}}$, it is important to keep this low. To substantially reduce this, thinning was used - though at the expense of fewer samples for a given runtime. 
 
@@ -425,7 +425,7 @@
         
         \noindent where $\mathbf{R}_n$ is the electron configuration at step $n$, $\Delta$ is the time-step, and $\mathbf{z}_n$ is a random vector drawn from a standard normal distribution. In this context, $T$ represents the diffusion coefficient ($=1/2$ in a.u.), and $\mathbf{f}_n$ is the drift force, defined by the wavefunction gradient $\mathbf{f}_n \coloneq {\nabla \psi(\mathbf{R}_n)}/{\psi(\mathbf{R}_n)}$.
         
-        Similarly to MH, the functions considered were best resolved with $N_s = 10^5$; however, to achieve the optimal acceptance of $\approx 0.54$ given by [MALA REF], the timestep, $\Delta$ requires some tuning.
+        Similarly to MH, the functions considered were best resolved with $N_s = 10^5$; however, to achieve the optimal acceptance of $\approx 0.54$ given by ~\ref{roberts_1998_optimal}, the timestep, $\Delta$ requires some tuning.
 
         Though this method undersamples low-probability regions (as in Fig.~\ref{sampling QHO}), its efficacy is maintained for calculating the local energy by preferentially sampling regions that contribute more significantly. Additionally, for particular timesteps, MALA outperforms MH by acceptance rate and autocorrelation, though thinning in MH improves its performance significantly.
 
@@ -592,7 +592,7 @@
     Using the quantum harmonic oscillator as a benchmark, this paper has presented an analysis of methods used to sample from and minimise the parametrised wavefunctions of the hydrogen atom to determine its ground state energy. This was extended to the hydrogen molecule, where the determination of ground-state energies using the stochastic recombination minimiser for different interatomic distances successfully produced a Morse potential. For future scope, further investigation on the specific sampling algorithms would be warranted to reduce the noise in the minimiser's convergence. Additionally, some element of dynamic minimiser parameter tuning should be included to help avoid convergence on local minima.
 
 \bibliographystyle{ieeetran} 
-\bibliography{Report/references.bib}
+\bibliography{Report/refs}
 
 % that's all folks
 \end{document}
