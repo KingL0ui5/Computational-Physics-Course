@@ -15,7 +15,7 @@ class hydrogen_molecule_minimisers:
         E_l = wf_temp.local_energy(r1, r2)
 
         if return_std:
-            return np.nanmean(E_l), np.std(E_l, ddof=1)
+            return np.nanmean(E_l), np.nanstd(E_l, ddof=1)
         return np.nanmean(E_l)
 
     @staticmethod
@@ -115,13 +115,12 @@ class hydrogen_molecule_minimisers:
         r = samples[len(samples)//10:]
         r1, r2 = r[:, 0:3], r[:, 3:6]
 
-        if detail:
-            from modules.helpers import get_acf
-            acf = get_acf(samples, max_lag=500)
-            ess = len(samples) / (1 + 2 * np.sum(acf[1:]))
-            if trace:
-                print(f"Effective Sample Size (ESS): {ess:.1f}")
-                print(f"Acceptance Rate: {acceptance*100:.2f}%")
+        from modules.helpers import get_acf
+        acf = get_acf(samples, max_lag=500)
+        ess = len(samples) / (1 + 2 * np.sum(acf[1:]))
+        if trace:
+            print(f"Effective Sample Size (ESS): {ess:.1f}")
+            print(f"Acceptance Rate: {acceptance*100:.2f}%")
 
         if return_ESS:
             return r1, r2, ess
@@ -447,7 +446,15 @@ class hydrogen_molecule_minimisers:
             return x, Es[-1], results
 
         if return_error:
-            return x, hydrogen_molecule_minimisers.E_fn(x, q1, q2, r1, r2), std_dev_last_10/np.sqrt(10)
+            wf_final = h2_wavefunction(x, q1, q2)
+            r1_final, r2_final, ess = hydrogen_molecule_minimisers.sample_coords(
+                wf_final, N_s, r_0, detail=False, trace=False, return_ESS=True)
+
+            E, std = hydrogen_molecule_minimisers.E_fn(
+                x, q1, q2, r1_final, r2_final, return_std=True)
+            E_err = std_dev_last_10/np.sqrt(10) + std/np.sqrt(ess)
+            return x, E, E_err
+
         return x, hydrogen_molecule_minimisers.E_fn(x, q1, q2, r1, r2)
 
     def gradient_descent(q1: np.ndarray, q2: np.ndarray, x_0: np.ndarray, alpha: float, max_iter: int = 100, stop_tol: float = 1e-6, N_s: int = 10000, sampling: str = "MH", detail: bool = False, trace: bool = False, return_error: bool = False) -> tuple:

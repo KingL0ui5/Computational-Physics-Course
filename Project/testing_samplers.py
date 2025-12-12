@@ -8,6 +8,16 @@ sns.set_style('darkgrid')
 sns.set_context('paper')
 sns.set_palette("colorblind")
 
+size = 15
+
+plt.rc('font', size=size)
+plt.rc('axes', titlesize=size-3)
+plt.rc('axes', labelsize=size)
+plt.rc('xtick', labelsize=size)
+plt.rc('ytick', labelsize=size)
+plt.rc('legend', fontsize=size-2)
+plt.rc('figure', titlesize=size)
+
 
 def optimise_step_H2():
     q1 = np.array([0, 0, 1])

@@ -139,7 +139,7 @@ class hydrogen_molecule_helpers:
 
         else:
             heatmap_matrix, _, _ = np.histogram2d(x_coords, y_coords,
-                                                  bins=500,
+                                                  bins=200,
                                                   range=[xlim, ylim],
                                                   density=True)
             img = ax.imshow(heatmap_matrix.T,

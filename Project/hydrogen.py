@@ -95,14 +95,13 @@ def ground_state():
 
 def plot_ground_state():
     import matplotlib.pyplot as plt
-    theta_min, E_min, E_err = ground_state()
-    ground_state_wavefunction = hydrogen_wavefunction(theta_min)
-    samples = metropolis_hastings(f=ground_state_wavefunction.probability_density, f_prop='gaussian', x_0=[1., 1., 1.], xmin=[-10., -10., -10.], xmax=[10., 10., 10.], N=1000000, kwrgs={
+    ground_state_wavefunction = hydrogen_wavefunction(1.)
+    samples = metropolis_hastings(f=ground_state_wavefunction.probability_density, f_prop='gaussian', x_0=[1., 1., 1.], xmin=[-10., -10., -10.], xmax=[10., 10., 10.], N=10000000, kwrgs={
         'sigma': 1.8}, detail=True)
     samples = samples[len(samples)//10:]
     x, y, z = samples[:, 0], samples[:, 1], samples[:, 2]
     plt.figure(figsize=(8, 6))
-    plt.hist2d(x, y, bins=100, cmap='inferno', density=True)
+    plt.hist2d(x, y, bins=200, cmap='inferno', density=True)
     plt.colorbar(label='Number Density')
     plt.title(f'2D Histogram of Electron Position (x, y)')
     plt.xlabel('x')

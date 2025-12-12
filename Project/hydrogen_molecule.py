@@ -11,6 +11,16 @@ from modules.function_sampling import metropolis_hastings, MALA
 from modules.minimisers import hydrogen_molecule_minimisers as minimisers
 import matplotlib.pyplot as plt
 
+size = 23
+
+plt.rc('font', size=size)
+plt.rc('axes', titlesize=size)
+plt.rc('axes', labelsize=size)
+plt.rc('xtick', labelsize=size)
+plt.rc('ytick', labelsize=size)
+plt.rc('legend', fontsize=15)
+plt.rc('figure', titlesize=size)
+
 
 class h2_wavefunction:
     def __init__(self, thetas: np.ndarray, q1: np.ndarray, q2: np.ndarray):
@@ -185,15 +195,17 @@ def test_SR():
     q1 = [0, 0, 2]
     q2 = [0, 0, 0]
 
-    N_s = 100000
+    N_s = 10000
     thetas_0 = [1.3] * 3  #  for minimiser
     alphas = [.1]  #  np.linspace(0.1, 1., 20)
     for alpha in alphas:
-        theta_min, E_min, results = minimisers.stochastic_reconfiguration(q1, q2, x_0=thetas_0,
-                                                                          alpha=alpha, stop_tol=0.005, N_s=N_s, sampling="MH", detail=True, trace=True, max_iter=30)
+        theta_min, E_min, E_err = minimisers.stochastic_reconfiguration(
+            q1, q2, x_0=thetas_0, alpha=0.2, stop_tol=0.005, N_s=N_s,
+            detail=False, sampling="MH", max_iter=70, return_error=True, trace=False
+        )
 
-        print(f"minimum theta: {theta_min}, minimum energy: {E_min}")
-        results['figure'].show()
+        print(f"minimum theta: {theta_min}, minimum energy: {E_min} ± {E_err}")
+        # results['figure'].show()
 
 
 def test_QN():
@@ -367,14 +379,14 @@ def process_bond_length(args):
     q1, q2_i, thetas_0, Ns, r_val = args
     print(f"Processing bond length: {r_val} a.u.")
 
-    # theta_min, E_min, E_err = minimisers.stochastic_reconfiguration(
-    #     q1, q2_i, x_0=thetas_0, alpha=0.2, stop_tol=0.005, N_s=Ns,
-    #     detail=False, sampling="sMALA", max_iter=70, return_error=True, trace=False
-    # )
-
-    theta_min, E_min, E_err = minimisers.simulated_annealing(
-        q1, q2_i, x_0=thetas_0, initial_temp=0.5, cooling_rate=0.95, max_iter=200, Ns=Ns, std=0.05, detail=False, return_error=True
+    theta_min, E_min, E_err = minimisers.stochastic_reconfiguration(
+        q1, q2_i, x_0=thetas_0, alpha=0.2, stop_tol=0.005, N_s=Ns,
+        detail=False, sampling="MH", max_iter=100, return_error=True, trace=False
     )
+
+    # theta_min, E_min, E_err = minimisers.simulated_annealing(
+    #     q1, q2_i, x_0=thetas_0, initial_temp=0.5, cooling_rate=0.95, max_iter=200, Ns=Ns, std=0.05, detail=False, return_error=True
+    # )
 
     return r_val, E_min, theta_min, E_err
 
@@ -382,7 +394,7 @@ def process_bond_length(args):
 def parallel_ground_state_energies(n_procs=4):
     import multiprocessing as mp
     from scipy.optimize import curve_fit
-    Ns = 10000
+    Ns = 100000
     r_0 = np.linspace(0.5, 3., 60)
 
     q1 = [0., 0., 0.]
@@ -451,6 +463,7 @@ def parallel_ground_state_energies(n_procs=4):
 
 
 if __name__ == '__main__':
-    test_samples()
+    # test_SR()
     # test_minimisers_convergence(alpha=0.1)
-    # parallel_ground_state_energies(n_procs=12)
+    parallel_ground_state_energies(n_procs=12)
+    # test_samples()
