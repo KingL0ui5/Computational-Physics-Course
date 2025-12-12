@@ -233,24 +233,23 @@ def test_MALA_H2():
 
 
 def test_samples():
-    x = np.linspace(0, 10, 100)
+    x = np.linspace(0, 4, 100)
     N = 100000
 
     n = 3
     f, _ = hlp.eigenfunctions(n)
-    df = hlp.first_derivative(n)
 
     samples_MH = metropolis_hastings(lambda x: f(x)**2, 'gaussian', [0.], xmin=[0.], xmax=[10.], N=N, kwrgs={
-        'sigma': 1.}, detail=True)
+        'sigma': 1.}, detail=False)
 
-    samples_MALA = MALA(f=f, f_prime=df, x_0=[1.], timestep=0.5, xmin=[
-        0.], xmax=[10.], N=N, detail=True)
+    samples_MALA = MALA(f=f, x_0=[1.], timestep=0.3, xmin=[
+        0.], xmax=[4.], N=N, detail=False)
 
-    samples_sMALA = stochasticMALA(f=f, f_prime=df, x_0=[1.], timestep=0.5, xmin=[
-        0.], xmax=[10.], N=N, p_kick=0.1, kick_sigma=0.1, detail=True)
+    samples_sMALA = stochasticMALA(f=f, x_0=[1.], timestep=0.3, xmin=[
+        0.], xmax=[4.], N=N, p_kick=0.3, kick_sigma=0.1, detail=False)
 
     #  discard first 10% of samples as burn-in
-    burn_in = N//10
+    burn_in = N//15
     samples_MALA = samples_MALA[burn_in:]
     samples_sMALA = samples_sMALA[burn_in:]
     samples_MH = samples_MH[burn_in:]
@@ -259,27 +258,31 @@ def test_samples():
     acf_s_mala = get_acf(samples_sMALA)
     acf_mh = get_acf(samples_MH)
 
-    fig, ax = plt.subplots(3, 1, figsize=(10, 6), sharex=True)
+    fig, ax = plt.subplots(2, 1, figsize=(10, 6), sharex=True)
     ax[0].hist(samples_MH, bins=100, density=True,
                alpha=1, label='Sampled Distribution')
-    ax[1].hist(samples_MALA, bins=100, density=True,
-               alpha=1, label='Sampled Distribution')
-    ax[2].hist(samples_sMALA, bins=100, density=True,
-               alpha=0.5, label='Sampled Distribution')
+    ax[1].hist(samples_MALA, bins=80, density=True,
+               alpha=1., label='Sampled Distribution MALA', color="#1f77b4")
+    ax[1].hist(samples_sMALA, bins=80, density=True,
+               alpha=0.4, label='Sampled Distribution sMALA', color="#ff7f0e")
 
     pdf = f(x)**2
     pdf /= np.trapezoid(pdf, x)
-    ax[0].plot(x, pdf, label='Target Distribution', color='red')
-    ax[1].plot(x, pdf, label='Target Distribution', color='red')
-    ax[2].plot(x, pdf, label='Target Distribution', color='red')
-    ax[0].set_title(f"Metropolis Hastings, nsamples: {N}")
-    ax[1].set_title(f"Metropolis-adjusted Langevin, nsamples: {N}")
-    ax[2].set_title(f"Stochastic Metropolis-adjusted Langevin, nsamples: {N}")
+    ax[0].plot(x, pdf, color='red')
+    ax[1].plot(x, pdf, color='red')
+    # ax[2].plot(x, pdf, label='Target Distribution', color='red')
+    ax[0].set_title(f"Figure 2.1: Metropolis Hastings, $N_s= {N}$")
+    ax[1].set_title(f"Figure 2.2: Metropolis-adjusted Langevin, $N_s= {N}$")
+    # ax[2].set_title(f"Stochastic Metropolis-adjusted Langevin, nsamples: {N}")
     ax[0].legend()
     ax[1].legend()
-    ax[2].legend()
-    plt.ylabel("$\psi (x)$")
-    plt.xlabel("x")
+    # ax[2].legend()
+    ax[0].set_ylabel("$\psi (x)$")
+    ax[0].set_xlabel("x")
+
+    ax[1].set_ylabel("$\psi (x)$")
+    ax[1].set_xlabel("x")
+    plt.savefig("QHO_sampler_distributions.png", dpi=300, bbox_inches='tight')
     plt.show()
 
     #  autocorrelation
@@ -294,7 +297,7 @@ def test_samples():
 
     plt.xlabel('Lag (k steps)')
     plt.ylabel('Autocorrelation $C(k)$')
-    plt.title('Sampler Efficiency Comparison (Steep Drop = Better)')
+    plt.title('Sampler Autocorrelation')
     plt.legend()
     plt.grid(True)
 

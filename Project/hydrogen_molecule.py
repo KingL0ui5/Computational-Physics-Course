@@ -125,53 +125,60 @@ class h2_wavefunction:
 
 
 def test_samples():
-    q1 = [0, 2, 0]
-    q2 = [0, 0, 0]
-    wf = h2_wavefunction(thetas=[1., 1., 1.], q1=q1, q2=q2)
+    q1s = [[-1, 0, 0], [-1.5, 0, 0]]
+    q2s = [[1, 0, 0], [1.5, 0, 0]]
 
-    def wrapper(coords):
-        coords = np.asarray(coords)
-        r1 = coords[:, 0:3]
-        r2 = coords[:, 3:6]
+    fig, axes = plt.subplots(nrows=1, ncols=len(q2s), figsize=(18, 6))
+    for i, (q1, q2) in enumerate(zip(q1s, q2s)):
+        wf = h2_wavefunction(thetas=[1., 1., 1.], q1=q1, q2=q2)
 
-        return wf.probability_density(r1, r2)
+        def wrapper(coords):
+            coords = np.asarray(coords)
+            r1 = coords[:, 0:3]
+            r2 = coords[:, 3:6]
 
-    def wrapper_grad(coords):
-        from modules.differentiators import central_difference
+            return wf.probability_density(r1, r2)
 
-        coords = np.asarray(coords)
-        grad = central_difference(wrapper, coords, h=[1e-4]*6, order=2)
-        return np.sum(grad, axis=0)
+        def wrapper_grad(coords):
+            from modules.differentiators import central_difference
 
-    x_0 = np.ones(6, dtype=float)
-    N_s = 1000000
-    samples = MALA(wrapper, wrapper_grad, x_0=x_0, N=N_s,
-                   timestep=0.5, xmin=-10., xmax=10., detail=True)
+            coords = np.asarray(coords)
+            grad = central_difference(wrapper, coords, h=[1e-4]*6, order=2)
+            return np.sum(grad, axis=0)
 
-    # samples = metropolis_hastings(
-    #     wrapper, f_prop='gaussian', x_0=x_0, xmax=10., xmin=-10., N=N_s, kwrgs={
-    #         'sigma': 0.7}, detail=True)
+        x_0 = np.ones(6, dtype=float)
+        N_s = 10000000
+        # samples = MALA(wrapper, wrapper_grad, x_0=x_0, N=N_s,
+        #                timestep=0.5, xmin=-10., xmax=10., detail=True)
 
-    print('Finished Sampling')
+        samples = metropolis_hastings(
+            wrapper, f_prop='gaussian', x_0=x_0, xmax=10., xmin=-10., N=N_s, kwrgs={
+                'sigma': 0.7}, detail=False)
 
-    r1, r2 = samples[:, 0:3], samples[:, 3:6]
-    E_l = wf.local_energy(r1=r1, r2=r2)
+        print('Finished Sampling')
 
-    plt.scatter(np.linalg.norm(r1, axis=1), E_l, marker='.', alpha=0.1)
-    plt.plot(0, q1[1], 'ro', label='Nucleus 1')
-    plt.plot(0, q2[1], 'bo', label='Nucleus 2')
-    plt.xlabel("Distance of electron 1 from origin")
-    plt.ylabel("Local Energy")
-    plt.title("Local energy vs distance of electron 1 from origin")
-    plt.show()
+        r1, r2 = samples[:, 0:3], samples[:, 3:6]
+        E_l = wf.local_energy(r1=r1, r2=r2)
 
-    print(f"local energy: {E_l}")
-    exp_energy = np.mean(E_l)
-    print(f"Expected Energy: {exp_energy}")
+        # plt.scatter(np.linalg.norm(r1, axis=1), E_l, marker='.', alpha=0.1)
+        # plt.plot(0, q1[1], 'ro', label='Nucleus 1')
+        # plt.plot(0, q2[1], 'bo', label='Nucleus 2')
+        # plt.xlabel("Distance of electron 1 from origin")
+        # plt.ylabel("Local Energy")
+        # plt.title("Local energy vs distance of electron 1 from origin")
+        # plt.show()
 
-    hlp.plot_samples(
-        r1, r2, q1=q1, q2=q2, xlim=[-3, 3], ylim=[-3, 3], seaborn=False)
-    plt.show()
+        print(f"local energy: {E_l}")
+        exp_energy = np.mean(E_l)
+        print(f"Expected Energy: {exp_energy}")
+
+        hlp.plot_samples(
+            r1, r2, q1=q1, q2=q2, xlim=[-3, 3], ylim=[-2, 2], seaborn=False, ax=axes[i])
+
+    axes[i].set_title(f"Separation z={q2[2] * 2}")
+    fig.tight_layout()
+    fig.savefig("h2_sample_plots.png")
+    fig.show()
 
 
 def test_SR():
@@ -444,10 +451,6 @@ def parallel_ground_state_energies(n_procs=4):
 
 
 if __name__ == '__main__':
-    alphas = [0.05, 0.1, 0.3, 0.01, 0.2]
-    # for alpha in alphas:
-    #     test_minimisers_convergence(alpha)
-    # # test_SR()
-
-    test_minimisers_convergence(alpha=0.1)
+    test_samples()
+    # test_minimisers_convergence(alpha=0.1)
     # parallel_ground_state_energies(n_procs=12)

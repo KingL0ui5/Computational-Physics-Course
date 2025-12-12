@@ -7,9 +7,18 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import math
 
-sns.set_style('darkgrid')
+sns.set_style('dark')
 sns.set_context('paper')
 sns.set_palette("colorblind")
+size = 13
+
+plt.rc('font', size=size)
+plt.rc('axes', titlesize=size)
+plt.rc('axes', labelsize=size)
+plt.rc('xtick', labelsize=size)
+plt.rc('ytick', labelsize=size)
+plt.rc('legend', fontsize=size-2)
+plt.rc('figure', titlesize=size)
 
 
 def rms(data):
@@ -80,7 +89,7 @@ class hydrogen_molecule_helpers:
         return V
 
     @staticmethod
-    def plot_samples(r1: np.ndarray, r2: np.ndarray, q1: np.ndarray, q2: np.ndarray, xlim: np.ndarray | tuple, ylim: np.ndarray | tuple, seaborn: bool = False) -> None:
+    def plot_samples(r1: np.ndarray, r2: np.ndarray, q1: np.ndarray, q2: np.ndarray, xlim: np.ndarray | tuple, ylim: np.ndarray | tuple, ax=None, seaborn: bool = False) -> None:
         """
         Visualizes the electron probability density as a 2D heatmap.
 
@@ -89,6 +98,7 @@ class hydrogen_molecule_helpers:
             r2 : numpy.ndarray, Array of shape (N, D) containing samples for the second electron.
             q1 : numpy.ndarray, Position of the first nucleus.
             q2 : numpy.ndarray, Position of the second nucleus.
+            ax : matplotlib.axes.Axes, The axes to plot on. If None, a new figure and axes are created.
             xlim : tuple or list, A sequence of length 2 defining the x-axis plotting limits (min, max).
             ylim : tuple or list, A sequence of length 2 defining the y-axis plotting limits (min, max).
             seaborn: bool, whether to plot using seaborn or not
@@ -103,53 +113,56 @@ class hydrogen_molecule_helpers:
         q1 = q1[:2]
         q2 = q2[:2]
 
-        fig = plt.figure(figsize=(8, 6))
+        if ax is None:
+            fig, ax = plt.subplots(figsize=(8, 6))
+        else:
+            fig = ax.figure
+
         if seaborn:
             sns.kdeplot(x=x_coords, y=y_coords, fill=True,
-                        cmap="mako", thresh=0, levels=50, cbar=True)
+                        cmap="mako", thresh=0, levels=50, cbar=True, ax=ax)
 
-            plt.title('Electron Density Heatmap (x, y)')
-            plt.xlabel('x position')
-            plt.ylabel('y position')
+            ax.set_title('Electron Density Heatmap (x, y)')
+            ax.set_xlabel('x position')
+            ax.set_ylabel('y position')
 
-            plt.xlim(xlim[0], xlim[1])
-            plt.ylim(ylim[0], ylim[1])
+            ax.set_xlim(xlim[0], xlim[1])
+            ax.set_ylim(ylim[0], ylim[1])
 
-            plt.scatter(q1[0], q1[1], color='red',
-                        marker='x', label='Nucleus 1')
-            plt.scatter(q2[0], q2[1], color='blue',
-                        marker='x', label='Nucleus 2')
-            plt.legend()
+            ax.scatter(q1[0], q1[1], color='red',
+                       marker='x', label='Nucleus 1')
+            ax.scatter(q2[0], q2[1], color='blue',
+                       marker='x', label='Nucleus 2')
+            ax.legend()
 
-            return fig
+            return fig, ax
 
         else:
-            fig = plt.figure(figsize=(8, 6))
             heatmap_matrix, _, _ = np.histogram2d(x_coords, y_coords,
-                                                  bins=100,
+                                                  bins=500,
                                                   range=[xlim, ylim],
                                                   density=True)
-            img = plt.imshow(heatmap_matrix.T,
-                             origin='lower',
-                             extent=[xlim[0], xlim[1], ylim[0], ylim[1]],
-                             cmap='plasma',
-                             interpolation='bilinear',
-                             aspect='auto')
+            img = ax.imshow(heatmap_matrix.T,
+                            origin='lower',
+                            extent=[xlim[0], xlim[1], ylim[0], ylim[1]],
+                            cmap='inferno',
+                            interpolation='bilinear',
+                            aspect='auto')
 
-            plt.colorbar(img, label='Density')
+            fig.colorbar(img, ax=ax, label='Density')
 
-            plt.title('Electron Density Heatmap')
-            plt.xlabel('x position')
-            plt.ylabel('y position')
-            plt.xlim(xlim[0], xlim[1])
-            plt.ylim(ylim[0], ylim[1])
+            ax.set_title('Electron Density Heatmap')
+            ax.set_xlabel('x position')
+            ax.set_ylabel('y position')
+            ax.set_xlim(xlim[0], xlim[1])
+            ax.set_ylim(ylim[0], ylim[1])
 
-            plt.scatter(q1[0], q1[1], color='red',
-                        marker='x', label='Nucleus 1')
-            plt.scatter(q2[0], q2[1], color='blue',
-                        marker='x', label='Nucleus 2')
-            plt.legend()
-            return fig
+            ax.scatter(q1[0], q1[1], color='red',
+                       marker='x', label='Nucleus 1')
+            ax.scatter(q2[0], q2[1], color='blue',
+                       marker='x', label='Nucleus 2')
+            ax.legend()
+            return fig, ax
 
 
 class hydrogen_atom_helpers:
